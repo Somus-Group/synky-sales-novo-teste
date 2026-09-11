@@ -682,7 +682,7 @@ textarea:focus-visible {
 .theme-dark .nav-item:hover { background: #222c38; color: #f1f5f9; }
 .theme-dark .nav-item-icon { background: #242e3a; color: #a7bdd5; }
 .theme-dark .nav-item-active {
-  background: linear-gradient(135deg, #24567f, #2c6c9e);
+  background: linear-gradient(135deg, #214763, #285c7b);
   box-shadow: 0 12px 24px rgb(2 14 28 / 46%);
 }
 .theme-dark .nav-item-badge { background: rgb(115 151 190 / 14%); color: #adc6df; }
@@ -711,7 +711,7 @@ textarea:focus-visible {
 .theme-dark [class*="bg-[#0969da]"],
 .theme-dark [class*="bg-[#0757C8]"],
 .theme-dark [class*="bg-[#075bbd]"] {
-  background-color: #28679a !important;
+  background-color: #245777 !important;
 }
 
 
