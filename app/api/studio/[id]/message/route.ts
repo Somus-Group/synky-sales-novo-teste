@@ -349,7 +349,7 @@ export async function POST(
           html: renderStudioTemplate(
             project.templateId,
             templateContent,
-            profile,
+            profile || undefined,
             preferredLogo?.id,
           ),
           reference_status: templateContent.referenceStatus,
