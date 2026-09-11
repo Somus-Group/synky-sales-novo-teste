@@ -17,6 +17,7 @@ import {
   Circle,
   Clock3,
   Columns3,
+  Download,
   FileCheck2,
   Eye,
   Flag,
@@ -26,6 +27,7 @@ import {
   GripVertical,
   Image as ImageIcon,
   LayoutDashboard,
+  LayoutTemplate,
   List,
   ListTodo,
   Link2,
@@ -174,6 +176,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   const [pipelineLabels, setPipelineLabels] = useState<PipelineLabels>(defaultPipelineLabels);
   const [companyDialog, setCompanyDialog] = useState(false);
   const [pipelineLabelEdit, setPipelineLabelEdit] = useState<PipelineLabelEdit | null>(null);
+  const [agentInitialTemplate, setAgentInitialTemplate] = useState(proposalTemplates[0].value);
 
   const pipelineValue = useMemo(() => opportunities.reduce((total, item) => total + item.value, 0), [opportunities]);
   const searchResults = useMemo(() => {
@@ -277,7 +280,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
     window.setTimeout(() => setToast(''), 2600);
   }
 
-  function openAgent() { setView('agent'); }
+  function openAgent(template = proposalTemplates[0].value) { setAgentInitialTemplate(template); setView('agent'); }
 
   const pipelineRequestHeaders = (): Record<string, string> => activeCompanyId ? { 'X-Company-Id': activeCompanyId } : {};
 
@@ -436,7 +439,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
           <div className="space-y-1">
           <Nav collapsed={sidebarCollapsed} active={view === 'overview'} icon={LayoutDashboard} label="Visão geral" onClick={() => setView('overview')} />
           <p className="sidebar-group-label sidebar-collapse-text">Criação</p>
-          <Nav collapsed={sidebarCollapsed} active={view === 'agent'} icon={Sparkles} label="Agente de propostas" onClick={openAgent} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'agent'} icon={Sparkles} label="Agente de propostas" onClick={() => openAgent()} />
           <Nav collapsed={sidebarCollapsed} active={view === 'agent_setup'} icon={SlidersHorizontal} label="Configurar agente" onClick={() => setView('agent_setup')} />
           <Nav collapsed={sidebarCollapsed} active={view === 'studio'} icon={FlaskConical} label="Estúdio Lab" onClick={() => { setView('studio'); setMobileNav(false); }} />
           <p className="sidebar-group-label sidebar-collapse-text">Comercial</p>
@@ -465,19 +468,19 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
               <Button type="button" variant="ghost" size="icon-sm" className={`rounded-full ${theme === 'light' ? 'bg-[#0B6FE8] text-white hover:bg-[#0757C8] hover:text-white' : 'text-[#9BAABB] hover:bg-[#27313C] hover:text-[#E7EEF6]'}`} aria-label="Usar tema claro" aria-pressed={theme === 'light'} onClick={() => setTheme('light')}><Sun /></Button>
               <Button type="button" variant="ghost" size="icon-sm" className={`rounded-full ${theme === 'dark' ? 'bg-[#2B3949] text-[#E7EEF6] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-[#344558] hover:text-white' : 'text-[#8E8E93]'}`} aria-label="Usar tema escuro" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}><Moon /></Button>
             </div>
-            <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" aria-label="Notificações" onClick={() => notify('Você não tem novas notificações')}><Bell /></Button><Button variant="outline" className="hidden h-10 rounded-2xl border-[#0B6FE8]/20 bg-white px-4 shadow-sm hover:bg-[#EAF2FF] md:flex" onClick={() => openNewOpportunity()}><Plus /> Oportunidade</Button><Button className="h-10 rounded-2xl bg-[#0B6FE8] px-3.5 text-white shadow-[0_8px_22px_rgba(11,111,232,0.22)] hover:bg-[#0757C8] sm:px-4" onClick={openAgent}><Sparkles /><span className="hidden sm:inline">Criar com IA</span><span className="sm:hidden">IA</span></Button>
+            <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" aria-label="Notificações" onClick={() => notify('Você não tem novas notificações')}><Bell /></Button><Button variant="outline" className="hidden h-10 rounded-2xl border-[#0B6FE8]/20 bg-white px-4 shadow-sm hover:bg-[#EAF2FF] md:flex" onClick={() => openNewOpportunity()}><Plus /> Oportunidade</Button><Button className="h-10 rounded-2xl bg-[#0B6FE8] px-3.5 text-white shadow-[0_8px_22px_rgba(11,111,232,0.22)] hover:bg-[#0757C8] sm:px-4" onClick={() => openAgent()}><Sparkles /><span className="hidden sm:inline">Criar com IA</span><span className="sm:hidden">IA</span></Button>
           </div>
         </header>
 
         <main data-view={view} className={view === 'studio' ? 'sales-content w-full' : 'sales-content mx-auto max-w-[1440px] px-4 py-6 sm:px-5 md:px-8 md:py-10'}>
           {view === 'studio' && <StudioLab />}
           {view === 'overview' && <Overview name={userName} opportunities={opportunities} proposals={proposals} pipelineValue={pipelineValue} onPipeline={() => setView('pipeline')} onProposal={openAgent} onProposals={() => setView('proposals')} onOpenProposal={(proposal) => { setActiveProposal(proposal); setView('editor'); }} />}
-          {view === 'agent' && <AgentStudio profile={agentProfile} onSetup={() => setView('agent_setup')} onGenerated={(proposal) => { setProposals((items) => [proposal, ...items]); setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
+          {view === 'agent' && <AgentStudio profile={agentProfile} initialTemplate={agentInitialTemplate} onSetup={() => setView('agent_setup')} onGenerated={(proposal) => { setProposals((items) => [proposal, ...items]); setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
           {view === 'agent_setup' && <AgentSetup initialProfile={agentProfile} onSaved={(profile) => { setAgentProfile(profile); notify('Agente configurado para o seu negócio'); setView('agent'); }} onNotify={notify} />}
           {view === 'pipeline' && <Pipeline opportunities={opportunities} labels={pipelineLabels} companies={companies} activeCompanyId={activeCompanyId} companyName={companies.find((company) => company.id === activeCompanyId)?.name || 'Empresa principal'} onSelectCompany={setActiveCompanyId} onNew={openNewOpportunity} onEdit={openOpportunity} onMove={moveOpportunity} onEditLabel={(key, label) => setPipelineLabelEdit({ key, label })} onCompanies={() => setCompanyDialog(true)} />}
           {view === 'tasks' && <Actions tasks={tasks} onNew={openNewTask} onQuickAdd={createQuickTask} onEdit={openTask} onMove={moveTask} />}
           {view === 'clients' && <Clients clients={clients} onNew={openNewClient} onEdit={openClient} />}
-          {view === 'proposals' && <Proposals proposals={proposals} onNew={openAgent} onOpen={(proposal) => { setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
+          {view === 'proposals' && <Proposals proposals={proposals} onNew={openAgent} onUseTemplate={openAgent} onOpen={(proposal) => { setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
           {view === 'team' && <Team members={members} onAdd={() => { setMemberError(''); setMemberDialog(true); }} />}
         </main>
       </div>
@@ -869,11 +872,29 @@ function Team({ members, onAdd }: { members: Member[]; onAdd: () => void }) {
   </>;
 }
 
-function Proposals({ proposals, onNew, onOpen, onNotify }: { proposals: Proposal[]; onNew: () => void; onOpen: (proposal: Proposal) => void; onNotify: (message: string) => void }) {
+function Proposals({ proposals, onNew, onUseTemplate, onOpen, onNotify }: { proposals: Proposal[]; onNew: () => void; onUseTemplate: (template: string) => void; onOpen: (proposal: Proposal) => void; onNotify: (message: string) => void }) {
+  const [tab, setTab] = useState<'proposals' | 'templates'>('proposals');
   const [filter, setFilter] = useState<'Todas' | 'Rascunhos' | 'Enviadas' | 'Aceitas'>('Todas');
   const filtered = proposals.filter((proposal) => filter === 'Todas' || (filter === 'Rascunhos' && proposal.status === 'Rascunho') || (filter === 'Enviadas' && ['Enviada', 'Visualizada'].includes(proposal.status)) || (filter === 'Aceitas' && proposal.status === 'Aceita'));
   function copyLink(proposal: Proposal) { void navigator.clipboard?.writeText(`${window.location.origin}/p/${proposal.slug}`); onNotify('Link público copiado'); }
-  return <><PageTitle kicker="Sites comerciais" title="Propostas" description="One pages sofisticadas, interativas e prontas para compartilhar por link." actions={<Button onClick={onNew} className="rounded-xl bg-black px-4 text-white"><Sparkles /> Nova proposta</Button>} /><div className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1">{(['Todas', 'Rascunhos', 'Enviadas', 'Aceitas'] as const).map((item) => <Filter key={item} active={filter === item} label={item === 'Todas' ? `Todas ${proposals.length}` : item} onClick={() => setFilter(item)} />)}</div><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{filtered.map((proposal, index) => <article key={`${proposal.id}-${proposal.code}`} className="group overflow-hidden rounded-[22px] border border-black/[0.06] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.035)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.09)]"><button className="block w-full text-left" onClick={() => onOpen(proposal)}><ProposalCover proposal={proposal} index={index} /></button><div className="p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="text-[13px] font-semibold">{proposal.project}</h3><p className="mt-1 text-[10px] text-[#8e8e93]">{proposal.client} · {proposal.code}</p></div><Status status={proposal.status} /></div><div className="mt-4 flex items-center gap-1 border-t border-black/[0.055] pt-3 sm:gap-2"><Button variant="ghost" size="sm" className="rounded-xl text-[11px]" onClick={() => onOpen(proposal)}><Eye /> Editar</Button><Button variant="ghost" size="sm" className="rounded-xl text-[11px]" onClick={() => copyLink(proposal)}><Link2 /> Copiar link</Button><Button aria-label={`Mais opções de ${proposal.project}`} onClick={() => onNotify('Mais opções estarão disponíveis na próxima versão')} variant="ghost" size="icon-sm" className="ml-auto rounded-full"><MoreHorizontal /></Button></div></div></article>)}<button onClick={onNew} className="grid min-h-[300px] place-items-center rounded-[22px] border border-dashed border-black/15 bg-white/50 p-6 text-center transition-all hover:-translate-y-1 hover:border-black/30 hover:bg-white hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)]"><span><span className="mx-auto grid size-11 place-items-center rounded-full bg-black text-white"><Plus /></span><strong className="mt-4 block text-sm">Nova proposta</strong><span className="mt-1 block text-[11px] text-[#8e8e93]">Criar com o agente de IA</span></span></button></div></>;
+  return <><PageTitle kicker="Sites comerciais" title={tab === 'proposals' ? 'Propostas' : 'Templates'} description={tab === 'proposals' ? 'One pages sofisticadas, interativas e prontas para compartilhar por link.' : 'Escolha uma referência, baixe o roteiro e comece sua proposta com a direção certa.'} actions={<Button onClick={onNew} className="rounded-xl bg-black px-4 text-white"><Sparkles /> Nova proposta</Button>} /><div className="mb-6 flex w-fit rounded-2xl border border-black/[0.07] bg-white p-1 shadow-sm"><button onClick={() => setTab('proposals')} className={`rounded-xl px-4 py-2 text-[11px] font-medium transition-colors ${tab === 'proposals' ? 'bg-black text-white shadow-sm' : 'text-[#6e6e73] hover:text-black'}`}>Propostas</button><button onClick={() => setTab('templates')} className={`rounded-xl px-4 py-2 text-[11px] font-medium transition-colors ${tab === 'templates' ? 'bg-black text-white shadow-sm' : 'text-[#6e6e73] hover:text-black'}`}>Templates <span className="ml-1 text-[9px] opacity-65">{proposalTemplates.length}</span></button></div>{tab === 'templates' ? <ProposalTemplateLibrary onUse={onUseTemplate} onNotify={onNotify} /> : <><div className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1">{(['Todas', 'Rascunhos', 'Enviadas', 'Aceitas'] as const).map((item) => <Filter key={item} active={filter === item} label={item === 'Todas' ? `Todas ${proposals.length}` : item} onClick={() => setFilter(item)} />)}</div><div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{filtered.map((proposal, index) => <article key={`${proposal.id}-${proposal.code}`} className="group overflow-hidden rounded-[22px] border border-black/[0.06] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.035)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(0,0,0,0.09)]"><button className="block w-full text-left" onClick={() => onOpen(proposal)}><ProposalCover proposal={proposal} index={index} /></button><div className="p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="text-[13px] font-semibold">{proposal.project}</h3><p className="mt-1 text-[10px] text-[#8e8e93]">{proposal.client} · {proposal.code}</p></div><Status status={proposal.status} /></div><div className="mt-4 flex items-center gap-1 border-t border-black/[0.055] pt-3 sm:gap-2"><Button variant="ghost" size="sm" className="rounded-xl text-[11px]" onClick={() => onOpen(proposal)}><Eye /> Editar</Button><Button variant="ghost" size="sm" className="rounded-xl text-[11px]" onClick={() => copyLink(proposal)}><Link2 /> Copiar link</Button><Button aria-label={`Mais opções de ${proposal.project}`} onClick={() => onNotify('Mais opções estarão disponíveis na próxima versão')} variant="ghost" size="icon-sm" className="ml-auto rounded-full"><MoreHorizontal /></Button></div></div></article>)}<button onClick={onNew} className="grid min-h-[300px] place-items-center rounded-[22px] border border-dashed border-black/15 bg-white/50 p-6 text-center transition-all hover:-translate-y-1 hover:border-black/30 hover:bg-white hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)]"><span><span className="mx-auto grid size-11 place-items-center rounded-full bg-black text-white"><Plus /></span><strong className="mt-4 block text-sm">Nova proposta</strong><span className="mt-1 block text-[11px] text-[#8e8e93]">Criar com o agente de IA</span></span></button></div></>}</>;
+}
+
+function ProposalTemplateLibrary({ onUse, onNotify }: { onUse: (template: string) => void; onNotify: (message: string) => void }) {
+  const [niche, setNiche] = useState<ProposalNiche | 'Todos'>('Todos');
+  const templates = niche === 'Todos' ? proposalTemplates : proposalTemplates.filter((template) => template.niche === niche);
+  function downloadTemplate(template: typeof proposalTemplates[number]) {
+    const content = `# ${template.name}\n\n## Direção\n${template.description}\n\n## Foco\n${template.focus}\n\n## Estrutura sugerida\n${template.structure.split(', ').map((item, index) => `${index + 1}. ${item}`).join('\n')}\n\n---\n\nUse este roteiro como referência. Substitua os campos acima pelo contexto, escopo, investimento e linguagem do seu cliente.\n`;
+    const file = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${template.id}-modelo.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+    onNotify(`${template.name} baixado como roteiro editável`);
+  }
+  return <section><div className="mb-6 flex flex-col gap-4 rounded-[26px] border border-[#0B6FE8]/10 bg-[linear-gradient(135deg,#F7FBFF,#FFFFFF)] p-5 shadow-[0_12px_32px_rgba(11,111,232,0.06)] sm:flex-row sm:items-end sm:justify-between"><div><span className="inline-flex items-center gap-2 rounded-full bg-[#EAF2FF] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#0757C8]"><LayoutTemplate className="size-3" /> Biblioteca de referências</span><h2 className="mt-4 text-xl font-semibold tracking-[-0.035em]">Comece com uma estrutura que já funciona.</h2><p className="mt-2 max-w-xl text-[11px] leading-5 text-[#60708B]">Baixe o roteiro para adaptar internamente ou aplique o template direto no agente para orientar a nova proposta.</p></div><div className="flex flex-wrap gap-2">{(['Todos', ...proposalNiches] as const).map((item) => <button key={item} onClick={() => setNiche(item)} className={`rounded-full px-3 py-2 text-[10px] font-medium transition-colors ${niche === item ? 'bg-[#0B6FE8] text-white shadow-[0_8px_18px_rgba(11,111,232,0.2)]' : 'bg-white text-[#60708B] ring-1 ring-black/[0.06] hover:text-[#11244A]'}`}>{item}</button>)}</div></div><div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{templates.map((template) => <article key={template.id} className="group overflow-hidden rounded-[24px] border border-black/[0.06] bg-white shadow-[0_8px_24px_rgba(25,38,34,0.045)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(11,111,232,0.12)]"><div className="aspect-[16/9] overflow-hidden"><ProposalThumbnail template={template.value} /></div><div className="p-4"><div className="flex items-start justify-between gap-3"><div><span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#0B6FE8]">{template.niche}</span><h3 className="mt-1 text-[14px] font-semibold">{template.name}</h3></div><div className="flex gap-1">{template.swatches.map((color) => <i key={color} className="size-3 rounded-full border border-black/10" style={{ backgroundColor: color }} />)}</div></div><p className="mt-2 min-h-8 text-[10px] leading-4 text-[#6E7C92]">{template.description}</p><p className="mt-3 line-clamp-2 text-[9px] leading-4 text-[#8E8E93]"><strong className="font-medium text-[#536381]">Estrutura:</strong> {template.structure}</p><div className="mt-4 grid grid-cols-2 gap-2 border-t border-black/[0.06] pt-3"><Button variant="outline" size="sm" className="h-9 rounded-xl border-black/10 text-[10px]" onClick={() => downloadTemplate(template)}><Download /> Baixar</Button><Button size="sm" className="h-9 rounded-xl bg-[#0B6FE8] text-[10px] text-white hover:bg-[#0757C8]" onClick={() => onUse(template.value)}><Sparkles /> Usar</Button></div></div></article>)}</div></section>;
 }
 
 function ProposalCover({ proposal }: { proposal: Proposal; index: number }) { return <div className="aspect-video overflow-hidden"><ProposalArtwork index={0} proposal={proposal} /></div>; }
@@ -1065,8 +1086,8 @@ async function extractBrandPalette(urls: string[]) {
 function colorDistance(first: string, second: string) { const a = [1, 3, 5].map((index) => Number.parseInt(first.slice(index, index + 2), 16)); const b = [1, 3, 5].map((index) => Number.parseInt(second.slice(index, index + 2), 16)); return Math.sqrt(a.reduce((total, channel, index) => total + (channel - b[index]) ** 2, 0)); }
 function derivedAccent(color: string) { const channels = [1, 3, 5].map((index) => Number.parseInt(color.slice(index, index + 2), 16)); const next = [channels[1], channels[2], channels[0]].map((channel, index) => Math.max(32, Math.min(232, index === 0 ? 255 - channel : channel + 48))); return `#${next.map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('')}`.toUpperCase(); }
 
-function AgentStudio({ profile, onSetup, onGenerated, onNotify }: { profile: AgentProfile; onSetup: () => void; onGenerated: (proposal: Proposal) => void; onNotify: (message: string) => void }) {
-  return <ProposalWorkflow profile={profile} onSetup={onSetup} onGenerated={onGenerated} onNotify={onNotify} initialTemplate={proposalTemplates[0].value} renderTemplates={(selected, onSelect) => <ProposalTemplatePicker selected={selected} onSelect={onSelect} brandColors={[profile.primaryColor, profile.secondaryColor]} />} />;
+function AgentStudio({ profile, initialTemplate, onSetup, onGenerated, onNotify }: { profile: AgentProfile; initialTemplate: string; onSetup: () => void; onGenerated: (proposal: Proposal) => void; onNotify: (message: string) => void }) {
+  return <ProposalWorkflow key={initialTemplate} profile={profile} onSetup={onSetup} onGenerated={onGenerated} onNotify={onNotify} initialTemplate={initialTemplate} renderTemplates={(selected, onSelect) => <ProposalTemplatePicker selected={selected} onSelect={onSelect} brandColors={[profile.primaryColor, profile.secondaryColor]} />} />;
 }
 
 function AgentMessage({ children }: { children: ReactNode }) { return <div className="flex max-w-[90%] gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-xl bg-black text-white"><Sparkles className="size-3.5" /></span><div className="rounded-[20px] rounded-tl-[6px] bg-[#f5f5f7] px-4 py-3 text-xs leading-5 text-[#3a3a3c]">{children}</div></div>; }
