@@ -175,7 +175,7 @@ export async function POST(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: configuration.STUDIO_AI_MODEL || 'gpt-5.5',
+          model: configuration.STUDIO_AI_MODEL || 'gpt-5-mini',
           instructions:
             instructions +
             (payload.intent === 'plan'
