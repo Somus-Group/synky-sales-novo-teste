@@ -33,6 +33,7 @@ import {
   Loader2,
   Maximize2,
   MessageSquare,
+  Mic,
   Minimize2,
   Monitor,
   MousePointer2,
@@ -69,6 +70,22 @@ type ContextDraft = {
   referenceUrl: string;
   templateId: StudioTemplateId;
 };
+type VoiceRecognitionResult = {
+  0: { transcript: string };
+  isFinal: boolean;
+};
+type VoiceRecognition = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: { results: ArrayLike<VoiceRecognitionResult> }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+};
+type VoiceRecognitionConstructor = new () => VoiceRecognition;
 const emptyContext: ContextDraft = {
   title: '',
   briefing: '',
@@ -135,6 +152,8 @@ export function StudioLab() {
   const [library, setLibrary] = useState(false);
   const [search, setSearch] = useState('');
   const [dragging, setDragging] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [listening, setListening] = useState(false);
   const gate = useRef(false);
   const request = useRef<AbortController | null>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
@@ -143,6 +162,7 @@ export function StudioLab() {
   const fileInput = useRef<HTMLInputElement>(null);
   const workspace = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const recognition = useRef<VoiceRecognition | null>(null);
   const dirty =
     !!project &&
     (draft.title !== project.title ||
@@ -178,7 +198,17 @@ export function StudioLab() {
       const id = sessionStorage.getItem('synky.studio.activeProject');
       if (id) void openProject(id);
     });
-    return () => request.current?.abort();
+    return () => {
+      request.current?.abort();
+      recognition.current?.abort();
+    };
+  }, []);
+  useEffect(() => {
+    const browser = window as typeof window & {
+      SpeechRecognition?: VoiceRecognitionConstructor;
+      webkitSpeechRecognition?: VoiceRecognitionConstructor;
+    };
+    setVoiceSupported(Boolean(browser.SpeechRecognition || browser.webkitSpeechRecognition));
   }, []);
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
@@ -549,6 +579,50 @@ export function StudioLab() {
     setPrompt(text);
     setTab('chat');
     composer.current?.focus();
+  }
+  function toggleVoiceInput() {
+    if (listening) {
+      recognition.current?.stop();
+      return;
+    }
+    const browser = window as typeof window & {
+      SpeechRecognition?: VoiceRecognitionConstructor;
+      webkitSpeechRecognition?: VoiceRecognitionConstructor;
+    };
+    const Recognition = browser.SpeechRecognition || browser.webkitSpeechRecognition;
+    if (!Recognition) {
+      setError('O ditado por voz não está disponível neste navegador. Use uma versão recente do Chrome, Edge ou Safari.');
+      return;
+    }
+    const initialPrompt = prompt.trimEnd();
+    const voice = new Recognition();
+    recognition.current = voice;
+    voice.lang = 'pt-BR';
+    voice.interimResults = true;
+    voice.continuous = false;
+    voice.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript || '')
+        .join('')
+        .trim();
+      setPrompt(initialPrompt ? `${initialPrompt} ${transcript}`.trim() : transcript);
+    };
+    voice.onerror = (event) => {
+      if (event.error === 'aborted') return;
+      setError(event.error === 'not-allowed' ? 'Permita o uso do microfone para ditar sua mensagem.' : 'Não foi possível transcrever o áudio. Tente novamente.');
+    };
+    voice.onend = () => {
+      setListening(false);
+      recognition.current = null;
+    };
+    try {
+      voice.start();
+      setError('');
+      setListening(true);
+      setNotice('Ouvindo você. Fale normalmente; a transcrição aparecerá no campo.');
+    } catch {
+      setError('Não foi possível iniciar o ditado. Tente novamente.');
+    }
   }
   return (
     <div className={styles.studio}>
@@ -1400,6 +1474,11 @@ export function StudioLab() {
                   )}
                 </div>
               )}
+              {listening && (
+                <p className={styles.voiceStatus} aria-live="polite">
+                  <span />Ouvindo… toque no microfone para parar.
+                </p>
+              )}
               <textarea
                 ref={composer}
                 aria-label="Pedido para a proposta"
@@ -1466,6 +1545,14 @@ export function StudioLab() {
                   onClick={() => setTab('context')}
                 >
                   <Link2 size={17} />
+                </IconButton>
+                <IconButton
+                  label={listening ? 'Parar ditado por voz' : voiceSupported ? 'Ditar mensagem por voz' : 'Ditado por voz indisponível neste navegador'}
+                  disabled={blocked || !voiceSupported}
+                  pressed={listening}
+                  onClick={toggleVoiceInput}
+                >
+                  {listening ? <Square size={15} /> : <Mic size={17} />}
                 </IconButton>
                 {busy && request.current ? (
                   <IconButton

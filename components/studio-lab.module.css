@@ -674,6 +674,27 @@
   flex-wrap: wrap;
   margin-bottom: 8px;
 }
+.voiceStatus {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 4px 8px;
+  color: #176fc8;
+  font-size: 11px;
+  font-weight: 600;
+}
+.voiceStatus > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #1b84ea;
+  box-shadow: 0 0 0 0 rgb(27 132 234 / 42%);
+  animation: voice-listening-pulse 1.4s ease-out infinite;
+}
+@keyframes voice-listening-pulse {
+  70% { box-shadow: 0 0 0 6px rgb(27 132 234 / 0%); }
+  100% { box-shadow: 0 0 0 0 rgb(27 132 234 / 0%); }
+}
 .attachmentTag,
 .referenceTag {
   display: inline-flex;
@@ -1090,6 +1111,9 @@
 :global(.theme-dark) .referenceTag {
   background: #2c3139;
   border-color: #3b444f;
+}
+:global(.theme-dark) .voiceStatus {
+  color: #8fc7ff;
 }
 :global(.theme-dark) .context input,
 :global(.theme-dark) .context textarea,
