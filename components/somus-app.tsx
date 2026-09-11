@@ -287,6 +287,15 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
     return '';
   }
 
+  async function renameCompany(id: string, name: string) {
+    const response = await fetch('/api/companies', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, name }) }).catch(() => null);
+    const payload = response ? await response.json().catch(() => ({})) as { company?: PipelineCompany; error?: string } : {};
+    if (!response?.ok || !payload.company) return payload.error || 'Não foi possível atualizar a empresa.';
+    setCompanies((items) => items.map((company) => company.id === id ? payload.company! : company));
+    notify(`Empresa renomeada para ${payload.company.name}`);
+    return '';
+  }
+
   async function savePipelineLabels(labels: PipelineLabels) {
     const response = await fetch('/api/pipeline-settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...pipelineRequestHeaders() }, body: JSON.stringify({ labels }) }).catch(() => null);
     const payload = response ? await response.json().catch(() => ({})) as { labels?: PipelineLabels; error?: string } : {};
@@ -470,7 +479,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
       </div>
 
       <OpportunityDialog open={opportunityDialog} onOpenChange={setOpportunityDialog} opportunity={editingOpportunity} defaultStage={newOpportunityStage} labels={pipelineLabels} saving={opportunitySaving} error={opportunityError} onSave={saveOpportunity} onDelete={deleteOpportunity} />
-      <CompanyDialog open={companyDialog} onOpenChange={setCompanyDialog} companies={companies} activeCompanyId={activeCompanyId} onSelect={setActiveCompanyId} onCreate={createCompany} />
+      <CompanyDialog open={companyDialog} onOpenChange={setCompanyDialog} companies={companies} activeCompanyId={activeCompanyId} onSelect={setActiveCompanyId} onCreate={createCompany} onRename={renameCompany} />
       <PipelineLabelDialog open={Boolean(pipelineLabelEdit)} onOpenChange={(open) => { if (!open) setPipelineLabelEdit(null); }} label={pipelineLabelEdit?.label || ''} value={pipelineLabelEdit ? getPipelineLabel(pipelineLabels, pipelineLabelEdit.key) : ''} onSave={saveSinglePipelineLabel} />
       <ClientDialog open={clientDialog} onOpenChange={setClientDialog} client={editingClient} saving={clientSaving} error={clientError} onSave={saveClient} onDelete={deleteClient} />
       <TaskDialog open={taskDialog} onOpenChange={setTaskDialog} task={editingTask} defaultStatus={newTaskStatus} saving={taskSaving} error={taskError} members={members} userName={userName} onSave={saveTask} onDelete={deleteTask} />
@@ -556,7 +565,7 @@ function Pipeline({ opportunities, labels, companies, activeCompanyId, companyNa
   const weightedForecast = filtered.reduce((sum, item) => sum + item.value * weights[item.stage], 0);
 
   return <>
-    <PageTitle kicker={`CRM inteligente · ${companyName}`} title={<span className="inline-flex items-center gap-2">{labels.title}<LabelEditButton label="Editar nome do pipeline" onClick={() => onEditLabel('title', 'Nome do pipeline')} /></span>} description={labels.description} actions={<><div className="flex w-full min-w-0 items-center gap-2 sm:w-auto"><Building2 className="size-4 shrink-0 text-[#0B6FE8]" /><AppSelect value={activeCompanyId} onValueChange={onSelectCompany} ariaLabel="Empresa exibida no pipeline" className="min-w-0 flex-1 sm:w-[190px]" options={companies.map((company) => ({ value: company.id, label: company.name }))} /><Button onClick={onCompanies} variant="outline" size="icon" className="shrink-0 rounded-xl border-[#0B6FE8]/20 bg-white text-[#0B6FE8]" aria-label="Adicionar empresa"><Plus /></Button></div><Button onClick={() => onNew()} className="flex-1 rounded-xl bg-[#0B6FE8] px-4 text-white shadow-[0_8px_18px_rgba(11,111,232,0.18)] hover:bg-[#0757C8] sm:flex-none"><Plus /> {labels.newOpportunity}</Button><LabelEditButton label="Editar nome do botão principal" onClick={() => onEditLabel('newOpportunity', 'Nome do botão principal')} /></>} />
+    <PageTitle kicker={`CRM inteligente · ${companyName}`} title={<span className="inline-flex items-center gap-2">{labels.title}<LabelEditButton label="Editar nome do pipeline" onClick={() => onEditLabel('title', 'Nome do pipeline')} /></span>} description={labels.description} actions={<><div className="flex w-full min-w-0 items-center gap-2 sm:w-auto"><div className="min-w-0 flex-1 sm:w-[220px]"><span className="mb-1 block pl-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#6E87A3]">Empresa</span><div className="flex items-center gap-2"><Building2 className="size-4 shrink-0 text-[#0B6FE8]" /><AppSelect value={activeCompanyId} onValueChange={onSelectCompany} ariaLabel="Empresa exibida no pipeline" className="min-w-0 flex-1" options={companies.map((company) => ({ value: company.id, label: company.name }))} /></div></div><Button onClick={onCompanies} variant="outline" className="mt-4 shrink-0 rounded-xl border-[#0B6FE8]/20 bg-white px-3 text-[#0B6FE8] hover:bg-[#F2F7FF]" aria-label="Gerenciar empresas"><Pencil className="size-3.5" /><span className="hidden sm:inline">Gerenciar</span></Button></div><Button onClick={() => onNew()} className="flex-1 rounded-xl bg-[#0B6FE8] px-4 text-white shadow-[0_8px_18px_rgba(11,111,232,0.18)] hover:bg-[#0757C8] sm:flex-none"><Plus /> {labels.newOpportunity}</Button><LabelEditButton label="Editar nome do botão principal" onClick={() => onEditLabel('newOpportunity', 'Nome do botão principal')} /></>} />
     <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <PipelineMetric color="violet" label={labels.metrics.pipeline} value={money.format(pipelineValue)} detail={`${filtered.length} oportunidades`} onEdit={() => onEditLabel('metrics.pipeline', 'Nome do indicador')} />
       <PipelineMetric color="green" label={labels.metrics.forecast} value={money.format(weightedForecast)} detail="Probabilidade por etapa" onEdit={() => onEditLabel('metrics.forecast', 'Nome do indicador')} />
@@ -597,12 +606,15 @@ function PipelineMetric({ color, label, value, detail, onEdit }: { color: 'viole
   return <article className={`rounded-[22px] p-5 ${palette}`}><div className="flex items-center gap-1"><p className="text-[9px] font-semibold uppercase tracking-[0.1em] opacity-65">{label}</p><LabelEditButton label={`Editar nome de ${label}`} onClick={onEdit} /></div><strong className="mt-3 block text-[25px] font-semibold tracking-[-0.045em] text-[#1D1D1F]">{value}</strong><p className="mt-3 text-[9px] text-black/40">{detail}</p></article>;
 }
 
-function CompanyDialog({ open, onOpenChange, companies, activeCompanyId, onSelect, onCreate }: { open: boolean; onOpenChange: (open: boolean) => void; companies: PipelineCompany[]; activeCompanyId: string; onSelect: (id: string) => void; onCreate: (name: string) => Promise<string> }) {
+function CompanyDialog({ open, onOpenChange, companies, activeCompanyId, onSelect, onCreate, onRename }: { open: boolean; onOpenChange: (open: boolean) => void; companies: PipelineCompany[]; activeCompanyId: string; onSelect: (id: string) => void; onCreate: (name: string) => Promise<string>; onRename: (id: string, name: string) => Promise<string> }) {
   const [name, setName] = useState('');
+  const [renameName, setRenameName] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const activeCompany = companies.find((company) => company.id === activeCompanyId);
 
-  useEffect(() => { if (open) { setName(''); setError(''); setSaving(false); } }, [open]);
+  useEffect(() => { if (open) { setName(''); setRenameName(activeCompany?.name || ''); setError(''); setSaving(false); setRenaming(false); } }, [activeCompany?.name, open]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

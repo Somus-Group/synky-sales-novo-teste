@@ -141,3 +141,19 @@ export async function createPipelineCompanyForUser(user: ChatGPTUser, name: stri
     .bind(company.id, workspaceId, company.name, company.createdAt).run();
   return company;
 }
+
+export async function renamePipelineCompanyForUser(user: ChatGPTUser, companyId: string, name: string) {
+  const workspaceId = await getWorkspaceForUser(user);
+  await ensureDefaultPipelineCompany(workspaceId);
+  const normalizedName = name.trim().replace(/\s+/g, ' ').slice(0, 80);
+  if (!normalizedName) throw new Error('Informe o nome da empresa.');
+  const current = await getD1().prepare('SELECT id, name, created_at AS createdAt FROM companies WHERE id = ? AND workspace_id = ? LIMIT 1')
+    .bind(companyId, workspaceId).first<PipelineCompany>();
+  if (!current) throw new Error('Empresa não encontrada.');
+  const existing = await getD1().prepare('SELECT id FROM companies WHERE workspace_id = ? AND lower(name) = lower(?) AND id <> ? LIMIT 1')
+    .bind(workspaceId, normalizedName, companyId).first<{ id: string }>();
+  if (existing) throw new Error('Já existe uma empresa com este nome.');
+  await getD1().prepare('UPDATE companies SET name = ? WHERE id = ? AND workspace_id = ?')
+    .bind(normalizedName, companyId, workspaceId).run();
+  return { ...current, name: normalizedName };
+}
