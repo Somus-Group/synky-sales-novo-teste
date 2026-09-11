@@ -22,6 +22,7 @@ import {
   FlaskConical,
   FolderOpen,
   History,
+  Link2,
   Loader2,
   Maximize2,
   MessageSquare,
@@ -75,6 +76,8 @@ export function StudioLab() {
   const [library, setLibrary] = useState(false);
   const [imageAttachment, setImageAttachment] = useState<File | null>(null);
   const [draggingImage, setDraggingImage] = useState(false);
+  const [presentationLink, setPresentationLink] = useState('');
+  const [showPresentationLink, setShowPresentationLink] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [pendingPrompt, setPendingPrompt] = useState('');
   const [tab, setTab] = useState<'chat' | 'context' | 'history'>('chat');
@@ -177,6 +180,8 @@ export function StudioLab() {
     setMobilePane('chat');
     setLibrary(false);
     setImageAttachment(null);
+    setPresentationLink('');
+    setShowPresentationLink(false);
   }
   function choosePrompt(nextPrompt: string) {
     if (busy) return;
@@ -243,6 +248,7 @@ export function StudioLab() {
     setHistorical(null);
     const text = prompt.trim();
     const attachment = imageAttachment;
+    const reference = presentationLink.trim();
     setPendingPrompt(text);
     setPrompt('');
     setImageAttachment(null);
@@ -253,6 +259,7 @@ export function StudioLab() {
         const body = new FormData();
         body.set('mode', 'free');
         body.set('title', text.slice(0, 72));
+        body.set('referenceUrl', reference);
         const created = await api<ProjectResponse>('/api/studio', {
           method: 'POST',
           signal: request.current.signal,
@@ -261,6 +268,8 @@ export function StudioLab() {
         accept(created);
         activeProject = created.project;
         setTab('chat');
+        setPresentationLink('');
+        setShowPresentationLink(false);
       }
       accept(
         await api<ProjectResponse>(`/api/studio/${activeProject.id}/message`, {
@@ -490,6 +499,38 @@ export function StudioLab() {
                     </button>
                   </span>
                 )}
+                {showPresentationLink && (
+                  <label className={styles.presentationLink}>
+                    <span>
+                      <Link2 size={14} />
+                      Apresentação de referência
+                      <em>Opcional</em>
+                    </span>
+                    <div>
+                      <input
+                        type="url"
+                        value={presentationLink}
+                        onChange={(event) =>
+                          setPresentationLink(event.target.value)
+                        }
+                        placeholder="Cole o link da apresentação"
+                        disabled={busy}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPresentationLink('');
+                          setShowPresentationLink(false);
+                        }}
+                        aria-label="Remover link da apresentação"
+                        title="Remover link"
+                        disabled={busy}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </label>
+                )}
                 <textarea
                   ref={composer}
                   aria-label="Pedido para criar uma proposta"
@@ -511,7 +552,17 @@ export function StudioLab() {
                   >
                     <Plus size={18} />
                   </button>
-                  <span>Arraste uma imagem ou clique em +</span>
+                  <button
+                    type="button"
+                    className={`${styles.addImage} ${showPresentationLink ? styles.linkActive : ''}`}
+                    onClick={() => setShowPresentationLink((visible) => !visible)}
+                    disabled={busy}
+                    aria-label="Adicionar link de apresentação"
+                    title="Adicionar link de apresentação"
+                  >
+                    <Link2 size={16} />
+                  </button>
+                  <span>Imagem, apresentação ou ideia</span>
                   <button
                     type="submit"
                     className={styles.send}
@@ -721,7 +772,7 @@ export function StudioLab() {
                     )}
                     {project.referenceUrl && (
                       <>
-                        <dt>Link de referência</dt>
+                        <dt>Apresentação de referência</dt>
                         <dd>
                           <a
                             href={project.referenceUrl}

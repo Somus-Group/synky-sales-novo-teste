@@ -1886,6 +1886,67 @@
   color: #154c88;
   background: #ddeeff;
 }
+.presentationLink {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 10px;
+  padding: 9px 10px;
+  border: 1px solid #d7e6f8;
+  border-radius: 9px;
+  background: #f7fbff;
+}
+.presentationLink > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #365c88;
+  font-size: 11px;
+  font-weight: 700;
+}
+.presentationLink em {
+  margin-left: auto;
+  color: #7d90a8;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+}
+.presentationLink > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.presentationLink input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 0;
+  border: 0;
+  outline: none;
+  color: #243b62;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+}
+.presentationLink input::placeholder {
+  color: #94a5ba;
+}
+.presentationLink button {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 6px;
+  color: #6681a2;
+}
+.presentationLink button:hover:not(:disabled) {
+  color: #154c88;
+  background: #e8f2ff;
+}
+.linkActive {
+  border-color: #78a8e6;
+  color: #086bf2;
+  background: #eef6ff;
+}
 .messageAttachment {
   width: fit-content;
   margin-top: 10px;
