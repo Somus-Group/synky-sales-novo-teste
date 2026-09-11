@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   title: 'Synky Sales · CRM e Propostas',
   description: 'Gestão comercial e propostas para escritórios de arquitetura.',
   icons: {
-    icon: [{ url: '/favicon.svg?v=3', type: 'image/svg+xml' }],
-    shortcut: '/favicon.svg?v=3',
-    apple: '/favicon.svg?v=3',
+    icon: [{ url: '/favicon.svg?v=4', type: 'image/svg+xml', sizes: 'any' }],
+    shortcut: '/favicon.svg?v=4',
+    apple: '/favicon.svg?v=4',
   },
   openGraph: {
     title: 'Synky Sales · CRM e Propostas',

@@ -1,10 +1,5 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="17" fill="white"/>
-  <g stroke="#0B6FE8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 17H42C46 17 49 20 49 24C49 28 46 31 42 31H24" stroke-width="6"/>
-    <path d="M12 26H39" stroke-width="6"/>
-    <path d="M12 35H40C45 35 49 39 49 44C49 49 45 53 40 53H12" stroke-width="6"/>
-    <path d="M12 44H37" stroke-width="6"/>
-    <path d="M21 17V26M30 17V26M21 35V44M30 35V44" stroke-width="3.5"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="4 0 36 36">
+  <title>Synky Sales</title>
+  <!-- Original user-supplied Synky mark; the square viewport trims only outer whitespace. -->
+  <image width="44" height="36" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACwAAAAkCAYAAADy19hsAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAR4SURBVFhH7ZVbbBRVGMd/58zet9uWtgEFhNQQsBEiIEExBGIFCaCAJnh5ECJqBI2AkmA0MRHDgwoSfSABSQ0S4QEfSBrwpRhCLErVSgzGEC0pKoZqYtu13cvszM7nw0wvLJdOt6yBpL+XzZ4ze/Lb7/y/b5SdF+EWQhcu3OyMCpeaUeFSc8sJq1KMNb8nKlW4MjQ3TFgEcrbwb0ZI58DOX/9YpRQKYWK1QdAo3L02IxYWgZ6scPjrLGfa87S221z8x8Fx3GNFQWEhlVfaSdUGX7xZzph44RPXZkTCIvBX0mHFu0kudjpopaiIwe1Vmoqoge0IQQ0COOJ+akBECBiKVx+Jcf/UANq/b/HCIvBdm8X6fb30ZBwevy/Cc/VRxldpznfk6TVdQ8GtsCBepVW/uKFh5p0G4YB/46KERSBtCvXvdNPRladhQzlzpwR5vzHD0VaTdNbBFlxbD6UGf3XzO65Sc+yNCsbENSLSH5XrUZSwlYdth1N8ejLD9qfLWFAX4uWGXs7+ZjG7NsiEKo2IW9WB08W1dkBpN8er5oZZNCOAoRV5x634UBQl/OulPKt2JJl6m8HeFxO8tj/Fl2dNdqwpZ9nsAGURzcfHTTq68uA1nYgbDjcQrnAwAJuXR0lEFd0podJH8xUl/Pk3JlsOpNi4LMb8aQFW70qydmGEbU/GEIFXPklxtNX0MuEqKgYGdN/Vz6wNcnBjgkRUkbWESLAEwiKw62iGnY1pDmys4MRPOY60mDSsTzBvWgABms9ZZEzxXgwKR9yGU2qg4UTBXeMN7qjWbr69xAyFj9RcyaQazdJZEaaM09SUa5bOCjOxxp3+WsGCuiBLZoZ4+J4QD80IEg0ZxCOaB+8OYFoweaxm8Ywgk2pcWbym9MOwKzxcUiaseC9JVVzR8FKC6Zs7ef2xGBuWRIc1f/vwJSwCh5pNjrRYgINSCkfAcdw9d8b2dRdEw/DRs2WMrVCcabdZs7uHObVBtq6Msnh7krdXx1hXH7lM2MoLQWPof+A7En92Ci1tOVrO25xus/j2fI7W9hytF3L8cMHm+3aL1nabH3+3iIY0iSjkbDhw0qSrx+GFRWEONpsEDKgp11e8rk//YhesXB3fFU6mhe5U36ODf+KVVSlEBEMrKmPuDWzY18Opcxbr6qM8vyjC2t09dPc6NL1VyZi4uiy3N3RKOAL7T2T57Kts3xR1JS/zVog4KDRWHi512ZgWPPVAmK2rYuxtyrKnKcOmZXG2rowM+uHw8BUJTw+l3aoo5c1X5W72r2uF1hCPKNYujHFoU4ItK2LsaMyw53iGR+8Ns2l58bL4rbAIdCQd/u52CreuivJu5Y9Ohw8aM7R12MyvC7LzmTImVA2MsmLwJewIfHgsy96mtCfjvRTcQvej+u8C7DykTZhQbbCuPsIT80JUJ3xd6HXxJSwCJ3+2OHXOAgQRV0wNTLJ+lFI4jlBTYTCnNsD0yQFCAUGPpKyD8CWMJ+3rwUEotxdvKL6FbxZGHqr/mVHhUjMqXGpGhUvNf9C19KshtPBZAAAAAElFTkSuQmCC" />
 </svg>
