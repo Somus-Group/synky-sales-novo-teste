@@ -388,6 +388,15 @@ textarea:focus-visible {
   .brand-logo {
     min-width: 148px;
   }
+  .sales-sidebar:not(.sidebar-collapsed) .brand-lockup {
+    justify-content: center;
+  }
+  .sales-sidebar:not(.sidebar-collapsed) .brand-logo {
+    width: 164px !important;
+    min-width: 164px;
+    height: 42px !important;
+    object-position: center;
+  }
   .sidebar-collapse-toggle {
     flex: 0 0 auto;
     transition: transform 250ms ease, background-color 180ms ease;
