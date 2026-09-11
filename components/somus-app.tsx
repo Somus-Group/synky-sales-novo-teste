@@ -430,16 +430,19 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
         </div>
 
         <nav className="mt-3" aria-label="Menu principal">
-          <p className="sidebar-section-label sidebar-collapse-text px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]">Espaço de trabalho</p>
+          <p className="sidebar-section-label sidebar-collapse-text px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]">Principal</p>
           <div className="space-y-1">
           <Nav collapsed={sidebarCollapsed} active={view === 'overview'} icon={LayoutDashboard} label="Visão geral" onClick={() => setView('overview')} />
+          <p className="sidebar-group-label sidebar-collapse-text">Criação</p>
           <Nav collapsed={sidebarCollapsed} active={view === 'agent'} icon={Sparkles} label="Agente de propostas" onClick={openAgent} />
           <Nav collapsed={sidebarCollapsed} active={view === 'agent_setup'} icon={SlidersHorizontal} label="Configurar agente" onClick={() => setView('agent_setup')} />
           <Nav collapsed={sidebarCollapsed} active={view === 'studio'} icon={FlaskConical} label="Estúdio Lab" onClick={() => { setView('studio'); setMobileNav(false); }} />
+          <p className="sidebar-group-label sidebar-collapse-text">Comercial</p>
           <Nav collapsed={sidebarCollapsed} active={view === 'pipeline'} icon={BarChart3} label="Pipeline" badge={opportunities.length} onClick={() => setView('pipeline')} />
           <Nav collapsed={sidebarCollapsed} active={view === 'tasks'} icon={ListTodo} label="Ações" badge={tasks.filter((task) => task.status !== 'Concluída').length} onClick={() => setView('tasks')} />
           <Nav collapsed={sidebarCollapsed} active={view === 'clients'} icon={Users2} label="Clientes" onClick={() => setView('clients')} />
           <Nav collapsed={sidebarCollapsed} active={view === 'proposals'} icon={FileText} label="Propostas" badge={proposals.length} onClick={() => setView('proposals')} />
+          <p className="sidebar-group-label sidebar-collapse-text">Gestão</p>
           <Nav collapsed={sidebarCollapsed} active={view === 'team'} icon={UserPlus} label="Equipe" badge={members.length} onClick={() => setView('team')} />
           </div>
         </nav>
@@ -489,7 +492,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
 }
 
 function Nav({ active, icon: Icon, label, badge, onClick, collapsed }: { active: boolean; icon: typeof LayoutDashboard; label: string; badge?: number; onClick?: () => void; collapsed: boolean }) {
-  return <button onClick={onClick} title={collapsed ? label : undefined} className={`nav-item flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-[13px] font-medium transition-all ${active ? 'nav-item-active' : ''}`}><span className="nav-item-icon grid size-7 shrink-0 place-items-center rounded-xl"><Icon className="size-[16px]" strokeWidth={1.9} /></span><span className="sidebar-collapse-text min-w-0 flex-1 truncate">{label}</span>{badge !== undefined && <span className="nav-item-badge sidebar-collapse-text rounded-full px-2 py-0.5 text-[10px] font-semibold">{badge}</span>}</button>;
+  return <button onClick={onClick} aria-current={active ? 'page' : undefined} aria-label={label} title={collapsed ? label : undefined} className={`nav-item flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-[13px] font-medium transition-all ${active ? 'nav-item-active' : ''}`}><span className="nav-item-icon grid size-7 shrink-0 place-items-center rounded-xl"><Icon className="size-[16px]" strokeWidth={1.9} /></span><span className="sidebar-collapse-text min-w-0 flex-1 truncate">{label}</span>{badge !== undefined && <span className="nav-item-badge sidebar-collapse-text rounded-full px-2 py-0.5 text-[10px] font-semibold">{badge}</span>}</button>;
 }
 
 function PageTitle({ kicker, title, description, actions }: { kicker?: string; title: ReactNode; description: string; actions?: ReactNode }) {
