@@ -71,6 +71,13 @@
       "when": 1789132548027,
       "tag": "0009_real_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789159162801,
+      "tag": "0010_glossy_forge",
+      "breakpoints": true
     }
   ]
 }

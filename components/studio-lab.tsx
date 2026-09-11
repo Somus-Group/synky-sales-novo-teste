@@ -55,6 +55,7 @@ import {
   type StudioVersion,
   type StudioVisualEdit,
 } from '@/lib/studio';
+import { studioTemplates, type StudioTemplateId } from '@/lib/studio-templates';
 import {
   StudioCanvas,
   type StudioSelection,
@@ -62,11 +63,17 @@ import {
 } from './studio-canvas';
 import styles from './studio-lab.module.css';
 type ProjectResponse = { project: StudioProject; versions: StudioVersion[] };
-type ContextDraft = { title: string; briefing: string; referenceUrl: string };
+type ContextDraft = {
+  title: string;
+  briefing: string;
+  referenceUrl: string;
+  templateId: StudioTemplateId;
+};
 const emptyContext: ContextDraft = {
   title: '',
   briefing: '',
   referenceUrl: '',
+  templateId: 'commercial',
 };
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
@@ -140,7 +147,8 @@ export function StudioLab() {
     !!project &&
     (draft.title !== project.title ||
       draft.briefing !== project.briefing ||
-      draft.referenceUrl !== project.referenceUrl);
+      draft.referenceUrl !== project.referenceUrl ||
+      draft.templateId !== project.templateId);
   const blocked = busy || loading || !!project?.busy;
   const html = historical?.html ?? project?.html ?? '';
   const review = [...(project?.messages || [])]
@@ -209,6 +217,7 @@ export function StudioLab() {
       title: result.project.title,
       briefing: result.project.briefing,
       referenceUrl: result.project.referenceUrl,
+      templateId: result.project.templateId,
     });
     setSelection(null);
     setVisualEdit({});
@@ -321,6 +330,7 @@ export function StudioLab() {
     );
     body.set('briefing', draft.briefing);
     body.set('referenceUrl', draft.referenceUrl);
+    body.set('templateId', draft.templateId);
     if (briefFile) body.set('file', briefFile);
     const created = await api<ProjectResponse>('/api/studio', {
       method: 'POST',
@@ -881,6 +891,35 @@ export function StudioLab() {
                   <ImagePlus size={18} />
                 </IconButton>
               </div>
+              {!project && (
+                <fieldset className={styles.templatePicker}>
+                  <legend>Template da proposta</legend>
+                  <div>
+                    {studioTemplates.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        aria-pressed={draft.templateId === template.id}
+                        disabled={blocked}
+                        onClick={() =>
+                          setDraft({ ...draft, templateId: template.id })
+                        }
+                      >
+                        <span
+                          className={styles.templateSwatch}
+                          style={
+                            { '--template-accent': template.accent } as CSSProperties
+                          }
+                        />
+                        <span>
+                          <strong>{template.name}</strong>
+                          <small>{template.description}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               <label>
                 Nome do projeto
                 <input
@@ -988,6 +1027,7 @@ export function StudioLab() {
                         title: project!.title,
                         briefing: project!.briefing,
                         referenceUrl: project!.referenceUrl,
+                        templateId: project!.templateId,
                       });
                       setError('');
                     }}

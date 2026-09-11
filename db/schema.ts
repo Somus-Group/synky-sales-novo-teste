@@ -202,6 +202,7 @@ export const studioProjects = sqliteTable('studio_projects', {
   workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
   title: text('title').notNull(),
   mode: text('mode').notNull(),
+  templateId: text('template_id').notNull().default('none'),
   briefing: text('briefing').notNull().default(''),
   referenceUrl: text('reference_url').notNull().default(''),
   fileKey: text('file_key').notNull().default(''),
