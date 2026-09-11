@@ -705,6 +705,15 @@ export function StudioLab() {
                       <FileText size={17} />
                       Com briefing
                     </button>
+                    {!project && (
+                      <button
+                        type="button"
+                        onClick={() => setTab('context')}
+                      >
+                        <PanelsTopLeft size={17} />
+                        Escolher template
+                      </button>
+                    )}
                   </div>
                   <div className={styles.suggestions}>
                     {[

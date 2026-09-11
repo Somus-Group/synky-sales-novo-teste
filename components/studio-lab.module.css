@@ -1757,6 +1757,15 @@
   font-size: 13px;
   padding: 12px 7px;
 }
+.studio .starterModes {
+  flex-wrap: wrap;
+}
+.studio .starterModes button {
+  min-width: calc(50% - 4px);
+}
+.studio .starterModes button:last-child {
+  flex-basis: 100%;
+}
 .studio .suggestions button {
   color: var(--muted);
 }

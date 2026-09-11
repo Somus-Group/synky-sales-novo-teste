@@ -90,7 +90,14 @@ export async function POST(
         'SELECT business_name, description, services_json, primary_color, secondary_color, tone, email, phone, website, legal_name FROM agent_profiles WHERE workspace_id = ?',
       )
       .bind(workspaceId)
-      .first();
+      .first<{
+        business_name?: string;
+        description?: string;
+        tone?: string;
+        website?: string;
+        email?: string;
+        phone?: string;
+      }>();
     const reference = referenceUrl(project.referenceUrl);
     const referenceDocument = reference
       ? await readStudioReference(reference, signal)
@@ -132,7 +139,10 @@ export async function POST(
         text: JSON.stringify({
           project: { title: project.title, mode: project.mode },
           supplier: profile || null,
-          briefing: project.briefing,
+          briefing:
+            project.briefing.length > 16000
+              ? `${project.briefing.slice(0, 12000)}\n\n[trecho final]\n${project.briefing.slice(-4000)}`
+              : project.briefing,
           referenceUrl: reference,
           referenceDocument: referenceDocument ? referenceContext : null,
           mediaCatalog: media.assets.map(
@@ -191,9 +201,9 @@ export async function POST(
             ? {
                 title: referenceDocument.title,
                 method: referenceDocument.method,
-                structure: referenceDocument.structure.slice(0, 2400),
-                styles: referenceDocument.styles.slice(0, 1400),
-                text: referenceDocument.text.slice(0, 6000),
+                structure: referenceDocument.structure.slice(0, 1200),
+                styles: referenceDocument.styles.slice(0, 900),
+                text: referenceDocument.text.slice(0, 3500),
               }
             : null,
         }),
@@ -246,7 +256,7 @@ export async function POST(
             },
           ],
           reasoning: { effort: 'low' },
-          max_output_tokens: usingTemplate ? 3500 : 8000,
+          max_output_tokens: usingTemplate ? 2200 : 8000,
           store: false,
           text: {
             format: {
@@ -339,7 +349,7 @@ export async function POST(
           html: renderStudioTemplate(
             project.templateId,
             templateContent,
-            profile as { business_name?: string | null } | undefined,
+            profile,
             preferredLogo?.id,
           ),
           reference_status: templateContent.referenceStatus,
