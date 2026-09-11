@@ -217,13 +217,49 @@ export async function POST(
             .join('')}`,
         }),
       });
-      if (!response.ok)
+      if (!response.ok) {
+        const failure = (await response.json().catch(() => null)) as {
+          error?: { code?: string; type?: string; message?: string };
+        } | null;
+        const code = failure?.error?.code || '';
+        const billingMessages: Record<string, string> = {
+          credit_balance_exhausted:
+            'O saldo da API da OpenAI acabou. Adicione créditos na conta da API para continuar. Sua proposta está salva.',
+          organization_spend_limit_exceeded:
+            'A conta da API atingiu o limite de gastos da organização. Revise esse limite na OpenAI. Sua proposta está salva.',
+          project_spend_limit_exceeded:
+            'O projeto da API atingiu o limite de gastos. Revise esse limite na OpenAI. Sua proposta está salva.',
+          organization_usage_limit_exceeded:
+            'A conta da API atingiu o limite de uso autorizado pela OpenAI. Revise os limites da conta. Sua proposta está salva.',
+          insufficient_quota:
+            'A API da OpenAI está sem cota disponível. Verifique o saldo e os limites da conta da API. Sua proposta está salva.',
+        };
+        const billingMessage =
+          billingMessages[code] ||
+          (failure?.error?.type === 'insufficient_quota'
+            ? billingMessages.insufficient_quota
+            : '');
+        if (billingMessage)
+          throw new StudioError(billingMessage, 503, 'ai_quota_exceeded');
+        if (response.status === 429) {
+          const delay = Number(response.headers.get('retry-after'));
+          const wait =
+            Number.isFinite(delay) && delay > 0
+              ? `Aguarde ${Math.ceil(delay)} segundos`
+              : 'Aguarde um minuto';
+          throw new StudioError(
+            /request too large/i.test(failure?.error?.message || '')
+              ? 'O conteúdo ultrapassou o limite por pedido da conta da API. Use um modelo de referência menor ou revise o limite de tokens na OpenAI. Sua proposta está salva.'
+              : `A IA atingiu um limite temporário de solicitações. ${wait} e tente novamente. Sua proposta está salva.`,
+            429,
+            'ai_rate_limited',
+          );
+        }
         throw new StudioError(
-          response.status === 429
-            ? 'A IA atingiu um limite de uso. Aguarde um pouco e tente novamente.'
-            : 'A IA não conseguiu concluir o pedido. Verifique a conexão e o acesso ao modelo.',
+          'A IA não conseguiu concluir o pedido. Verifique a conexão e o acesso ao modelo.',
           502,
         );
+      }
       const result = (await response.json()) as ModelResult;
       if (result.status !== 'completed')
         throw new StudioError(

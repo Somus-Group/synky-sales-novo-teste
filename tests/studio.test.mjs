@@ -530,6 +530,59 @@ test('missing logo triggers one repair; a complete version stores review results
   }
 });
 
+test('distinguishes API billing and temporary rate limits without retrying paid requests or losing data', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  try {
+    const { project } = await (await f.create()).json();
+    for (const code of [
+      'insufficient_quota',
+      'credit_balance_exhausted',
+      'project_spend_limit_exceeded',
+      'rate_limit_exceeded',
+    ]) {
+      let calls = 0;
+      globalThis.fetch = async () => {
+        calls++;
+        return Response.json(
+          {
+            error: {
+              code,
+              type:
+                code === 'rate_limit_exceeded'
+                  ? 'rate_limit_error'
+                  : 'insufficient_quota',
+            },
+          },
+          { status: 429, headers: { 'retry-after': '65' } },
+        );
+      };
+      const response = await f.messages.POST(
+        request({ message: 'Crie a proposta.', revision: 0 }),
+        context(project.id),
+      );
+      const error = await response.json();
+      assert.equal(calls, 1);
+      assert.equal(response.status, code === 'rate_limit_exceeded' ? 429 : 503);
+      assert.equal(
+        error.code,
+        code === 'rate_limit_exceeded'
+          ? 'ai_rate_limited'
+          : 'ai_quota_exceeded',
+      );
+      if (code === 'rate_limit_exceeded')
+        assert.match(error.error, /65 segundos/);
+      else assert.doesNotMatch(error.error, /Aguarde/);
+      const row = await f.database.studioProject(project.id, 'one');
+      assert.equal(row.revision, 0);
+      assert.equal(row.lockToken, '');
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
 test('PDF and actual reference content reach the model without relying on web search', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
