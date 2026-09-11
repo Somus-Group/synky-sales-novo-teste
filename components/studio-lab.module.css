@@ -779,6 +779,22 @@
   inset: 0;
   z-index: 70;
 }
+.expanded .previewStage {
+  padding: 0;
+}
+.expanded .previewFrame,
+.expanded .emptyPreview {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.expanded .previewFooter {
+  display: none;
+}
 .restoreBar {
   display: flex;
   flex-wrap: wrap;
