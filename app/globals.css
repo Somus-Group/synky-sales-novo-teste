@@ -431,6 +431,11 @@ textarea:focus-visible {
     gap: 0;
     padding-inline: 0;
   }
+  .sales-sidebar.sidebar-collapsed .nav-item > .sidebar-collapse-text {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
   .sales-sidebar.sidebar-collapsed nav > .space-y-1 {
     display: grid;
     justify-items: center;
