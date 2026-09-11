@@ -436,7 +436,19 @@ textarea:focus-visible {
     gap: 6px;
   }
   .sales-sidebar.sidebar-collapsed .nav-item-icon {
+    position: relative;
+    display: grid !important;
+    place-items: center !important;
+    width: 28px;
+    height: 28px;
     transition: transform 220ms ease, background-color 180ms ease;
+  }
+  .sales-sidebar.sidebar-collapsed .nav-item-icon > svg {
+    position: absolute;
+    inset: 0;
+    width: 16px;
+    height: 16px;
+    margin: auto;
   }
   .sales-sidebar.sidebar-collapsed .nav-item:hover .nav-item-icon {
     transform: scale(1.07);
@@ -447,6 +459,12 @@ textarea:focus-visible {
     justify-content: center;
     gap: 0;
     padding-inline: 0;
+  }
+  .sales-sidebar.sidebar-collapsed .sidebar-profile > span:first-child {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
   }
 }
 
