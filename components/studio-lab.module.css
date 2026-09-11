@@ -2152,3 +2152,77 @@
   outline-color: #a8d5ff;
   background: #1e4c7e;
 }
+
+.floatingComposer {
+  position: absolute;
+  z-index: 3;
+  bottom: 24px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(440px, calc(100% - 36px));
+  min-height: 50px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid #557fae;
+  border-radius: 18px;
+  color: #edf6ff;
+  background: linear-gradient(135deg, #234c7d, #1b3d68);
+  box-shadow: 0 14px 38px #071d382e, 0 0 0 5px #ffffff52;
+  transform: translateX(-50%);
+  backdrop-filter: blur(16px);
+}
+.floatingComposer:focus-within {
+  border-color: #a3d1ff;
+  box-shadow: 0 0 0 4px #82bfff33, 0 14px 38px #071d382e;
+}
+.floatingComposer textarea {
+  min-width: 0;
+  flex: 1;
+  height: 26px;
+  padding: 3px 0;
+  border: 0;
+  outline: none !important;
+  resize: none;
+  color: #fff;
+  background: transparent;
+  font-size: 13px;
+  line-height: 20px;
+}
+.floatingComposer textarea::placeholder {
+  color: #c2d6ee;
+}
+.floatingAttach,
+.floatingSend {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+}
+.floatingAttach {
+  color: #d8eaff;
+  background: #ffffff17;
+}
+.floatingAttach:hover:not(:disabled) {
+  background: #ffffff2b;
+}
+.floatingSend {
+  color: #173f6d;
+  background: #edf7ff;
+}
+.floatingSend:hover:not(:disabled) {
+  background: #fff;
+}
+.floatingSend:disabled,
+.floatingAttach:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+@media (max-width: 760px) {
+  .floatingComposer {
+    bottom: 16px;
+    width: calc(100% - 28px);
+  }
+}

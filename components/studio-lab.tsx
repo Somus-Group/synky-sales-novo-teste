@@ -931,7 +931,11 @@ export function StudioLab() {
               )}
               <IconButton
                 label={expanded ? 'Sair da tela cheia' : 'Expandir prévia'}
-                onClick={() => setExpanded(!expanded)}
+                onClick={() => {
+                  setExpanded(!expanded);
+                  if (!expanded)
+                    window.setTimeout(() => composer.current?.focus(), 0);
+                }}
               >
                 {expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
               </IconButton>
@@ -1008,6 +1012,61 @@ export function StudioLab() {
                   : 'Experimental'}
             </span>
           </footer>
+          {expanded && (
+            <form className={styles.floatingComposer} onSubmit={send}>
+              <button
+                type="button"
+                className={styles.floatingAttach}
+                onClick={() => imageInput.current?.click()}
+                disabled={busy}
+                aria-label="Adicionar imagem"
+                title="Adicionar imagem"
+              >
+                <Plus size={17} />
+              </button>
+              <textarea
+                ref={composer}
+                aria-label="Pedido rápido para a prévia"
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                placeholder={
+                  project?.html
+                    ? 'Peça uma alteração na prévia…'
+                    : 'Descreva o que você quer criar…'
+                }
+                rows={1}
+                maxLength={8000}
+                disabled={busy}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === 'Enter' &&
+                    !event.shiftKey &&
+                    !event.nativeEvent.isComposing
+                  ) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+              />
+              {busy ? (
+                <IconButton
+                  label="Interromper pedido"
+                  onClick={() => request.current?.abort()}
+                >
+                  <Square size={15} />
+                </IconButton>
+              ) : (
+                <button
+                  type="submit"
+                  className={styles.floatingSend}
+                  disabled={!prompt.trim() || project?.busy}
+                  aria-label="Enviar pedido"
+                >
+                  <ArrowUp size={17} />
+                </button>
+              )}
+            </form>
+          )}
         </section>
       </div>
 
