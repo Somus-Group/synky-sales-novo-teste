@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://somus-flow.wca.chatgpt.site'),
   title: 'Synky Sales · CRM e Propostas',
   description: 'Gestão comercial e propostas para escritórios de arquitetura.',
+  icons: {
+    icon: '/favicon.svg?v=2',
+  },
   openGraph: {
     title: 'Synky Sales · CRM e Propostas',
     description: 'Gestão comercial e propostas para escritórios de arquitetura.',
