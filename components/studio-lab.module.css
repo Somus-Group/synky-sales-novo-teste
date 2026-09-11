@@ -1909,34 +1909,34 @@
   }
 }
 
-/* Graphite chat surface */
+/* Synky blue chat surface */
 .conversation {
-  color: #f1f3f6;
-  background: #191919;
+  color: #f4f8ff;
+  background: #143561;
 }
 .panelTabs {
   height: 54px;
-  border-bottom-color: #303030;
-  background: #191919;
+  border-bottom-color: #2c5d95;
+  background: #173d6d;
 }
 .panelTabs button {
-  color: #a7a7a7;
+  color: #a9c8ee;
 }
 .panelTabs button[aria-selected='true'] {
-  color: #f4f4f4;
-  border-color: #4e9bff;
+  color: #ffffff;
+  border-color: #7ec0ff;
 }
 .messages {
   background:
-    radial-gradient(circle at 0 0, #22252a 0, transparent 260px),
-    #191919;
-  scrollbar-color: #4a4a4a transparent;
+    radial-gradient(circle at 0 0, #2b619d 0, transparent 280px),
+    linear-gradient(145deg, #153a6a, #12315b);
+  scrollbar-color: #4d79aa transparent;
 }
 .welcome {
   padding: 0 0 20px;
   margin-bottom: 22px;
   border: 0;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid #315f92;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -1945,34 +1945,34 @@
   width: 30px;
   height: 30px;
   margin-bottom: 12px;
-  border-color: #3d4550;
-  background: #2a2d31;
-  color: #78b3ff;
+  border-color: #5585bd;
+  background: #224d80;
+  color: #c7e4ff;
   box-shadow: none;
 }
 .welcome h2 {
-  color: #f4f4f4;
+  color: #ffffff;
   font-size: 19px;
 }
 .welcome p {
-  color: #b4b4b4;
+  color: #c2d7f1;
 }
 .chatPromise {
-  color: #9bcfb7;
+  color: #b5e2cf;
 }
 .promptSuggestions {
   grid-template-columns: 1fr;
   gap: 7px;
 }
 .promptSuggestions button {
-  border-color: #393939;
-  color: #d8d8d8;
-  background: #252525;
+  border-color: #4775a9;
+  color: #d9ebff;
+  background: #204a7d;
 }
 .promptSuggestions button:hover:not(:disabled) {
-  border-color: #5f93d6;
+  border-color: #8dc3ff;
   box-shadow: none;
-  background: #2c333d;
+  background: #2b5d96;
 }
 .userMessage,
 .assistantMessage {
@@ -1984,171 +1984,171 @@
   max-width: calc(100% - 28px);
   margin: 22px 0 22px auto;
   padding: 14px 16px;
-  border: 1px solid #3b3b3b;
+  border: 1px solid #5080b5;
   border-radius: 16px 16px 5px 16px;
-  color: #f4f4f4;
-  background: #303030;
+  color: #ffffff;
+  background: #28588e;
   box-shadow: none;
 }
 .assistantMessage {
   margin: 22px 0;
   padding: 0 0 22px;
   border: 0;
-  border-bottom: 1px solid #343434;
+  border-bottom: 1px solid #356596;
   border-radius: 0;
-  color: #ececec;
+  color: #f1f7ff;
   background: transparent;
   box-shadow: none;
 }
 .messageBy {
-  color: #919191;
+  color: #a9c5e4;
   font-size: 11px;
 }
 .assistantMessage .messageBy {
-  color: #80b8ff;
+  color: #a8d5ff;
 }
 .versionChip {
-  border-color: #2c5f45;
+  border-color: #39785e;
   border-radius: 7px;
   color: #9ee2bd;
-  background: #1f352a;
+  background: #1e5646;
 }
 .messageAttachment {
   color: #acd3ff;
-  background: #26394f;
+  background: #234f80;
 }
 .working {
   padding: 13px 0 18px;
-  border-bottom: 1px solid #343434;
-  color: #b9b9b9;
+  border-bottom: 1px solid #356596;
+  color: #c4d9f1;
 }
 .working button {
-  color: #8fbeff;
+  color: #b2d7ff;
 }
 .composerArea {
   padding: 14px 16px 16px;
-  border-top-color: #303030;
-  background: #191919;
+  border-top-color: #2c5d95;
+  background: #173d6d;
 }
 .composer {
-  border-color: #3e3e3e;
+  border-color: #4c78ab;
   border-radius: 15px;
-  background: #2a2a2a;
+  background: #214b7d;
   box-shadow: none;
 }
 .composer:focus-within {
-  border-color: #6b9fdb;
-  box-shadow: 0 0 0 3px #5492dd1c;
+  border-color: #93c8ff;
+  box-shadow: 0 0 0 3px #8ac3ff26;
 }
 .composer textarea {
-  color: #f2f2f2;
+  color: #ffffff;
   background: transparent;
 }
 .composer textarea::placeholder {
-  color: #8c8c8c;
+  color: #afc8e5;
 }
 .composerFooter {
-  border-top: 1px solid #3a3a3a;
+  border-top: 1px solid #3e6d9f;
   padding-top: 9px;
 }
 .composerFooter > span {
-  color: #a4a4a4;
+  color: #b8d0ea;
 }
 .addImage {
-  border-color: #484848;
-  color: #d6d6d6;
-  background: #353535;
+  border-color: #4e7fb3;
+  color: #e0efff;
+  background: #2a5b91;
 }
 .addImage:hover:not(:disabled) {
-  border-color: #6c9ed6;
-  color: #bdddff;
-  background: #303b49;
+  border-color: #9dceff;
+  color: #ffffff;
+  background: #3570ad;
 }
 .send {
   border-radius: 50%;
-  background: #f4f4f4;
-  color: #1b1b1b;
+  background: #e8f4ff;
+  color: #174273;
 }
 .send:hover {
   background: #ffffff;
 }
 .imageAttachment {
-  border-color: #405167;
-  color: #bedbff;
-  background: #253545;
+  border-color: #5d8ec3;
+  color: #e0f0ff;
+  background: #285b91;
 }
 .imageAttachment button {
-  color: #a9c5e7;
+  color: #c9e2ff;
 }
 .imageAttachment button:hover {
   color: #fff;
-  background: #3d5570;
+  background: #3a71a8;
 }
 .context,
 .history {
-  color: #eeeeee;
-  background: #191919;
-  scrollbar-color: #4a4a4a transparent;
+  color: #eef6ff;
+  background: #143561;
+  scrollbar-color: #4d79aa transparent;
 }
 .context dt,
 .context dd,
 .historySummary,
 .historyItem time,
 .historyItem > svg {
-  color: #a4a4a4;
+  color: #b8cfe9;
 }
 .historyItem {
-  border-bottom-color: #343434;
+  border-bottom-color: #356596;
 }
 .historyNumber {
-  border-color: #444;
-  color: #bdbdbd;
+  border-color: #4a78aa;
+  color: #c8ddf4;
 }
 .startChat {
   justify-content: space-between;
   background:
-    radial-gradient(circle at 0 0, #262a2f 0, transparent 250px),
-    #191919;
+    radial-gradient(circle at 0 0, #2c609a 0, transparent 250px),
+    #143561;
 }
 .startChatIntro .eyebrow {
-  color: #7db6ff;
+  color: #9ed0ff;
 }
 .startChatIntro .assistantMark {
-  border-color: #3c4652;
-  background: #292d32;
-  color: #86bbff;
+  border-color: #5484b9;
+  background: #214d80;
+  color: #c9e5ff;
   box-shadow: none;
 }
 .startChatIntro h2 {
-  color: #f4f4f4;
+  color: #ffffff;
 }
 .startChatIntro p {
-  color: #b4b4b4;
+  color: #c2d7f1;
 }
 .startComposer {
-  border-color: #414141;
-  background: #2a2a2a;
-  box-shadow: 0 14px 30px #0000002a;
+  border-color: #4d7eb2;
+  background: #214b7d;
+  box-shadow: 0 14px 30px #061a372b;
 }
 .startComposer:focus-within {
-  border-color: #6c9fda;
-  box-shadow: 0 0 0 3px #5795e21c;
+  border-color: #93c8ff;
+  box-shadow: 0 0 0 3px #8ac3ff26;
 }
 .startComposer textarea {
-  color: #f2f2f2;
+  color: #ffffff;
   background: transparent;
 }
 .startComposer textarea::placeholder {
-  color: #929292;
+  color: #afc8e5;
 }
 .startComposerFooter {
-  border-top-color: #3f3f3f;
+  border-top-color: #3e6d9f;
 }
 .startComposerFooter > span {
-  color: #a6a6a6;
+  color: #b8d0ea;
 }
 .composerArea.dragging,
 .startChat.dragging {
-  outline-color: #83baff;
-  background: #222a34;
+  outline-color: #a8d5ff;
+  background: #1e4c7e;
 }
