@@ -724,9 +724,12 @@ export function StudioLab() {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
+                          title={message.reference?.title || url}
                         >
                           <Link2 size={12} />
-                          Referência consultada
+                          {message.reference
+                            ? 'Modelo lido e aplicado'
+                            : 'Referência consultada'}
                         </a>
                       ))}
                     </div>
@@ -742,9 +745,11 @@ export function StudioLab() {
                   <div className={styles.working}>
                     <Loader2 className={styles.spin} size={17} />
                     <span>
-                      {intent === 'plan'
-                        ? 'Preparando o plano…'
-                        : 'Criando sua próxima versão…'}
+                      {draft.referenceUrl
+                        ? 'Lendo o modelo e preparando sua proposta…'
+                        : intent === 'plan'
+                          ? 'Preparando o plano…'
+                          : 'Criando sua próxima versão…'}
                     </span>
                   </div>
                 </>

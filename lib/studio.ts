@@ -5,6 +5,7 @@ export type StudioMessage = {
   revision?: number;
   at: number;
   sources?: string[];
+  reference?: { url: string; title: string; method: 'html' | 'react-source' };
   attachment?: { name: string; mime: string };
   intent?: 'edit' | 'plan';
 };
@@ -45,6 +46,8 @@ export class StudioError extends Error {
 
 export function referenceUrl(value: string) {
   if (!value.trim()) return '';
+  if (value.length > 4096)
+    throw new StudioError('Use um link de proposta de até 4.096 caracteres.');
   let url: URL;
   try {
     url = new URL(value.trim());
@@ -62,7 +65,6 @@ export function referenceUrl(value: string) {
   ) {
     throw new StudioError('Use o link HTTPS de uma proposta pública.');
   }
-  url.hash = '';
   return url.href;
 }
 

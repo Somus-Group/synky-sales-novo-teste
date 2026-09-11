@@ -102,6 +102,25 @@ function fixture() {
     'cloudflare:workers': { env },
     '@/db': { getD1: () => d1 },
     '@/lib/studio': studio,
+    '@/lib/studio-reference': {
+      readStudioReference: async (url) => {
+        const response = await fetch(url);
+        if (!response.ok)
+          throw new studio.StudioError(
+            'A referência não está pública.',
+            422,
+            'reference_unavailable',
+          );
+        return {
+          url,
+          title: 'Modelo de proposta',
+          method: 'html',
+          text: await response.text(),
+          structure: 'h1,section,h2',
+          styles: ':root{--accent:#10a090}',
+        };
+      },
+    },
     '@/app/chatgpt-auth': { getChatGPTUser: async () => user },
     '@/db/workspace': { getWorkspaceForUser: async (user) => user.userId },
     '@/lib/studio-html': {
@@ -146,7 +165,7 @@ test('validates references, user messages and complete model documents', () => {
   assert.equal(studio.referenceUrl(''), '');
   assert.equal(
     studio.referenceUrl('https://example.com/proposal#top'),
-    'https://example.com/proposal',
+    'https://example.com/proposal#top',
   );
   for (const url of [
     'http://example.com',
@@ -413,11 +432,15 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
   }
 });
 
-test('PDF and optional reference reach the model, unavailable reference is disclosed', async () => {
+test('PDF and actual reference content reach the model without relying on web search', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
   let sent;
-  globalThis.fetch = async (_url, options) => {
+  globalThis.fetch = async (url, options) => {
+    if (url === 'https://example.com/proposta')
+      return new Response(
+        'Estrutura da proposta de referência: diagnóstico, escopo e investimento.',
+      );
     sent = JSON.parse(options.body);
     return Response.json({
       status: 'completed',
@@ -425,7 +448,7 @@ test('PDF and optional reference reach the model, unavailable reference is discl
         title: 'Teste',
         message: 'Criada a partir do briefing.',
         html,
-        reference_status: 'unavailable',
+        reference_status: 'used',
       }),
     });
   };
@@ -443,11 +466,69 @@ test('PDF and optional reference reach the model, unavailable reference is discl
     );
     assert.equal(response.status, 200);
     assert.equal(sent.input[0].content[1].type, 'input_file');
-    assert.deepEqual(sent.tools[0].filters.allowed_domains, ['example.com']);
-    assert.match(
-      (await response.json()).project.messages.at(-1).text,
-      /Não foi possível confirmar a leitura/,
+    assert.equal(sent.tools, undefined);
+    const document = JSON.parse(
+      sent.input[0].content[0].text,
+    ).referenceDocument;
+    assert.match(document.text, /diagnóstico, escopo e investimento/);
+    assert.match(document.styles, /#10a090/);
+    const message = (await response.json()).project.messages.at(-1);
+    assert.deepEqual(message.sources, ['https://example.com/proposta']);
+    assert.equal(message.reference.title, 'Modelo de proposta');
+    assert.doesNotMatch(message.text, /Não foi possível/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('blocked reference or model refusal preserves the page and releases the project lock', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  try {
+    const { project } = await (
+      await f.create({ referenceUrl: 'https://example.com/blocked' })
+    ).json();
+    let modelCalls = 0;
+    globalThis.fetch = async (url) => {
+      if (url === 'https://example.com/blocked')
+        return new Response('', { status: 403 });
+      modelCalls++;
+      throw new Error('Should not call the model');
+    };
+    const failed = await f.messages.POST(
+      request({ message: 'Use o modelo', revision: 0 }),
+      context(project.id),
     );
+    assert.equal(failed.status, 422);
+    assert.equal(modelCalls, 0);
+    let row = await f.database.studioProject(project.id, 'one');
+    assert.equal(row.html, '');
+    assert.equal(row.revision, 0);
+    assert.equal(row.messagesJson, '[]');
+    assert.equal(row.lockToken, '');
+    globalThis.fetch = async (url) =>
+      url === 'https://example.com/blocked'
+        ? new Response('Modelo lido')
+        : Response.json({
+            status: 'completed',
+            output_text: JSON.stringify({
+              title: 'Teste',
+              message: 'Não usei a referência.',
+              html,
+              reference_status: 'unavailable',
+            }),
+          });
+    const ignored = await f.messages.POST(
+      request({ message: 'Use o modelo', revision: 0 }),
+      context(project.id),
+    );
+    assert.equal(ignored.status, 502);
+    assert.equal((await ignored.json()).code, 'reference_not_applied');
+    row = await f.database.studioProject(project.id, 'one');
+    assert.equal(row.revision, 0);
+    assert.equal(row.messagesJson, '[]');
+    assert.equal(row.lockToken, '');
   } finally {
     globalThis.fetch = originalFetch;
     f.sqlite.close();
