@@ -155,16 +155,16 @@ textarea:focus-visible {
 
 .theme-dark {
   color-scheme: dark;
-  --background: oklch(0.14 0.025 260);
-  --foreground: oklch(0.95 0.015 255);
-  --card: oklch(0.19 0.028 260);
-  --card-foreground: oklch(0.95 0.015 255);
-  --popover: oklch(0.19 0.028 260);
-  --popover-foreground: oklch(0.95 0.015 255);
-  --muted: oklch(0.24 0.03 260);
-  --muted-foreground: oklch(0.78 0.02 255);
-  --border: oklch(0.95 0.015 255 / 16%);
-  --input: oklch(0.95 0.015 255 / 18%);
+  --background: #17191e;
+  --foreground: #f4f6fa;
+  --card: #20242b;
+  --card-foreground: #f4f6fa;
+  --popover: #20242b;
+  --popover-foreground: #f4f6fa;
+  --muted: #282d35;
+  --muted-foreground: #b8c0cc;
+  --border: rgb(232 238 248 / 14%);
+  --input: rgb(232 238 248 / 16%);
 }
 
 .theme-dark [class*="bg-white"] {
@@ -294,9 +294,9 @@ textarea:focus-visible {
 }
 
 .theme-dark .sales-sidebar {
-  border-color: rgb(132 184 255 / 14%);
-  background: linear-gradient(180deg, #111d32 0%, #0c1729 100%);
-  box-shadow: 18px 0 48px rgb(0 12 31 / 18%);
+  border-color: #303944;
+  background: linear-gradient(180deg, #1d2128 0%, #17191e 100%);
+  box-shadow: 18px 0 48px rgb(0 0 0 / 20%);
 }
 
 .theme-dark .brand-lockup {
@@ -316,13 +316,13 @@ textarea:focus-visible {
 }
 
 .theme-dark .nav-item:hover {
-  background: rgb(74 139 226 / 15%);
+  background: #292f38;
   color: #f3f8ff;
 }
 
 .theme-dark .nav-item-icon {
-  background: rgb(120 177 255 / 10%);
-  color: #91c6ff;
+  background: #272d36;
+  color: #a9cfff;
 }
 
 .theme-dark .nav-item-active {
@@ -343,19 +343,90 @@ textarea:focus-visible {
 }
 
 .theme-dark .sidebar-profile {
-  border-color: rgb(125 181 255 / 14%);
-  background: rgb(78 142 226 / 14%);
+  border-color: #343e4a;
+  background: #242a32;
   color: #edf6ff;
 }
 
 .theme-dark .sidebar-profile:hover {
-  background: rgb(78 142 226 / 22%);
+  background: #2b333d;
 }
 
 .theme-dark .sidebar-profile > span:last-of-type > span:last-child,
 .theme-dark .sidebar-profile > svg {
   color: #9bbbe2;
 }
+
+/* Dark overview: graphite surfaces keep blue meaningful rather than dominant. */
+.theme-dark .overview-hero {
+  border-color: #303944 !important;
+  background: #1d2128 !important;
+  box-shadow: 0 16px 38px rgb(0 0 0 / 20%) !important;
+}
+
+.theme-dark .overview-hero > div:first-child {
+  background: #1682f2 !important;
+}
+
+.theme-dark .overview-hero [class*="bg-[#EAF2FF]"] {
+  background: #262d36 !important;
+  color: #78b9ff !important;
+}
+
+.theme-dark .overview-hero [class*="bg-[#F7FAFF]"] {
+  border-color: #343e4a !important;
+  background: #242a32 !important;
+}
+
+.theme-dark .overview-inspiration {
+  border: 1px solid #303944 !important;
+  border-left: 4px solid #1682f2 !important;
+  background-color: #1d2229 !important;
+  background-image: linear-gradient(rgb(117 142 173 / 10%) 1px, transparent 1px), linear-gradient(90deg, rgb(117 142 173 / 10%) 1px, transparent 1px), linear-gradient(135deg, #20262e, #1a1e24) !important;
+  background-size: 156px 156px, 156px 156px, 100% 100% !important;
+  box-shadow: 0 22px 48px rgb(0 0 0 / 24%) !important;
+}
+
+.theme-dark .overview-inspiration > div.absolute {
+  display: none;
+}
+
+.theme-dark .overview-inspiration [class*="bg-white/10"] {
+  border: 1px solid #394552;
+  background: #202731 !important;
+  color: #d9e5f5 !important;
+}
+
+.theme-dark .overview-inspiration button {
+  border: 1px solid #394552;
+  background: #20252c !important;
+  color: #f4f6fa !important;
+  box-shadow: 0 12px 26px rgb(0 0 0 / 18%) !important;
+}
+
+.theme-dark .overview-inspiration button [class*="bg-[#E6F2EC]"] {
+  background: #2a313b !important;
+  color: #d8e5f4 !important;
+}
+
+.theme-dark .overview-stat {
+  border: 1px solid #303944;
+  background: #20242b !important;
+  box-shadow: 0 12px 24px rgb(0 0 0 / 15%);
+}
+
+.theme-dark .overview-stat [class*="bg-[#DCE1FF]"],
+.theme-dark .overview-stat [class*="bg-[#D2EBDD]"],
+.theme-dark .overview-stat [class*="bg-[#FFE1BE]"],
+.theme-dark .overview-stat [class*="bg-[#EFD4E2]"] {
+  background: #2a313b !important;
+  color: #dbe7f5 !important;
+}
+
+.theme-dark .overview-stat-violet .overview-stat-accent { background: #1682f2; }
+.theme-dark .overview-stat-green .overview-stat-accent { background: #19b69a; }
+.theme-dark .overview-stat-orange .overview-stat-accent { background: #e99a36; }
+.theme-dark .overview-stat-rose .overview-stat-accent { background: #d14d83; }
 
 @keyframes pipeline-number-update {
   0% { opacity: 0.52; transform: translateY(5px); }
