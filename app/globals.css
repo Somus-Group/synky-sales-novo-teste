@@ -400,6 +400,15 @@ textarea:focus-visible {
     border: 1px solid rgb(11 111 232 / 16%);
     background: #edf5ff;
   }
+  .sales-sidebar.sidebar-collapsed .brand-logo {
+    width: 83px !important;
+    min-width: 83px;
+    max-width: none;
+    object-fit: contain;
+    object-position: left center;
+    clip-path: inset(0 calc(100% - 27px) 0 0);
+    transform: translateX(4px);
+  }
   .sales-sidebar.sidebar-collapsed .sidebar-collapse-toggle {
     width: 36px;
     height: 32px;
