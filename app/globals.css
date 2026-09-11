@@ -364,7 +364,7 @@ textarea:focus-visible {
   }
   .sales-sidebar.sidebar-collapsed {
     width: 72px;
-    padding-inline: 10px;
+    padding-inline: 14px;
   }
   .brand-lockup {
     width: 164px;
@@ -379,18 +379,16 @@ textarea:focus-visible {
     transition: transform 250ms ease, background-color 180ms ease;
   }
   .sales-sidebar.sidebar-collapsed .brand-lockup {
+    position: absolute;
+    top: 32px;
+    left: 18px;
     width: 36px;
     padding-inline: 0;
   }
   .sales-sidebar.sidebar-collapsed .sidebar-collapse-toggle {
     position: absolute;
-    top: 16px;
-    left: 38px;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .sales-sidebar.sidebar-collapsed:hover .sidebar-collapse-toggle,
-  .sales-sidebar.sidebar-collapsed:focus-within .sidebar-collapse-toggle {
+    top: 6px;
+    left: 18px;
     opacity: 1;
     pointer-events: auto;
   }
@@ -410,6 +408,8 @@ textarea:focus-visible {
     pointer-events: none;
   }
   .sales-sidebar.sidebar-collapsed .nav-item {
+    width: 44px;
+    margin-inline: auto;
     justify-content: center;
     gap: 0;
     padding-inline: 0;
@@ -421,6 +421,8 @@ textarea:focus-visible {
     transform: scale(1.07);
   }
   .sales-sidebar.sidebar-collapsed .sidebar-profile {
+    width: 44px;
+    margin-inline: auto;
     justify-content: center;
     gap: 0;
     padding-inline: 0;
