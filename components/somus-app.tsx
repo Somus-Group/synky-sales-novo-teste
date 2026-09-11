@@ -33,6 +33,7 @@ import {
   Menu,
   MoreHorizontal,
   PanelLeftClose,
+  PanelLeftOpen,
   Paperclip,
   Palette,
   Pencil,
@@ -139,6 +140,7 @@ function updatePipelineLabel(labels: PipelineLabels, key: PipelineLabelKey, valu
 export function SomusApp({ userName, userEmail }: { userName: string; userEmail: string }) {
   const [view, setView] = useState<View>('overview');
   const [mobileNav, setMobileNav] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [opportunities, setOpportunities] = useState(opportunitiesSeed);
   const [clients, setClients] = useState<Client[]>([]);
   const [proposals, setProposals] = useState(proposalsSeed);
@@ -243,9 +245,17 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   }, []);
 
   useEffect(() => {
+    setSidebarCollapsed(window.localStorage.getItem('synky-sidebar-collapsed') === 'true');
+  }, []);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     window.localStorage.setItem('synky-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    window.localStorage.setItem('synky-sidebar-collapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     type Tool = { name: string; title: string; description: string; inputSchema: Record<string, object | string | boolean>; annotations: { readOnlyHint: boolean; untrustedContentHint: boolean }; execute: (input: Record<string, unknown>) => unknown };
@@ -410,37 +420,38 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
 
   return (
     <div className={`min-h-screen transition-colors ${theme === 'dark' ? 'theme-dark bg-[#17191E] text-[#EAF2FF]' : 'bg-[#F2F7FF] text-[#11244A]'}`}>
-      <aside className={`sales-sidebar fixed inset-y-0 left-0 z-50 w-[256px] border-r p-3 backdrop-blur-2xl transition-transform lg:translate-x-0 ${theme === 'dark' ? 'text-[#EAF2FF]' : ''} ${mobileNav ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`sales-sidebar fixed inset-y-0 left-0 z-50 w-[256px] border-r p-3 backdrop-blur-2xl transition-[width,padding,transform] duration-300 ease-out lg:translate-x-0 ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${theme === 'dark' ? 'text-[#EAF2FF]' : ''} ${mobileNav ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-[72px] items-center justify-between px-2">
           <button onClick={() => setView('overview')} className="brand-lockup flex items-center" aria-label="Synky Sales">
               <img src="/synky-sales-logo-transparent.png" alt="Synky Sales" className="brand-logo h-9 w-[148px] object-contain object-left" />
           </button>
+          <Button variant="ghost" size="icon-sm" className="sidebar-collapse-toggle hidden lg:grid" onClick={() => setSidebarCollapsed((value) => !value)} aria-label={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}>{sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</Button>
           <Button variant="ghost" size="icon-sm" className="lg:hidden" onClick={() => setMobileNav(false)}><X /></Button>
         </div>
 
         <nav className="mt-3" aria-label="Menu principal">
-          <p className="sidebar-section-label px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]">Espaço de trabalho</p>
+          <p className="sidebar-section-label sidebar-collapse-text px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]">Espaço de trabalho</p>
           <div className="space-y-1">
-          <Nav active={view === 'overview'} icon={LayoutDashboard} label="Visão geral" onClick={() => setView('overview')} />
-          <Nav active={view === 'agent'} icon={Sparkles} label="Agente de propostas" onClick={openAgent} />
-          <Nav active={view === 'agent_setup'} icon={SlidersHorizontal} label="Configurar agente" onClick={() => setView('agent_setup')} />
-          <Nav active={view === 'studio'} icon={FlaskConical} label="Estúdio Lab" onClick={() => { setView('studio'); setMobileNav(false); }} />
-          <Nav active={view === 'pipeline'} icon={BarChart3} label="Pipeline" badge={opportunities.length} onClick={() => setView('pipeline')} />
-          <Nav active={view === 'tasks'} icon={ListTodo} label="Ações" badge={tasks.filter((task) => task.status !== 'Concluída').length} onClick={() => setView('tasks')} />
-          <Nav active={view === 'clients'} icon={Users2} label="Clientes" onClick={() => setView('clients')} />
-          <Nav active={view === 'proposals'} icon={FileText} label="Propostas" badge={proposals.length} onClick={() => setView('proposals')} />
-          <Nav active={view === 'team'} icon={UserPlus} label="Equipe" badge={members.length} onClick={() => setView('team')} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'overview'} icon={LayoutDashboard} label="Visão geral" onClick={() => setView('overview')} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'agent'} icon={Sparkles} label="Agente de propostas" onClick={openAgent} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'agent_setup'} icon={SlidersHorizontal} label="Configurar agente" onClick={() => setView('agent_setup')} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'studio'} icon={FlaskConical} label="Estúdio Lab" onClick={() => { setView('studio'); setMobileNav(false); }} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'pipeline'} icon={BarChart3} label="Pipeline" badge={opportunities.length} onClick={() => setView('pipeline')} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'tasks'} icon={ListTodo} label="Ações" badge={tasks.filter((task) => task.status !== 'Concluída').length} onClick={() => setView('tasks')} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'clients'} icon={Users2} label="Clientes" onClick={() => setView('clients')} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'proposals'} icon={FileText} label="Propostas" badge={proposals.length} onClick={() => setView('proposals')} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'team'} icon={UserPlus} label="Equipe" badge={members.length} onClick={() => setView('team')} />
           </div>
         </nav>
 
         <div className="absolute inset-x-3 bottom-3">
-          <button onClick={() => setView('team')} className="sidebar-profile flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors"><span className="grid size-9 place-items-center rounded-xl bg-[#DCEBFF] text-[10px] font-semibold text-[#0B6FE8]">{userName.slice(0, 2).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-semibold">{userName}</span><span className="block truncate text-[10px]">{userEmail}</span></span><ChevronRight className="size-4" /></button>
+          <button onClick={() => setView('team')} className="sidebar-profile flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors" title={sidebarCollapsed ? userName : undefined}><span className="grid size-9 place-items-center rounded-xl bg-[#DCEBFF] text-[10px] font-semibold text-[#0B6FE8]">{userName.slice(0, 2).toUpperCase()}</span><span className="sidebar-collapse-text min-w-0 flex-1"><span className="block truncate text-[13px] font-semibold">{userName}</span><span className="block truncate text-[10px]">{userEmail}</span></span><ChevronRight className="sidebar-collapse-text size-4" /></button>
         </div>
       </aside>
 
       {mobileNav && <button onClick={() => setMobileNav(false)} className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden" aria-label="Fechar menu" />}
 
-      <div className="lg:pl-[256px]">
+      <div className={`transition-[padding] duration-300 ease-out ${sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-[256px]'}`}>
         <header className={`sticky top-0 z-30 flex h-[68px] items-center border-b px-3 backdrop-blur-2xl sm:px-5 md:px-8 ${theme === 'dark' ? 'border-white/10 bg-[#17191E]/90 text-[#EAF2FF]' : 'border-[#0B6FE8]/10 bg-[#F2F7FF]/90'}`}>
           <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => setMobileNav(true)}><Menu /></Button>
           <div className="relative hidden w-[360px] md:block"><Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-[#8e8e93]" /><Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="h-9 rounded-xl border-0 bg-black/[0.045] pl-9 shadow-none focus-visible:ring-1" placeholder="Buscar cliente, projeto ou proposta" />{searchQuery.trim().length >= 2 && <div className="absolute left-0 right-0 top-11 z-50 overflow-hidden rounded-2xl border border-black/[0.08] bg-white p-2 shadow-2xl">{searchResults.length ? searchResults.map((result) => <button key={result.id} onClick={() => { setSearchQuery(''); if (result.client) openClient(result.client); else if (result.proposal) { setActiveProposal(result.proposal); setView('editor'); } else setView('pipeline'); }} className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[#f5f5f7]"><span className="grid size-8 place-items-center rounded-xl bg-[#edf1ef] text-[10px] font-semibold text-[#31594e]">{result.title.slice(0, 2).toUpperCase()}</span><span><strong className="block text-xs font-medium">{result.title}</strong><span className="mt-0.5 block text-[10px] text-[#8e8e93]">{result.subtitle}</span></span></button>) : <p className="px-3 py-4 text-center text-[11px] text-[#8e8e93]">Nenhum resultado encontrado</p>}</div>}</div>
@@ -477,8 +488,8 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   );
 }
 
-function Nav({ active, icon: Icon, label, badge, onClick }: { active: boolean; icon: typeof LayoutDashboard; label: string; badge?: number; onClick?: () => void }) {
-  return <button onClick={onClick} className={`nav-item flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-[13px] font-medium transition-all ${active ? 'nav-item-active' : ''}`}><span className="nav-item-icon grid size-7 shrink-0 place-items-center rounded-xl"><Icon className="size-[16px]" strokeWidth={1.9} /></span><span className="min-w-0 flex-1 truncate">{label}</span>{badge !== undefined && <span className="nav-item-badge rounded-full px-2 py-0.5 text-[10px] font-semibold">{badge}</span>}</button>;
+function Nav({ active, icon: Icon, label, badge, onClick, collapsed }: { active: boolean; icon: typeof LayoutDashboard; label: string; badge?: number; onClick?: () => void; collapsed: boolean }) {
+  return <button onClick={onClick} title={collapsed ? label : undefined} className={`nav-item flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-[13px] font-medium transition-all ${active ? 'nav-item-active' : ''}`}><span className="nav-item-icon grid size-7 shrink-0 place-items-center rounded-xl"><Icon className="size-[16px]" strokeWidth={1.9} /></span><span className="sidebar-collapse-text min-w-0 flex-1 truncate">{label}</span>{badge !== undefined && <span className="nav-item-badge sidebar-collapse-text rounded-full px-2 py-0.5 text-[10px] font-semibold">{badge}</span>}</button>;
 }
 
 function PageTitle({ kicker, title, description, actions }: { kicker?: string; title: ReactNode; description: string; actions?: ReactNode }) {
