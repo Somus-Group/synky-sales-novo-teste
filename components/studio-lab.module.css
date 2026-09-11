@@ -1556,3 +1556,130 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Conversational editing desk */
+.panelTabs {
+  height: 56px;
+  gap: 20px;
+  padding: 0 22px;
+  background: linear-gradient(90deg, #fafdff, #ffffff);
+}
+.panelTabs button {
+  gap: 7px;
+  font-weight: 650;
+}
+.messages {
+  padding: 24px 22px 30px;
+  background:
+    radial-gradient(circle at 0 0, #edf5ff 0, transparent 210px),
+    #ffffff;
+}
+.welcome {
+  padding: 18px;
+  margin-bottom: 24px;
+  border: 1px solid #d8e7fb;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fbff, #edf5ff);
+  box-shadow: 0 12px 26px #1b4b8908;
+}
+.welcome .assistantMark {
+  margin-bottom: 12px;
+  border: 1px solid #cde1ff;
+  background: #ffffff;
+  box-shadow: 0 5px 14px #1c57a71a;
+}
+.welcome h2 {
+  color: #18335f;
+  font-size: 20px;
+  font-weight: 720;
+}
+.welcome p {
+  color: #5f7496;
+}
+.chatPromise {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  color: #36705f;
+  font-size: 12px;
+  font-weight: 650;
+}
+.promptSuggestions {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.promptSuggestions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid #d2e2f7;
+  border-radius: 9px;
+  color: #285b9d;
+  background: #ffffffb8;
+  font-size: 12px !important;
+  font-weight: 650;
+  line-height: 1.4;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.promptSuggestions button:hover:not(:disabled) {
+  border-color: #7babeb;
+  box-shadow: 0 6px 16px #2462ad14;
+  transform: translateY(-1px);
+}
+.promptSuggestions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.userMessage {
+  border: 1px solid #e0e8f2;
+  border-radius: 12px 12px 3px 12px;
+  background: #f3f7fc;
+  box-shadow: 0 5px 14px #1a385707;
+}
+.assistantMessage {
+  padding: 16px 15px;
+  border: 1px solid #e1eaf5;
+  border-radius: 12px 12px 12px 3px;
+  background: #fff;
+  box-shadow: 0 5px 14px #1a385705;
+}
+.composerArea {
+  padding: 14px 16px 16px;
+  background: #fbfdff;
+}
+.composer {
+  border-radius: 12px;
+  border-color: #cbdced;
+  box-shadow: 0 10px 22px #21456d0c;
+}
+.composer:focus-within {
+  border-color: #6aa4ee;
+  box-shadow: 0 0 0 4px #086bf212, 0 10px 22px #21456d0c;
+}
+.previewLabel {
+  min-width: 132px;
+}
+.previewLabel:has(.previewDot) {
+  color: #29476f;
+}
+@media (max-width: 760px) {
+  .panelTabs {
+    height: 50px;
+    padding: 0 14px;
+    gap: 14px;
+  }
+  .messages {
+    padding: 18px 14px 24px;
+  }
+  .welcome {
+    padding: 15px;
+  }
+  .promptSuggestions button {
+    padding: 9px 10px;
+  }
+}

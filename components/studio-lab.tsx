@@ -181,6 +181,12 @@ export function StudioLab() {
     setReference('');
     setFile(null);
   }
+  function choosePrompt(nextPrompt: string) {
+    if (busy) return;
+    setPrompt(nextPrompt);
+    setTab('chat');
+    window.setTimeout(() => composer.current?.focus(), 0);
+  }
   async function create(event: FormEvent) {
     event.preventDefault();
     if (busyRef.current) return;
@@ -550,7 +556,7 @@ export function StudioLab() {
               >
                 {(
                   [
-                    { id: 'chat', label: 'Conversa', icon: MessageSquare },
+                    { id: 'chat', label: 'Editar com IA', icon: MessageSquare },
                     { id: 'context', label: 'Briefing', icon: FileText },
                     { id: 'history', label: 'Versões', icon: History },
                   ] as const
@@ -586,6 +592,34 @@ export function StudioLab() {
                         ? 'O briefing está salvo. Qual direção você quer para a primeira versão?'
                         : 'O que você quer criar? Conte sua ideia ou peça a primeira versão.'}
                     </p>
+                    <span className={styles.chatPromise}>
+                      <CheckCheck size={13} />
+                      Cada resposta cria uma versão e atualiza a prévia ao lado.
+                    </span>
+                    <div className={styles.promptSuggestions}>
+                      {(project.html
+                        ? [
+                            'Deixe o visual mais sofisticado e use mais azul.',
+                            'Melhore a seção de investimento e os diferenciais.',
+                            'Deixe o texto mais direto e persuasivo.',
+                          ]
+                        : [
+                            'Crie a primeira versão da proposta com base neste projeto.',
+                            'Crie uma proposta moderna, elegante e com destaque para o azul.',
+                            'Estruture a proposta com contexto, solução e investimento.',
+                          ]
+                      ).map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => choosePrompt(suggestion)}
+                          disabled={busy || project.busy}
+                        >
+                          <Sparkles size={13} />
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   {project.messages.map((message, index) => (
                     <article
@@ -778,11 +812,11 @@ export function StudioLab() {
                     }}
                   />
                   <div className={styles.composerFooter}>
-                    <span>
-                      <Sparkles size={13} />
-                      {project.html
-                        ? `Versão ${project.revision}`
-                        : 'Primeira versão'}
+                      <span>
+                        <Sparkles size={13} />
+                        {project.html
+                          ? `Versão ${project.revision} · enviar para atualizar`
+                          : 'Primeira versão · enviar para criar'}
                     </span>
                     {busy ? (
                       <IconButton
@@ -816,7 +850,8 @@ export function StudioLab() {
           <div className={styles.previewToolbar}>
             <span className={styles.previewLabel}>
               <span className={styles.previewDot} />
-              Prévia{historical && <small>v{historical.revision}</small>}
+              {busy ? 'Atualizando prévia…' : 'Prévia'}
+              {historical && <small>v{historical.revision}</small>}
             </span>
             <div
               className={styles.deviceControls}
