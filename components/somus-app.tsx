@@ -60,6 +60,9 @@ import {
   ZoomIn,
   ZoomOut,
   Moon,
+  Monitor,
+  Smartphone,
+  Tablet,
 } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ReferenceDot, XAxis, YAxis } from 'recharts';
 
@@ -902,9 +905,12 @@ function ProposalTemplateLibrary({ onUse, onNotify }: { onUse: (template: string
 }
 
 function TemplatePreviewDialog({ template, onOpenChange, onUse }: { template: typeof proposalTemplates[number] | null; onOpenChange: (open: boolean) => void; onUse: () => void }) {
+  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   if (!template) return null;
   const example: Proposal = { id: 0, code: 'MODELO', client: 'Cliente exemplo', project: template.name, value: 85000, status: 'Rascunho', validity: '2026-12-31', template: template.value, slug: 'modelo', updated: 'agora' };
-  return <Dialog open={!!template} onOpenChange={onOpenChange}><DialogContent className="flex max-h-[90vh] max-w-6xl flex-col overflow-hidden rounded-[26px] p-0"><div className="flex shrink-0 items-start justify-between gap-5 border-b border-black/[0.07] bg-white px-5 py-4 sm:px-6"><div><span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#0B6FE8]">Prévia · {template.niche}</span><DialogTitle className="mt-1 text-lg font-semibold tracking-[-0.03em]">{template.name}</DialogTitle><DialogDescription className="mt-1 text-[11px]">{template.description}</DialogDescription></div><Button onClick={onUse} className="shrink-0 rounded-xl bg-[#0B6FE8] text-white hover:bg-[#0757C8]"><Sparkles /> Usar este template</Button></div><div className="min-h-0 overflow-y-auto bg-[#EDF3FA] p-3 sm:p-5"><div className="mx-auto max-w-4xl overflow-hidden rounded-xl bg-white shadow-[0_20px_60px_rgba(17,36,74,0.2)]"><ProposalOnePage preview idPrefix={`template-${template.id}`} proposal={example} /></div></div></DialogContent></Dialog>;
+  const devices = [{ id: 'desktop', label: 'Desktop', Icon: Monitor }, { id: 'tablet', label: 'Tablet', Icon: Tablet }, { id: 'mobile', label: 'Celular', Icon: Smartphone }] as const;
+  const canvasWidth = device === 'mobile' ? 'max-w-[390px]' : device === 'tablet' ? 'max-w-[820px]' : 'max-w-[1280px]';
+  return <Dialog open={!!template} onOpenChange={onOpenChange}><DialogContent className="flex h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none flex-col overflow-hidden rounded-[24px] border border-[#D5E2F1] bg-white p-0 shadow-[0_24px_80px_rgba(15,42,77,0.28)] sm:h-[calc(100dvh-3rem)] sm:w-[calc(100vw-3rem)]"><div className="flex shrink-0 flex-col gap-3 border-b border-black/[0.07] bg-white px-4 py-3 sm:px-6 sm:py-4 lg:flex-row lg:items-center"><div className="min-w-0 flex-1"><span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#0B6FE8]">Prévia da proposta · {template.niche}</span><DialogTitle className="mt-1 truncate text-lg font-semibold tracking-[-0.03em]">{template.name}</DialogTitle><DialogDescription className="mt-1 line-clamp-1 text-[11px]">{template.description}</DialogDescription></div><div className="flex items-center justify-between gap-2 sm:justify-end"><div className="flex rounded-xl border border-[#D8E4F1] bg-[#F4F8FC] p-1" aria-label="Tamanho da prévia">{devices.map(({ id, label, Icon }) => <button key={id} type="button" title={label} aria-label={`Ver em ${label}`} aria-pressed={device === id} onClick={() => setDevice(id)} className={`grid size-8 place-items-center rounded-lg transition-colors ${device === id ? 'bg-white text-[#0B6FE8] shadow-sm' : 'text-[#70839B] hover:text-[#11244A]'}`}><Icon className="size-4" /></button>)}</div><Button onClick={onUse} className="h-9 shrink-0 rounded-xl bg-[#0B6FE8] px-3 text-[11px] text-white hover:bg-[#0757C8]"><Sparkles className="size-3.5" /><span className="hidden sm:inline">Usar este template</span><span className="sm:hidden">Usar</span></Button></div></div><div className="min-h-0 flex-1 overflow-auto bg-[radial-gradient(circle_at_top,#F8FBFF,#E8F0F9)] p-3 sm:p-6"><div className={`mx-auto w-full overflow-hidden rounded-xl bg-white shadow-[0_22px_70px_rgba(17,36,74,0.22)] transition-[max-width] duration-300 ${canvasWidth}`}><ProposalOnePage preview idPrefix={`template-${template.id}`} proposal={example} /></div></div><div className="flex shrink-0 items-center justify-between border-t border-black/[0.06] bg-white px-4 py-2 text-[10px] text-[#6E7C92]"><span>Prévia responsiva</span><span>{device === 'desktop' ? 'Desktop' : device === 'tablet' ? 'Tablet' : 'Celular'}</span></div></DialogContent></Dialog>;
 }
 
 function ProposalCover({ proposal }: { proposal: Proposal; index: number }) { return <div className="aspect-video overflow-hidden"><ProposalArtwork index={0} proposal={proposal} /></div>; }
