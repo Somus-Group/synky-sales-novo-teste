@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+// Shell styling is kept separate so the visual refresh is easy to review/revert.
+import './sales-ui.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://somus-flow.wca.chatgpt.site'),

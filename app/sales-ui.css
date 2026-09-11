@@ -1,0 +1,523 @@
+/* Shared presentation tokens. Scoped to the sales shell and its portalled controls;
+   proposal documents and generated preview HTML keep their own brand styles. */
+:is(
+  .sales-app,
+  [data-slot='dialog-content'],
+  [data-slot='select-content'],
+  [data-slot='popover-content'],
+  [data-slot='dropdown-menu-content']
+) {
+  --sales-canvas: #f4f6f9;
+  --sales-surface: #ffffff;
+  --sales-inset: #eef2f6;
+  --sales-hover: #e8eef5;
+  --sales-text: #172b46;
+  --sales-muted: #586a80;
+  --sales-line: #dbe2eb;
+  --sales-primary: #145db5;
+  --sales-primary-hover: #104d96;
+  --sales-focus: #397bcd;
+  --sales-shadow: 0 4px 16px rgb(24 43 68 / 4%), 0 16px 36px rgb(24 43 68 / 3%);
+  --sales-shadow-hover: 0 8px 24px rgb(24 43 68 / 9%);
+  --background: var(--sales-surface);
+  --foreground: var(--sales-text);
+  --popover: var(--sales-surface);
+  --popover-foreground: var(--sales-text);
+  --primary: var(--sales-primary);
+  --primary-foreground: #fff;
+  --muted: var(--sales-inset);
+  --muted-foreground: var(--sales-muted);
+  --border: var(--sales-line);
+  --input: var(--sales-line);
+  --accent: var(--sales-hover);
+  --accent-foreground: var(--sales-text);
+  --ring: var(--sales-focus);
+}
+
+.dark
+  :is(
+    .sales-app,
+    [data-slot='dialog-content'],
+    [data-slot='select-content'],
+    [data-slot='popover-content'],
+    [data-slot='dropdown-menu-content']
+  ) {
+  --sales-canvas: #14181e;
+  --sales-surface: #1d232c;
+  --sales-inset: #252d38;
+  --sales-hover: #2c3745;
+  --sales-text: #ecf0f5;
+  --sales-muted: #a7b3c3;
+  --sales-line: #374352;
+  --sales-primary: #245777;
+  --sales-primary-hover: #2c6589;
+  --sales-focus: #81a8cc;
+  --sales-shadow: 0 8px 24px rgb(0 0 0 / 17%), 0 18px 38px rgb(0 0 0 / 10%);
+  --sales-shadow-hover: 0 12px 32px rgb(0 0 0 / 30%);
+  color-scheme: dark;
+}
+
+.sales-app {
+  background: var(--sales-canvas);
+  color: var(--sales-text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sales-app .sales-content {
+  min-width: 0;
+}
+.sales-app .sales-content:not([data-view='studio']) {
+  padding-block: clamp(20px, 3vw, 32px);
+}
+.sales-app .sales-content > * {
+  animation: sales-page-enter 220ms ease-out;
+}
+.sales-app .sales-content :is(h1, h2, h3):not([style]) {
+  text-wrap: balance;
+}
+.sales-app .sales-content:not([data-view='studio']) h1:not([style]) {
+  font-size: clamp(26px, 2.7vw, 36px);
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+.sales-app .sales-content h2 {
+  letter-spacing: -0.02em;
+}
+.sales-app .sales-content :is(strong, [class*='tabular-nums']) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cards stay still unless interactive, so tables and text remain easy to scan. */
+.sales-app
+  .sales-content
+  :is(article, section)[class*='rounded-']:not([class*='gradient']):not(
+    .overview-inspiration
+  ):not(.overview-hero) {
+  border-color: transparent !important;
+  border-radius: 20px;
+  box-shadow: var(--sales-shadow) !important;
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+.sales-app .sales-content article[class*='bg-white'],
+.sales-app .overview-stat {
+  background: var(--sales-surface) !important;
+}
+.sales-app .overview-stat {
+  padding: 22px;
+}
+.sales-app .overview-stat strong {
+  font-size: clamp(24px, 2.3vw, 30px);
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+.sales-app .overview-stat p {
+  font-size: 12px;
+  color: var(--sales-muted) !important;
+}
+.sales-app .overview-stat p:last-child {
+  margin-top: 12px;
+}
+.sales-app .overview-hero {
+  background: var(--sales-surface) !important;
+  border-color: transparent !important;
+  border-radius: 20px;
+  box-shadow: var(--sales-shadow) !important;
+}
+.sales-app .overview-inspiration {
+  padding: clamp(22px, 3vw, 32px);
+  border-radius: 20px;
+  box-shadow: var(--sales-shadow) !important;
+}
+.sales-app .overview-inspiration blockquote {
+  font-size: clamp(24px, 2.8vw, 36px);
+  line-height: 1.13;
+  letter-spacing: -0.035em;
+}
+.sales-app .overview-inspiration button {
+  min-height: 52px;
+  border-radius: 12px;
+}
+
+/* Navigation geometry is preserved for the compact sidebar. */
+.sales-app .sales-sidebar {
+  background: var(--sales-surface);
+  border-color: transparent;
+  box-shadow: 3px 0 18px rgb(14 30 50 / 4%);
+}
+.sales-app .sales-sidebar nav {
+  max-height: calc(100dvh - 210px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+.sales-app.theme-dark .sales-sidebar.sidebar-collapsed .brand-lockup {
+  background-color: var(--sales-inset);
+  border-color: var(--sales-line);
+}
+.sales-app .nav-item {
+  position: relative;
+  font-size: 13px;
+  border-radius: 12px;
+  color: var(--sales-text);
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+.sales-app .nav-item-icon {
+  border-radius: 8px;
+  background: var(--sales-inset);
+  color: var(--sales-muted);
+}
+.sales-app .nav-item:hover {
+  background: var(--sales-hover);
+  color: var(--sales-text);
+}
+.sales-app .nav-item-active {
+  background: var(--sales-primary);
+  color: #fff;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 10%);
+}
+.sales-app .nav-item-active:hover {
+  background: var(--sales-primary-hover);
+  color: #fff;
+}
+.sales-app .nav-item-active .nav-item-icon {
+  color: #fff;
+  background: rgb(255 255 255 / 12%);
+}
+.sales-app .nav-item-badge {
+  background: var(--sales-inset);
+  color: var(--sales-muted);
+}
+.sales-app .nav-item-active .nav-item-badge {
+  color: #fff;
+  background: rgb(255 255 255 / 12%);
+}
+.sales-app .sidebar-profile {
+  border-color: transparent;
+  background: var(--sales-inset);
+  border-radius: 14px;
+}
+.sales-app .sidebar-section-label {
+  color: var(--sales-muted);
+  letter-spacing: 0.12em;
+}
+.sales-app .sales-sidebar + div > header {
+  background: color-mix(in srgb, var(--sales-canvas) 94%, transparent);
+  border-color: var(--sales-line);
+}
+
+/* Reuse control variants rather than infer intent from individual blue shades. */
+:is(.sales-app, [data-slot='dialog-content']) [data-slot='button'] {
+  border-radius: 10px;
+  font-weight: 600;
+  box-shadow: none;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+  transform: none;
+}
+:is(.sales-app, [data-slot='dialog-content'])
+  [data-slot='button'][data-variant='default'] {
+  color: #fff !important;
+  background: var(--sales-primary) !important;
+  border-color: transparent !important;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 10%);
+}
+:is(.sales-app, [data-slot='dialog-content'])
+  [data-slot='button'][data-variant='default']:hover:not(:disabled) {
+  background: var(--sales-primary-hover) !important;
+}
+:is(.sales-app, [data-slot='dialog-content'])
+  [data-slot='button'][data-variant='outline'] {
+  background: var(--sales-surface) !important;
+  color: var(--sales-text) !important;
+  border-color: var(--sales-line) !important;
+}
+:is(.sales-app, [data-slot='dialog-content'])
+  [data-slot='button']:is(
+    [data-variant='outline'],
+    [data-variant='ghost']
+  ):hover:not(:disabled) {
+  background: var(--sales-hover) !important;
+}
+:is(.sales-app, [data-slot='dialog-content']) [data-slot='button']:disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+:is(.sales-app, [data-slot='dialog-content'])
+  :is(
+    [data-slot='input'],
+    [data-slot='select-trigger'],
+    textarea:not([class*='composer'])
+  ) {
+  border-color: var(--sales-line) !important;
+  border-radius: 10px;
+  color: var(--sales-text) !important;
+  background-color: var(--sales-surface) !important;
+  box-shadow: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+:is(.sales-app, [data-slot='dialog-content'])
+  :is(input, textarea)::placeholder {
+  color: var(--sales-muted);
+  opacity: 0.85;
+}
+:is(.sales-app, [data-slot='dialog-content'])
+  :is(
+    button,
+    a,
+    input,
+    textarea,
+    [role='combobox'],
+    [role='button']
+  ):focus-visible {
+  outline: 2px solid var(--sales-focus);
+  outline-offset: 3px;
+}
+:is(.sales-app, [data-slot='dialog-content'])
+  :is(input, textarea)[aria-invalid='true'] {
+  border-color: #c95252 !important;
+}
+.sales-app :is([role='tablist'], [data-slot='tabs-list']) {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.sales-app [role='tab'] {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+.sales-app [data-slot='tabs-content'] {
+  animation: sales-page-enter 180ms ease-out;
+}
+.sales-app :is(th, [data-slot='table-head']) {
+  font-size: 11px;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--sales-muted);
+  background: var(--sales-inset);
+}
+.sales-app :is(td, [data-slot='table-cell']) {
+  padding: 14px 12px;
+}
+.sales-app tr {
+  border-color: var(--sales-line);
+}
+.sales-app tbody tr:hover {
+  background: var(--sales-hover);
+}
+.sales-app [class*='border-dashed'] {
+  border-color: var(--sales-line) !important;
+  box-shadow: none;
+}
+
+/* Dialogs render outside the theme wrapper. Match the shell through html.dark. */
+[data-slot='dialog-content'] {
+  border-color: transparent !important;
+  border-radius: 20px;
+  background: var(--sales-surface);
+  color: var(--sales-text);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 28%);
+}
+[data-slot='dialog-title'] {
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+[data-slot='dialog-description'] {
+  line-height: 1.6;
+  color: var(--sales-muted);
+}
+[data-slot='dialog-footer'] {
+  border-color: var(--sales-line);
+}
+.dark
+  [data-slot='dialog-content']
+  :is(
+    [class*='bg-white'],
+    [class*='bg-[#F'],
+    [class*='bg-[#f'],
+    [class*='bg-[#E'],
+    [class*='bg-[#e']
+  ) {
+  background-color: var(--sales-inset) !important;
+}
+.dark [data-slot='dialog-content'] [class*='bg-[linear-gradient'] {
+  background-image: none;
+  background-color: var(--sales-inset);
+}
+.dark [data-slot='dialog-content'] [class*='text-[#'] {
+  color: var(--sales-text);
+}
+.dark [data-slot='dialog-content'] [class*='border-'] {
+  border-color: var(--sales-line);
+}
+
+/* Restore readable secondary and semantic colors above the legacy theme rules. */
+.sales-app.theme-dark [class*='bg-white'] {
+  background-color: var(--sales-surface) !important;
+}
+.sales-app.theme-dark
+  :is(
+    [class*='bg-[#F'],
+    [class*='bg-[#f'],
+    [class*='bg-[#E'],
+    [class*='bg-[#e'],
+    [class*='bg-[#D'],
+    [class*='bg-[#d']
+  ) {
+  background-color: var(--sales-inset) !important;
+}
+.sales-app.theme-dark [class*='bg-[linear-gradient'] {
+  background-image: linear-gradient(135deg, #26323f, #1b232d) !important;
+}
+.sales-app.theme-dark :is([class*='border-[#'], [class*='border-black']) {
+  border-color: var(--sales-line) !important;
+}
+.sales-app.theme-dark
+  .sales-content
+  :is(article, section)[class*='rounded-']:not([class*='gradient']) {
+  border-color: transparent !important;
+}
+.sales-app.theme-dark
+  :is(
+    [class*='text-[#5'],
+    [class*='text-[#6'],
+    [class*='text-[#7'],
+    [class*='text-[#8'],
+    [class*='text-[#9'],
+    [class*='text-black/']
+  ) {
+  color: var(--sales-muted) !important;
+}
+.dark
+  :is(.sales-app, [data-slot='dialog-content'])
+  :is(
+    [class*='text-[#B54336]'],
+    [class*='text-[#C03F32]'],
+    [class*='text-[#9D3127]'],
+    [class*='text-[#c04a3b]']
+  ) {
+  color: #f3a39e !important;
+}
+.sales-app.theme-dark
+  :is(
+    [class*='text-[#277157]'],
+    [class*='text-[#159868]'],
+    [class*='text-[#157352]']
+  ) {
+  color: #8bc8b0 !important;
+}
+.sales-app.theme-dark
+  :is([class*='text-[#A46024]'], [class*='text-[#9A6B37]']) {
+  color: #ddbe87 !important;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .sales-app
+    .sales-content
+    article:is([role='button'], [draggable='true']):hover {
+    box-shadow: var(--sales-shadow-hover) !important;
+  }
+}
+/* Keep supporting copy readable without competing with commercial metrics. */
+:is(.sales-content, [data-slot='dialog-content'])
+  :is([class~='text-[8px]'], [class~='text-[9px]'], [class~='text-[10px]']) {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.sales-app .sales-content :is(section, article)[class*='bg-[linear-gradient'] {
+  border-radius: 20px;
+  box-shadow: var(--sales-shadow) !important;
+}
+.sales-app:not(.theme-dark)
+  .sales-content
+  :is(section, article)[class*='bg-[linear-gradient'][class~='text-white'] {
+  background-image: linear-gradient(120deg, #173f70, #145db5);
+}
+.sales-app.theme-dark
+  .sales-content
+  [class*='shadow-'][class*='rgba(11,111,232'] {
+  box-shadow: var(--sales-shadow) !important;
+}
+.sales-app .sales-client-metric {
+  padding-inline: 8px;
+}
+.sales-app .sales-client-metric strong {
+  overflow-wrap: anywhere;
+}
+.sales-app
+  .sales-content
+  :is(section, article)[class*='gradient'][class~='text-white']
+  [class*='text-white/'] {
+  color: rgb(255 255 255 / 85%);
+}
+.sales-app .grid:has(> .sales-client-metric) {
+  grid-template-columns: 1fr 1fr 1.6fr;
+}
+.dark
+  :is(.sales-app, [data-slot='dialog-content'])
+  button:is(
+    [class~='bg-[#0969DA]'],
+    [class~='bg-[#0B6FE8]'],
+    [class~='bg-[#075bbd]'],
+    [class~='bg-[#0757C8]']
+  ) {
+  background-color: var(--sales-primary) !important;
+  color: #fff !important;
+}
+@keyframes sales-page-enter {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 767px) {
+  .sales-app .sales-content:not([data-view='studio']) h1:not([style]) {
+    font-size: 26px;
+  }
+  .sales-app .overview-stat {
+    padding: 18px;
+  }
+  .sales-app .sales-content :is(article, section)[class*='rounded-'] {
+    border-radius: 16px;
+  }
+  :is(.sales-app, [data-slot='dialog-content'])
+    :is(input, textarea, [data-slot='select-trigger']) {
+    font-size: 16px;
+  }
+  :is(.sales-app, [data-slot='dialog-content'])
+    [data-slot='button']:not([data-size^='icon']):not([data-size='xs']) {
+    min-height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  :is(
+    .sales-app,
+    [data-slot='dialog-content'],
+    [data-slot='dialog-overlay'],
+    [data-slot='select-content']
+  ),
+  :is(.sales-app, [data-slot='dialog-content'], [data-slot='select-content'])
+    * {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

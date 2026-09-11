@@ -1290,3 +1290,66 @@
     animation-duration: 2s;
   }
 }
+
+/* Shared shell tokens only; generated proposal content keeps its own styles. */
+:global(.sales-app) .studio {
+  --ink: var(--sales-text);
+  --muted: var(--sales-muted);
+  --line: var(--sales-line);
+  --blue: var(--sales-primary);
+  height: calc(100dvh - 68px);
+  min-height: 0;
+  background: var(--sales-surface);
+  color: var(--ink);
+}
+.studio :is(.header, .conversation, .composerArea, .composer, .secondary, .libraryDialog, .floatingComposer) {
+  background: var(--sales-surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.studio :is(.previewToolbar, .previewFooter, .deviceControls, .canvasTools, .inspector, .userMessage, .attachmentTag, .referenceTag) {
+  background: var(--sales-inset);
+  border-color: var(--line);
+  color: var(--ink);
+}
+.studio :is(.preview, .previewStage, .resizeHandle) { background: var(--sales-canvas); }
+.studio :is(.context input, .context textarea, .inspector textarea, .urlInput, .visualControls input[type='number']) {
+  background: var(--sales-surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+.studio :is(.projectPicker, .userMessage > p, .assistantMessage > p, .context > label, .inspector > label) { color: var(--ink); }
+.studio :is(.composer > textarea, .floatingComposer input) { background: transparent !important; color: var(--ink) !important; }
+.studio :is(.composer > textarea, .floatingComposer input)::placeholder { color: var(--muted); }
+.studio :is(.primary, .send) { background: var(--blue); color: #fff; border-color: transparent; }
+.studio :is(.primary, .send):hover:not(:disabled) { background: var(--sales-primary-hover); }
+.studio :is(.secondary, .iconButton):hover:not(:disabled) { background: var(--sales-hover); color: var(--ink); }
+.studio :is(.intentSwitch button, .iconButton, .canvasTools > button, .starterModes button, .mobileTabs button)[aria-pressed='true'] {
+  background: var(--sales-hover);
+  color: var(--sales-focus);
+  border-color: var(--sales-focus);
+}
+.studio :is(.mobileTabs, .panelTabs) { background: var(--sales-surface); }
+.studio .panelTabs button[aria-current='page'] { color: var(--ink); border-color: var(--sales-focus); }
+.studio :is(.iconButton, .previewActions > a, .suggestions button, .messageBy, .historyItem time, .historyItem p, .optional, .libraryList small, .emptyPreview p, .emptyPreview h2) { color: var(--muted); }
+.studio :is(.assistantMark, .projectIcon) { background: var(--sales-inset); border-color: var(--line); color: var(--sales-focus); }
+.studio :is(.composer, .floatingComposer, .libraryDialog, .canvasTools) { border-radius: 12px; box-shadow: var(--sales-shadow); }
+.studio .previewFrame { border-color: var(--line); box-shadow: var(--sales-shadow); }
+.studio .emptyPreview > img { background: transparent; padding: 0; }
+.studio .emptyDocument { background: var(--sales-surface); border-color: var(--line); box-shadow: 8px 8px 0 var(--sales-inset); }
+.studio .emptyDocument > span { background: var(--line); }
+.studio .emptyDocument > div { background: var(--sales-inset); border-color: var(--line); }
+.studio .composer:focus-within { border-color: var(--sales-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sales-focus) 18%, transparent); }
+.studio .resizeHandle:is(:hover, :focus-visible) { background: var(--sales-focus); }
+.studio :is(.messages, .context, .history) { scrollbar-color: var(--line) transparent; }
+.studio :is(.starterModes button, .intentSwitch button) { color: var(--muted); }
+.studio :is(.suggestions button, .historyItem, .libraryList > button) { border-color: var(--line); }
+.studio .identity > svg { color: var(--sales-focus); }
+:global(.theme-dark) .studio .saveStatus { color: #8bc8b0; }
+@media (max-width: 760px) {
+  .studio .header { flex-wrap: wrap; gap: 8px; }
+  .studio textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio, .studio * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

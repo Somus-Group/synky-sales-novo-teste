@@ -419,14 +419,14 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   if (view === 'editor') return <ProposalEditor proposal={activeProposal} onBack={() => setView('proposals')} onNotify={notify} />;
 
   return (
-    <div className={`min-h-screen transition-colors ${theme === 'dark' ? 'theme-dark bg-[#17191E] text-[#EAF2FF]' : 'bg-[#F2F7FF] text-[#11244A]'}`}>
+    <div className={`sales-app min-h-screen transition-colors ${theme === 'dark' ? 'theme-dark bg-[#17191E] text-[#EAF2FF]' : 'bg-[#F2F7FF] text-[#11244A]'}`}>
       <aside className={`sales-sidebar fixed inset-y-0 left-0 z-50 w-[256px] border-r p-3 backdrop-blur-2xl transition-[width,padding,transform] duration-300 ease-out lg:translate-x-0 ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${theme === 'dark' ? 'text-[#EAF2FF]' : ''} ${mobileNav ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-[72px] items-center justify-between px-2">
           <button onClick={() => setView('overview')} className="brand-lockup flex items-center" aria-label="Synky Sales">
               <img src="/synky-sales-logo-transparent.png" alt="Synky Sales" className="brand-logo h-9 w-[148px] object-contain object-left" />
           </button>
           <Button variant="ghost" size="icon-sm" className="sidebar-collapse-toggle hidden lg:grid" onClick={() => setSidebarCollapsed((value) => !value)} aria-label={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}>{sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</Button>
-          <Button variant="ghost" size="icon-sm" className="lg:hidden" onClick={() => setMobileNav(false)}><X /></Button>
+          <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label="Fechar navegação" onClick={() => setMobileNav(false)}><X /></Button>
         </div>
 
         <nav className="mt-3" aria-label="Menu principal">
@@ -453,7 +453,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
 
       <div className={`transition-[padding] duration-300 ease-out ${sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-[256px]'}`}>
         <header className={`sticky top-0 z-30 flex h-[68px] items-center border-b px-3 backdrop-blur-2xl sm:px-5 md:px-8 ${theme === 'dark' ? 'border-white/10 bg-[#17191E]/90 text-[#EAF2FF]' : 'border-[#0B6FE8]/10 bg-[#F2F7FF]/90'}`}>
-          <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => setMobileNav(true)}><Menu /></Button>
+          <Button variant="ghost" size="icon" className="mr-2 lg:hidden" aria-label="Abrir menu" onClick={() => setMobileNav(true)}><Menu /></Button>
           <div className="relative hidden w-[360px] md:block"><Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-[#8e8e93]" /><Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="h-9 rounded-xl border-0 bg-black/[0.045] pl-9 shadow-none focus-visible:ring-1" placeholder="Buscar cliente, projeto ou proposta" />{searchQuery.trim().length >= 2 && <div className="absolute left-0 right-0 top-11 z-50 overflow-hidden rounded-2xl border border-black/[0.08] bg-white p-2 shadow-2xl">{searchResults.length ? searchResults.map((result) => <button key={result.id} onClick={() => { setSearchQuery(''); if (result.client) openClient(result.client); else if (result.proposal) { setActiveProposal(result.proposal); setView('editor'); } else setView('pipeline'); }} className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[#f5f5f7]"><span className="grid size-8 place-items-center rounded-xl bg-[#edf1ef] text-[10px] font-semibold text-[#31594e]">{result.title.slice(0, 2).toUpperCase()}</span><span><strong className="block text-xs font-medium">{result.title}</strong><span className="mt-0.5 block text-[10px] text-[#8e8e93]">{result.subtitle}</span></span></button>) : <p className="px-3 py-4 text-center text-[11px] text-[#8e8e93]">Nenhum resultado encontrado</p>}</div>}</div>
           <div className="ml-auto flex items-center gap-2">
             <div className={`flex items-center rounded-full border p-1 shadow-sm ${theme === 'dark' ? 'border-[#35414E] bg-[#1A222C]' : 'border-[#0B6FE8]/15 bg-white'}`} aria-label="Tema do sistema">
@@ -464,7 +464,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
           </div>
         </header>
 
-        <main className={view === 'studio' ? 'w-full' : 'mx-auto max-w-[1440px] px-4 py-6 sm:px-5 md:px-8 md:py-10'}>
+        <main data-view={view} className={view === 'studio' ? 'sales-content w-full' : 'sales-content mx-auto max-w-[1440px] px-4 py-6 sm:px-5 md:px-8 md:py-10'}>
           {view === 'studio' && <StudioLab />}
           {view === 'overview' && <Overview name={userName} opportunities={opportunities} proposals={proposals} pipelineValue={pipelineValue} onPipeline={() => setView('pipeline')} onProposal={openAgent} onProposals={() => setView('proposals')} onOpenProposal={(proposal) => { setActiveProposal(proposal); setView('editor'); }} />}
           {view === 'agent' && <AgentStudio profile={agentProfile} onSetup={() => setView('agent_setup')} onGenerated={(proposal) => { setProposals((items) => [proposal, ...items]); setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
@@ -846,7 +846,7 @@ function Clients({ clients, onNew, onEdit }: { clients: Client[]; onNew: () => v
   </div>;
 }
 
-function ClientHeroMetric({ label, value }: { label: string; value: string }) { return <div className="min-w-0 px-3 py-4 text-center md:px-5"><strong className="block truncate text-[clamp(17px,2vw,28px)] font-semibold tracking-[-0.04em]">{value}</strong><span className="mt-1.5 block text-[8px] uppercase tracking-[0.12em] text-white/38">{label}</span></div>; }
+function ClientHeroMetric({ label, value }: { label: string; value: string }) { return <div className="sales-client-metric min-w-0 px-3 py-4 text-center md:px-5"><strong className="block text-[clamp(17px,2vw,24px)] font-semibold tracking-[-0.04em]">{value}</strong><span className="mt-1.5 block text-[8px] uppercase tracking-[0.12em] text-white/38">{label}</span></div>; }
 
 function Team({ members, onAdd }: { members: Member[]; onAdd: () => void }) {
   const active = members.filter((member) => member.status === 'Ativo').length;
