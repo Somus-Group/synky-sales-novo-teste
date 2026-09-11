@@ -5,6 +5,7 @@ export type StudioMessage = {
   revision?: number;
   at: number;
   sources?: string[];
+  attachment?: { name: string; mime: string };
 };
 export type StudioProject = {
   id: string;
@@ -76,7 +77,31 @@ export function studioInput(value: unknown) {
     throw new StudioError('Escreva um pedido de até 8.000 caracteres.');
   if (!Number.isInteger(p.revision) || (p.revision as number) < 0)
     throw new StudioError('Reabra o projeto para atualizar a versão.');
-  return { message: p.message.trim(), revision: p.revision as number };
+  let image:
+    | { name: string; mime: string; data: string }
+    | undefined;
+  if (p.image !== undefined) {
+    if (!p.image || typeof p.image !== 'object')
+      throw new StudioError('A imagem anexada é inválida.');
+    const item = p.image as Record<string, unknown>;
+    const mime = String(item.mime || '');
+    const name = String(item.name || '').trim().slice(0, 180);
+    const data = String(item.data || '');
+    const validMime = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const prefix = `data:${mime};base64,`;
+    if (
+      !name ||
+      !validMime.includes(mime) ||
+      !data.startsWith(prefix) ||
+      data.length > 5_600_000 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(data.slice(prefix.length))
+    )
+      throw new StudioError(
+        'Envie uma imagem PNG, JPG, WebP ou GIF de até 4 MB.',
+      );
+    image = { name, mime, data };
+  }
+  return { message: p.message.trim(), revision: p.revision as number, image };
 }
 
 export const studioOutputSchema = {

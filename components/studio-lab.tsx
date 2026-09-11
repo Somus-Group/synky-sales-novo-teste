@@ -22,7 +22,6 @@ import {
   FlaskConical,
   FolderOpen,
   History,
-  Link2,
   Loader2,
   Maximize2,
   MessageSquare,
@@ -39,7 +38,6 @@ import {
 } from 'lucide-react';
 import {
   studioPreviewDocument,
-  type StudioMode,
   type StudioProject,
   type StudioSummary,
   type StudioVersion,
@@ -75,11 +73,8 @@ export function StudioLab() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [library, setLibrary] = useState(false);
-  const [mode, setMode] = useState<StudioMode>('briefing');
-  const [title, setTitle] = useState('');
-  const [briefing, setBriefing] = useState('');
-  const [reference, setReference] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [imageAttachment, setImageAttachment] = useState<File | null>(null);
+  const [draggingImage, setDraggingImage] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [pendingPrompt, setPendingPrompt] = useState('');
   const [tab, setTab] = useState<'chat' | 'context' | 'history'>('chat');
@@ -97,7 +92,7 @@ export function StudioLab() {
   } | null>(null);
   const request = useRef<AbortController | null>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const imageInput = useRef<HTMLInputElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
   const workspace = useRef<HTMLDivElement>(null);
@@ -181,16 +176,36 @@ export function StudioLab() {
     setTab('chat');
     setMobilePane('chat');
     setLibrary(false);
-    setTitle('');
-    setBriefing('');
-    setReference('');
-    setFile(null);
+    setImageAttachment(null);
   }
   function choosePrompt(nextPrompt: string) {
     if (busy) return;
     setPrompt(nextPrompt);
     setTab('chat');
     window.setTimeout(() => composer.current?.focus(), 0);
+  }
+  function attachImage(next: File | null | undefined) {
+    if (!next) return;
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(next.type)) {
+      setError('Envie uma imagem PNG, JPG, WebP ou GIF.');
+      return;
+    }
+    if (next.size > 4 * 1024 * 1024) {
+      setError('A imagem deve ter no máximo 4 MB.');
+      return;
+    }
+    setImageAttachment(next);
+    setError('');
+  }
+  async function imagePayload(file: File | null) {
+    if (!file) return undefined;
+    const data = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+      reader.readAsDataURL(file);
+    });
+    return { name: file.name.slice(0, 180), mime: file.type, data };
   }
   function resizeConversation(clientX: number) {
     const bounds = workspace.current?.getBoundingClientRect();
@@ -218,66 +233,51 @@ export function StudioLab() {
       bounds.left + chatWidth + (event.key === 'ArrowLeft' ? -24 : 24),
     );
   }
-  async function create(event: FormEvent) {
-    event.preventDefault();
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
-    setError('');
-    try {
-      const body = new FormData();
-      body.set('mode', mode);
-      body.set('title', title);
-      body.set('briefing', briefing);
-      body.set('referenceUrl', reference);
-      if (file) body.set('file', file);
-      const result = await api<ProjectResponse>('/api/studio', {
-        method: 'POST',
-        body,
-      });
-      accept(result);
-      setTab('chat');
-      setPrompt(
-        briefing || file
-          ? 'Crie a primeira versão da proposta-site a partir do briefing e das referências deste projeto.'
-          : '',
-      );
-      composer.current?.focus();
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : 'Não foi possível criar o projeto.',
-      );
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
-    }
-  }
   async function send(event: FormEvent) {
     event.preventDefault();
-    if (!project || !prompt.trim() || busyRef.current) return;
+    if (!prompt.trim() || busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
     setError('');
     setTab('chat');
     setHistorical(null);
     const text = prompt.trim();
+    const attachment = imageAttachment;
     setPendingPrompt(text);
     setPrompt('');
+    setImageAttachment(null);
     request.current = new AbortController();
     try {
+      let activeProject = project;
+      if (!activeProject) {
+        const body = new FormData();
+        body.set('mode', 'free');
+        body.set('title', text.slice(0, 72));
+        const created = await api<ProjectResponse>('/api/studio', {
+          method: 'POST',
+          signal: request.current.signal,
+          body,
+        });
+        accept(created);
+        activeProject = created.project;
+        setTab('chat');
+      }
       accept(
-        await api<ProjectResponse>(`/api/studio/${project.id}/message`, {
+        await api<ProjectResponse>(`/api/studio/${activeProject.id}/message`, {
           method: 'POST',
           signal: request.current.signal,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, revision: project.revision }),
+          body: JSON.stringify({
+            message: text,
+            revision: activeProject.revision,
+            image: await imagePayload(attachment),
+          }),
         }),
       );
       setAiReady(true);
     } catch (cause) {
       setPrompt(text);
+      setImageAttachment(attachment);
       setError(
         cause instanceof Error && cause.name === 'AbortError'
           ? 'Pedido interrompido. A última versão salva continua disponível.'
@@ -430,142 +430,89 @@ export function StudioLab() {
           className={styles.conversation}
           aria-label="Conversa e briefing"
         >
+          <input
+            ref={imageInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            hidden
+            onChange={(event) => {
+              attachImage(event.target.files?.[0]);
+              event.target.value = '';
+            }}
+          />
           {!project ? (
-            <form className={styles.setup} onSubmit={create}>
-              <div className={styles.sectionTitle}>
-                <span className={styles.eyebrow}>01 · Ponto de partida</span>
-                <h2>O que vamos criar?</h2>
+            <form
+              className={`${styles.startChat} ${draggingImage ? styles.dragging : ''}`}
+              onSubmit={send}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDraggingImage(true);
+              }}
+              onDragLeave={() => setDraggingImage(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDraggingImage(false);
+                attachImage(event.dataTransfer.files?.[0]);
+              }}
+            >
+              <div className={styles.startChatIntro}>
+                <span className={styles.eyebrow}>CRIAÇÃO POR CONVERSA</span>
+                <span className={styles.assistantMark}>
+                  <Sparkles size={18} />
+                </span>
+                <h2>O que você quer criar?</h2>
                 <p>
-                  Comece com o contexto certo. O Estúdio organiza a proposta e
-                  deixa a conversa cuidar do restante.
+                  Descreva a proposta, envie uma referência visual e acompanhe
+                  as mudanças na prévia ao lado.
                 </p>
               </div>
-              <div
-                className={styles.modeSelector}
-                role="group"
-                aria-label="Como começar"
-              >
-                <button
-                  type="button"
-                  aria-pressed={mode === 'briefing'}
-                  onClick={() => setMode('briefing')}
-                >
-                  <FileText size={17} />
-                  <span>
-                    <strong>Com briefing</strong>
-                    <small>Parta das informações do cliente</small>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={mode === 'free'}
-                  onClick={() => setMode('free')}
-                >
-                  <Sparkles size={17} />
-                  <span>
-                    <strong>Criação livre</strong>
-                    <small>Comece por uma ideia ou direção</small>
-                  </span>
-                </button>
-              </div>
-              <div className={styles.formStack}>
-                <label className={styles.field}>
-                  Nome do projeto
-                  <input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Proposta para o cliente"
-                    maxLength={120}
-                  />
-                </label>
-                <label className={styles.field}>
-                  {mode === 'briefing'
-                    ? 'Briefing do cliente'
-                    : 'Contexto inicial'}
-                  {mode === 'free' && (
-                    <span className={styles.optional}>Opcional</span>
-                  )}
-                  <textarea
-                    value={briefing}
-                    onChange={(e) => setBriefing(e.target.value)}
-                    placeholder={
-                      mode === 'briefing'
-                        ? 'Cole o briefing, o escopo e o que o cliente precisa…'
-                        : 'Uma ideia, um serviço, uma direção visual…'
-                    }
-                    rows={6}
-                    maxLength={40000}
-                    required={mode === 'briefing' && !file}
-                  />
-                </label>
-              </div>
-              <div className={styles.attachmentRow}>
-                <input
-                  ref={fileInput}
-                  type="file"
-                  accept=".pdf,.txt,.md"
-                  hidden
-                  onChange={(e) => {
-                    const selected = e.target.files?.[0];
-                    if (selected && selected.size > 8 * 1024 * 1024)
-                      setError('Envie um arquivo de até 8 MB.');
-                    else {
-                      setFile(selected || null);
-                      setError('');
-                    }
-                    e.target.value = '';
-                  }}
-                />
-                {file ? (
-                  <span className={styles.attachment}>
-                    <FileText size={14} />
-                    <span>{file.name}</span>
-                    <IconButton
-                      label="Remover anexo"
-                      onClick={() => setFile(null)}
+              <div className={styles.startComposer}>
+                {imageAttachment && (
+                  <span className={styles.imageAttachment}>
+                    <Paperclip size={14} />
+                    <span>{imageAttachment.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setImageAttachment(null)}
+                      aria-label="Remover imagem"
                     >
                       <X size={14} />
-                    </IconButton>
+                    </button>
                   </span>
-                ) : (
+                )}
+                <textarea
+                  ref={composer}
+                  aria-label="Pedido para criar uma proposta"
+                  value={prompt}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  placeholder="Descreva a proposta que você quer criar…"
+                  rows={5}
+                  maxLength={8000}
+                  disabled={busy}
+                />
+                <div className={styles.startComposerFooter}>
                   <button
                     type="button"
-                    className={styles.attachButton}
-                    onClick={() => fileInput.current?.click()}
+                    className={styles.addImage}
+                    onClick={() => imageInput.current?.click()}
+                    disabled={busy}
+                    aria-label="Adicionar imagem"
+                    title="Adicionar imagem"
                   >
-                    <Paperclip size={15} />
-                    Anexar briefing
+                    <Plus size={18} />
                   </button>
-                )}
-                <small>PDF, TXT, MD · até 8 MB</small>
+                  <span>Arraste uma imagem ou clique em +</span>
+                  <button
+                    type="submit"
+                    className={styles.send}
+                    disabled={!prompt.trim() || busy || loading}
+                    aria-label="Criar proposta"
+                  >
+                    {busy ? <Loader2 size={17} className={styles.spin} /> : <ArrowUp size={18} />}
+                  </button>
+                </div>
               </div>
-              <label className={`${styles.field} ${styles.referenceField}`}>
-                Proposta de referência
-                <span className={styles.optional}>Opcional</span>
-                <span className={styles.urlField}>
-                  <Link2 size={16} />
-                  <input
-                    type="url"
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    placeholder="https://sua-proposta.com"
-                    maxLength={2000}
-                  />
-                </span>
-              </label>
               {error && <ErrorMessage>{error}</ErrorMessage>}
-              <button
-                type="submit"
-                className={styles.primary}
-                disabled={busy || loading}
-              >
-                {busy ? (
-                  <Loader2 size={17} className={styles.spin} />
-                ) : (
-                  <ArrowRight size={17} />
-                )}
-                Criar workspace
-              </button>
               {projects.length > 0 && (
                 <button
                   type="button"
@@ -573,14 +520,8 @@ export function StudioLab() {
                   onClick={() => setLibrary(true)}
                 >
                   <FolderOpen size={15} />
-                  Continuar um projeto
+                  Abrir um projeto existente
                 </button>
-              )}
-              {loading && (
-                <p className={styles.loading}>
-                  <Loader2 size={16} className={styles.spin} />
-                  Carregando projetos
-                </p>
               )}
             </form>
           ) : (
@@ -677,6 +618,12 @@ export function StudioLab() {
                         )}
                       </span>
                       <p>{message.text}</p>
+                      {message.attachment && (
+                        <span className={styles.messageAttachment}>
+                          <Paperclip size={13} />
+                          {message.attachment.name}
+                        </span>
+                      )}
                       {message.revision && (
                         <button
                           className={styles.versionChip}
@@ -820,9 +767,35 @@ export function StudioLab() {
                   )}
                 </div>
               )}
-              <form className={styles.composerArea} onSubmit={send}>
+              <form
+                className={`${styles.composerArea} ${draggingImage ? styles.dragging : ''}`}
+                onSubmit={send}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setDraggingImage(true);
+                }}
+                onDragLeave={() => setDraggingImage(false)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setDraggingImage(false);
+                  attachImage(event.dataTransfer.files?.[0]);
+                }}
+              >
                 {error && <ErrorMessage>{error}</ErrorMessage>}
                 <div className={styles.composer}>
+                  {imageAttachment && (
+                    <span className={styles.imageAttachment}>
+                      <Paperclip size={14} />
+                      <span>{imageAttachment.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setImageAttachment(null)}
+                        aria-label="Remover imagem"
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  )}
                   <textarea
                     ref={composer}
                     aria-label="Pedido para a proposta"
@@ -848,12 +821,22 @@ export function StudioLab() {
                     }}
                   />
                   <div className={styles.composerFooter}>
-                      <span>
-                        <Sparkles size={13} />
+                    <span>
+                      <Sparkles size={13} />
                         {project.html
                           ? `Versão ${project.revision} · enviar para atualizar`
                           : 'Primeira versão · enviar para criar'}
                     </span>
+                    <button
+                      type="button"
+                      className={styles.addImage}
+                      onClick={() => imageInput.current?.click()}
+                      disabled={busy}
+                      aria-label="Adicionar imagem"
+                      title="Adicionar imagem"
+                    >
+                      <Plus size={17} />
+                    </button>
                     {busy ? (
                       <IconButton
                         label="Interromper pedido"

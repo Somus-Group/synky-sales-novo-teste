@@ -76,6 +76,7 @@ export async function POST(
       text?: string;
       filename?: string;
       file_data?: string;
+      image_url?: string;
     }> = [
       {
         type: 'input_text',
@@ -110,6 +111,9 @@ export async function POST(
         filename: project.fileName,
         file_data: `data:application/pdf;base64,${btoa(binary)}`,
       });
+    }
+    if (payload.image) {
+      content.push({ type: 'input_image', image_url: payload.image.data });
     }
     const hash = await crypto.subtle.digest(
       'SHA-256',
@@ -207,7 +211,14 @@ export async function POST(
       generated.message +=
         '\n\nNão foi possível confirmar a leitura do link de referência. Você pode descrever o visual desejado na conversa.';
     const now = Date.now();
-    messages.push({ role: 'user', text: payload.message, at: now });
+    messages.push({
+      role: 'user',
+      text: payload.message,
+      at: now,
+      attachment: payload.image
+        ? { name: payload.image.name, mime: payload.image.mime }
+        : undefined,
+    });
     messages.push({
       role: 'assistant',
       text: generated.message,

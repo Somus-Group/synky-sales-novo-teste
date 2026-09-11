@@ -450,6 +450,63 @@ test('PDF and optional reference reach the model, unavailable reference is discl
   }
 });
 
+test('conversation accepts a safe image reference without storing its data', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  let sent;
+  globalThis.fetch = async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Proposta visual',
+        message: 'Usei a imagem como referência visual.',
+        html,
+        reference_status: 'not_requested',
+      }),
+    });
+  };
+  try {
+    const { project } = await (await f.create()).json();
+    const image = {
+      name: 'referencia.png',
+      mime: 'image/png',
+      data: 'data:image/png;base64,aGVsbG8=',
+    };
+    const response = await f.messages.POST(
+      request({ message: 'Use esta referência.', revision: 0, image }),
+      context(project.id),
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual(sent.input[0].content.at(-1), {
+      type: 'input_image',
+      image_url: image.data,
+    });
+    const result = await response.json();
+    assert.deepEqual(result.project.messages[0].attachment, {
+      name: image.name,
+      mime: image.mime,
+    });
+    assert.doesNotMatch(JSON.stringify(result.project.messages), /aGVsbG8=/);
+    assert.equal(
+      (
+        await f.messages.POST(
+          request({
+            message: 'Imagem inválida.',
+            revision: 1,
+            image: { ...image, mime: 'image/svg+xml' },
+          }),
+          context(project.id),
+        )
+      ).status,
+      400,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
 test('actual Worker HTML parser removes active content and keeps proposal styling', async () => {
   const workerSource = `const exports = {}; ${transpile('lib/studio-html.ts')} addEventListener('fetch', event => event.respondWith((async () => new Response(await exports.sanitizeStudioHtml(await event.request.text())))()));`;
   const mf = new Miniflare({
