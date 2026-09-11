@@ -5,7 +5,10 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent,
   type ReactNode,
+  type CSSProperties,
 } from 'react';
 import {
   ArrowLeft,
@@ -84,6 +87,7 @@ export function StudioLab() {
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>(
     'desktop',
   );
+  const [chatWidth, setChatWidth] = useState(410);
   const [expanded, setExpanded] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [historical, setHistorical] = useState<{
@@ -96,6 +100,7 @@ export function StudioLab() {
   const fileInput = useRef<HTMLInputElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
+  const workspace = useRef<HTMLDivElement>(null);
   const libraryDialog = useRef<HTMLDialogElement>(null);
   const busyRef = useRef(false);
 
@@ -186,6 +191,32 @@ export function StudioLab() {
     setPrompt(nextPrompt);
     setTab('chat');
     window.setTimeout(() => composer.current?.focus(), 0);
+  }
+  function resizeConversation(clientX: number) {
+    const bounds = workspace.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const minimum = 300;
+    const maximum = Math.max(minimum, Math.min(580, bounds.width - 340));
+    setChatWidth(Math.round(Math.min(maximum, Math.max(minimum, clientX - bounds.left))));
+  }
+  function startResize(event: PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    resizeConversation(event.clientX);
+  }
+  function moveResize(event: PointerEvent<HTMLDivElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      resizeConversation(event.clientX);
+    }
+  }
+  function keyResize(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const bounds = workspace.current?.getBoundingClientRect();
+    if (!bounds) return;
+    resizeConversation(
+      bounds.left + chatWidth + (event.key === 'ArrowLeft' ? -24 : 24),
+    );
   }
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -389,7 +420,12 @@ export function StudioLab() {
         </button>
       </div>
 
-      <div className={styles.workspace} data-pane={mobilePane}>
+      <div
+        ref={workspace}
+        className={styles.workspace}
+        data-pane={mobilePane}
+        style={{ '--studio-chat-width': `${chatWidth}px` } as CSSProperties}
+      >
         <section
           className={styles.conversation}
           aria-label="Conversa e briefing"
@@ -842,6 +878,22 @@ export function StudioLab() {
             </>
           )}
         </section>
+
+        <div
+          className={styles.resizeHandle}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Redimensionar conversa e prévia"
+          aria-valuemin={300}
+          aria-valuemax={580}
+          aria-valuenow={chatWidth}
+          tabIndex={0}
+          onPointerDown={startResize}
+          onPointerMove={moveResize}
+          onKeyDown={keyResize}
+        >
+          <span />
+        </div>
 
         <section
           className={`${styles.preview} ${expanded ? styles.expanded : ''}`}
