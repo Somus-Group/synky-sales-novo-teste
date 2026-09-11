@@ -196,6 +196,34 @@ textarea:focus-visible {
   color: #e3efff !important;
 }
 
+/* The app uses several small utility labels inside cards. In the dark surface,
+   their light-theme opacity values made useful information disappear. Keep
+   secondary text visibly secondary, but never too dim to read. */
+.theme-dark [class*="text-white/"] {
+  color: rgb(235 244 255 / 88%) !important;
+}
+
+.theme-dark [class*="text-black"] {
+  color: #e3efff !important;
+}
+
+.theme-dark p[class*="opacity-"],
+.theme-dark span[class*="opacity-"] {
+  opacity: 0.86;
+}
+
+.theme-dark input,
+.theme-dark textarea,
+.theme-dark [data-slot="select-trigger"],
+.theme-dark [role="combobox"] {
+  color: #eef6ff;
+}
+
+.theme-dark input::placeholder,
+.theme-dark textarea::placeholder {
+  color: #b9cee9;
+}
+
 .theme-dark [class*="text-[#B54336]"],
 .theme-dark [class*="text-[#C03F32]"],
 .theme-dark [class*="text-[#9D3127]"] {
@@ -209,11 +237,6 @@ textarea:focus-visible {
   background-color: #2485f5 !important;
 }
 
-.theme-dark input::placeholder,
-.theme-dark textarea::placeholder {
-  color: #9db4d2;
-  opacity: 1;
-}
 
 @layer base {
   * {
