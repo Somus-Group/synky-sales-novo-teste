@@ -592,12 +592,33 @@ textarea:focus-visible {
   100% { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes overview-chart-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overview-funnel-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.overview-chart {
+  animation: overview-chart-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.overview-funnel-bar {
+  transform-origin: left center;
+  animation: overview-funnel-fill 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .pipeline-number-moving {
   animation: pipeline-number-update 520ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pipeline-number-moving {
+  .pipeline-number-moving,
+  .overview-chart,
+  .overview-funnel-bar {
     animation: none;
   }
 }
