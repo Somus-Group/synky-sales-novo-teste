@@ -176,6 +176,9 @@ export function StudioLab() {
     .find((message) => message.review)?.review;
   const logo = canvasReport?.images.find((item) => item.logo);
   const revisionLabel = historical?.revision ?? project?.revision ?? 0;
+  const selectedTemplate =
+    studioTemplates.find((item) => item.id === draft.templateId) ||
+    studioTemplates[0];
   const reportCanvas = useCallback(
     (value: StudioCanvasReport) => setCanvasReport(value),
     [],
@@ -997,10 +1000,34 @@ export function StudioLab() {
                         <span>
                           <strong>{template.name}</strong>
                           <small>{template.description}</small>
+                          <em>Ideal para: {template.bestFor}</em>
                         </span>
                       </button>
                     ))}
                   </div>
+                  <aside
+                    className={styles.templatePreview}
+                    style={
+                      {
+                        '--template-accent': selectedTemplate.accent,
+                        '--template-surface': selectedTemplate.surface,
+                      } as CSSProperties
+                    }
+                  >
+                    <span>Selecionado</span>
+                    <strong>{selectedTemplate.name}</strong>
+                    <p>{selectedTemplate.description}</p>
+                    <dl>
+                      <div>
+                        <dt>Ideal para</dt>
+                        <dd>{selectedTemplate.bestFor}</dd>
+                      </div>
+                      <div>
+                        <dt>Estrutura</dt>
+                        <dd>{selectedTemplate.structure}</dd>
+                      </div>
+                    </dl>
+                  </aside>
                 </fieldset>
               )}
               <label>

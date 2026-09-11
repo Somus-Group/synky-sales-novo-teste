@@ -1900,6 +1900,14 @@
   font-size: 11px;
   line-height: 1.35;
 }
+.templatePicker em {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1.35;
+}
 .templateSwatch {
   display: block;
   width: 10px;
@@ -1907,6 +1915,51 @@
   flex: 0 0 10px;
   background: var(--template-accent);
   border-radius: 4px;
+}
+.templatePreview {
+  margin-top: 12px;
+  padding: 16px;
+  color: var(--ink);
+  background: var(--template-surface);
+  border: 1px solid color-mix(in srgb, var(--template-accent) 32%, var(--line));
+  border-left: 4px solid var(--template-accent);
+  border-radius: 7px;
+}
+.templatePreview > span,
+.templatePreview dt {
+  display: block;
+  color: var(--template-accent);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.templatePreview > strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 17px;
+}
+.templatePreview > p {
+  margin: 5px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.templatePreview dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.templatePreview dl div {
+  display: grid;
+  gap: 2px;
+}
+.templatePreview dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+:global(.theme-dark) .templatePreview {
+  background: var(--studio-inset);
 }
 .reviewCount {
   font-size: 10px;
