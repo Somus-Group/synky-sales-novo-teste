@@ -6,6 +6,7 @@ import {
   studioFailure,
 } from '@/db/studio';
 import { referenceUrl, StudioError, type StudioSummary } from '@/lib/studio';
+import { studioTemplateId } from '@/lib/studio-templates';
 
 export async function GET() {
   try {
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
       throw new StudioError('O arquivo deve ter no máximo 8 MB.', 413);
     const form = await request.formData();
     const mode = form.get('mode');
+    const templateId = studioTemplateId(form.get('templateId'));
     const title =
       String(form.get('title') || '')
         .trim()
@@ -87,13 +89,14 @@ export async function POST(request: Request) {
     const now = Date.now();
     await db
       .prepare(
-        'INSERT INTO studio_projects (id, workspace_id, title, mode, briefing, reference_url, file_key, file_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO studio_projects (id, workspace_id, title, mode, template_id, briefing, reference_url, file_key, file_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       )
       .bind(
         id,
         workspaceId,
         title,
         mode,
+        templateId,
         briefing,
         reference,
         uploadedKey,

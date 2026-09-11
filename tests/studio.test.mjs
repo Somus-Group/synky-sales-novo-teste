@@ -30,6 +30,7 @@ function load(path, mocks = {}) {
   return mod.exports;
 }
 const studio = load('lib/studio.ts');
+const studioTemplates = load('lib/studio-templates.ts');
 const html =
   '<!doctype html><html><head><style>body{color:#123}</style></head><body><h1>Proposta teste</h1><p>Escopo confirmado</p></body></html>';
 const request = (payload, method = 'POST') =>
@@ -102,6 +103,7 @@ function fixture() {
     'cloudflare:workers': { env },
     '@/db': { getD1: () => d1 },
     '@/lib/studio': studio,
+    '@/lib/studio-templates': studioTemplates,
     '@/lib/studio-media': {
       prepareStudioMedia: async (
         _db,
@@ -339,6 +341,50 @@ test('disconnected AI never fabricates a result or loses the saved briefing', as
   }
 });
 
+test('template projects use GPT-5 Mini once and render the visual locally', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  let sent;
+  globalThis.fetch = async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Proposta de performance',
+        message: 'Primeira versao pronta.',
+        headline: 'Crescimento com foco em resultado.',
+        summary: 'Uma proposta objetiva para acelerar a operacao.',
+        objective: 'Organizar a estrategia e a execucao comercial.',
+        scope: ['Diagnostico do funil', 'Plano de midia', 'Rotina de otimizacao'],
+        method: ['Imersao', 'Plano de acao', 'Acompanhamento'],
+        timeline: ['Semana 1: diagnostico', 'Semanas 2 a 4: execucao'],
+        investment: 'Investimento a definir conforme o escopo final.',
+        next_steps: ['Validar o escopo', 'Definir inicio'],
+        missing_information: ['Investimento mensal'],
+        reference_status: 'not_requested',
+      }),
+    });
+  };
+  try {
+    const { project } = await (
+      await f.create({ templateId: 'performance', briefing: 'Cliente teste' })
+    ).json();
+    const response = await f.messages.POST(
+      request({ message: 'Crie a proposta.', revision: 0 }),
+      context(project.id),
+    );
+    assert.equal(response.status, 200);
+    assert.equal(sent.model, 'gpt-5-mini');
+    assert.equal(sent.text.format.name, 'studio_template');
+    const result = await response.json();
+    assert.match(result.project.html, /Crescimento com foco em resultado/);
+    assert.match(result.project.html, /#0f9d72/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
 test('conversation edits use existing HTML, restore adds history, stale edits and failures preserve current version', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
@@ -366,7 +412,7 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
     );
     assert.equal(first.status, 200);
     const v1 = await first.json();
-    assert.equal(calls[0].model, 'gpt-5-mini');
+    assert.equal(calls[0].model, 'gpt-5-nano');
     assert.equal(v1.project.revision, 1);
     assert.equal(v1.versions.length, 1);
     assert.equal(v1.project.messages.length, 2);

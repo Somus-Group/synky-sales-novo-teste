@@ -15,7 +15,7 @@ type ProjectRow = Omit<StudioProject, 'messages' | 'busy'> & {
   lockToken: string;
   lockedUntil: number;
 };
-const fields = `id, workspace_id AS workspaceId, title, mode, briefing, reference_url AS referenceUrl,
+const fields = `id, workspace_id AS workspaceId, title, mode, template_id AS templateId, briefing, reference_url AS referenceUrl,
   file_key AS fileKey, file_name AS fileName, html, revision, messages_json AS messagesJson,
   lock_token AS lockToken, locked_until AS lockedUntil, created_at AS createdAt, updated_at AS updatedAt`;
 

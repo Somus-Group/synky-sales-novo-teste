@@ -20,6 +20,7 @@ export type StudioProject = {
   id: string;
   title: string;
   mode: StudioMode;
+  templateId: import('./studio-templates').StudioTemplateId;
   briefing: string;
   referenceUrl: string;
   fileName: string;
