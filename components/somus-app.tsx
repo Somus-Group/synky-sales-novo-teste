@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type FormEvent } from 'react';
 import {
   ArrowLeft,
   ArrowUp,
@@ -555,10 +555,10 @@ function Pipeline({ opportunities, labels, companies, activeCompanyId, companyNa
   return <>
     <PageTitle kicker={`CRM inteligente · ${companyName}`} title={<span className="inline-flex items-center gap-2">{labels.title}<LabelEditButton label="Editar nome do pipeline" onClick={() => onEditLabel('title', 'Nome do pipeline')} /></span>} description={labels.description} actions={<><div className="flex w-full min-w-0 items-center gap-2 sm:w-auto"><div className="min-w-0 flex-1 sm:w-[220px]"><span className="mb-1 block pl-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#6E87A3]">Empresa</span><div className="flex items-center gap-2"><Building2 className="size-4 shrink-0 text-[#0B6FE8]" /><AppSelect value={activeCompanyId} onValueChange={onSelectCompany} ariaLabel="Empresa exibida no pipeline" className="min-w-0 flex-1" options={companies.map((company) => ({ value: company.id, label: company.name }))} /></div></div><Button onClick={onCompanies} variant="outline" className="mt-4 shrink-0 rounded-xl border-[#0B6FE8]/20 bg-white px-3 text-[#0B6FE8] hover:bg-[#F2F7FF]" aria-label="Gerenciar empresas"><Pencil className="size-3.5" /><span className="hidden sm:inline">Gerenciar</span></Button></div><Button onClick={() => onNew()} className="flex-1 rounded-xl bg-[#0B6FE8] px-4 text-white shadow-[0_8px_18px_rgba(11,111,232,0.18)] hover:bg-[#0757C8] sm:flex-none"><Plus /> {labels.newOpportunity}</Button><LabelEditButton label="Editar nome do botão principal" onClick={() => onEditLabel('newOpportunity', 'Nome do botão principal')} /></>} />
     <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <PipelineMetric color="violet" label={labels.metrics.pipeline} value={money.format(pipelineValue)} detail={`${filtered.length} oportunidades`} onEdit={() => onEditLabel('metrics.pipeline', 'Nome do indicador')} />
-      <PipelineMetric color="green" label={labels.metrics.forecast} value={money.format(weightedForecast)} detail="Probabilidade por etapa" onEdit={() => onEditLabel('metrics.forecast', 'Nome do indicador')} />
-      <PipelineMetric color="orange" label={labels.metrics.ticket} value={money.format(averageTicket)} detail="Valor médio por oportunidade" onEdit={() => onEditLabel('metrics.ticket', 'Nome do indicador')} />
-      <PipelineMetric color="rose" label={labels.metrics.negotiation} value={String(filtered.filter((item) => item.stage === 'Negociação').length)} detail={money.format(filtered.filter((item) => item.stage === 'Negociação').reduce((sum, item) => sum + item.value, 0))} onEdit={() => onEditLabel('metrics.negotiation', 'Nome do indicador')} />
+      <PipelineMetric color="violet" label={labels.metrics.pipeline} value={pipelineValue} format={money.format} detail={`${filtered.length} oportunidades`} onEdit={() => onEditLabel('metrics.pipeline', 'Nome do indicador')} />
+      <PipelineMetric color="green" label={labels.metrics.forecast} value={weightedForecast} format={money.format} detail="Probabilidade por etapa" onEdit={() => onEditLabel('metrics.forecast', 'Nome do indicador')} />
+      <PipelineMetric color="orange" label={labels.metrics.ticket} value={averageTicket} format={money.format} detail="Valor médio por oportunidade" onEdit={() => onEditLabel('metrics.ticket', 'Nome do indicador')} />
+      <PipelineMetric color="rose" label={labels.metrics.negotiation} value={filtered.filter((item) => item.stage === 'Negociação').length} format={String} detail={money.format(filtered.filter((item) => item.stage === 'Negociação').reduce((sum, item) => sum + item.value, 0))} onEdit={() => onEditLabel('metrics.negotiation', 'Nome do indicador')} />
     </section>
 
     <section className="mb-5 flex flex-col gap-3 rounded-[22px] border border-black/[0.06] bg-white p-3 shadow-sm md:flex-row md:items-center">
@@ -572,7 +572,7 @@ function Pipeline({ opportunities, labels, companies, activeCompanyId, companyNa
       const items = filtered.filter((item) => item.stage === stage);
       const stageValue = items.reduce((sum, item) => sum + item.value, 0);
       return <section key={stage} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDrop={(event) => { event.preventDefault(); const id = Number(event.dataTransfer.getData('text/opportunity-id') || draggedId); if (id) onMove(id, stage); setDraggedId(null); }} className={`min-h-[430px] rounded-[24px] border p-3 transition-colors ${draggedId ? 'border-[#83908B] bg-[#EEF4F1]' : 'border-transparent bg-black/[0.025]'}`}>
-        <header className="px-2 py-2"><div className="flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: stageColors[stage] }} /><h2 className="text-xs font-semibold">{labels.stages[stage]}</h2><LabelEditButton label={`Editar nome de ${labels.stages[stage]}`} onClick={() => onEditLabel(`stages.${stage}`, 'Nome da etapa')} /><span className="ml-auto rounded-full bg-white px-2 py-1 text-[9px] text-[#6E6E73] shadow-sm">{items.length}</span></div><strong className="mt-3 block text-[17px] font-semibold tracking-[-0.03em]">{money.format(stageValue)}</strong><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/[0.055]"><div className="h-full rounded-full" style={{ width: `${pipelineValue ? Math.max(5, stageValue / pipelineValue * 100) : 0}%`, background: stageColors[stage] }} /></div></header>
+        <header className="px-2 py-2"><div className="flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: stageColors[stage] }} /><h2 className="text-xs font-semibold">{labels.stages[stage]}</h2><LabelEditButton label={`Editar nome de ${labels.stages[stage]}`} onClick={() => onEditLabel(`stages.${stage}`, 'Nome da etapa')} /><AnimatedNumber value={items.length} format={String} className="ml-auto rounded-full bg-white px-2 py-1 text-[9px] text-[#6E6E73] shadow-sm" /></div><AnimatedNumber value={stageValue} format={money.format} className="mt-3 block text-[17px] font-semibold tracking-[-0.03em]" /><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/[0.055]"><div className="h-full rounded-full transition-[width] duration-500 ease-out" style={{ width: `${pipelineValue ? Math.max(5, stageValue / pipelineValue * 100) : 0}%`, background: stageColors[stage] }} /></div></header>
         <div className="mt-2 space-y-3">{items.map((item) => <article key={item.id} draggable onDragStart={(event) => { event.dataTransfer.setData('text/opportunity-id', String(item.id)); event.dataTransfer.effectAllowed = 'move'; setDraggedId(item.id); }} onDragEnd={() => setDraggedId(null)} onClick={() => onEdit(item)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onEdit(item); }} role="button" tabIndex={0} className={`group cursor-grab rounded-[18px] border border-black/[0.06] bg-white p-4 shadow-[0_4px_18px_rgba(0,0,0,0.035)] transition-all active:cursor-grabbing ${draggedId === item.id ? 'scale-[0.98] opacity-50' : 'hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)]'}`}>
           <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#F2F3F5] text-[9px] font-semibold">{item.client.split(' ').map((word) => word[0]).join('').slice(0, 2)}</span><div className="min-w-0 flex-1"><h3 className="truncate text-[13px] font-semibold">{item.project}</h3><p className="mt-1 truncate text-[10px] text-[#8E8E93]">{item.client}</p></div><GripVertical className="size-4 text-[#C4C4C7] transition-colors group-hover:text-[#6E6E73]" /></div>
           {item.tags.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{item.tags.slice(0, 3).map((tag, index) => <span key={tag} className={`rounded-full px-2 py-1 text-[8px] font-medium ${index % 3 === 0 ? 'bg-[#EEF0FF] text-[#5164C9]' : index % 3 === 1 ? 'bg-[#EAF6F0] text-[#277157]' : 'bg-[#FFF2E3] text-[#A46024]'}`}>{tag}</span>)}</div>}
@@ -589,9 +589,37 @@ function LabelEditButton({ label, onClick }: { label: string; onClick: () => voi
   return <Button type="button" variant="ghost" size="icon-sm" className="size-6 shrink-0 rounded-lg text-current opacity-55 transition-opacity hover:bg-white/65 hover:opacity-100" aria-label={label} onClick={onClick}><Pencil className="size-3" /></Button>;
 }
 
-function PipelineMetric({ color, label, value, detail, onEdit }: { color: 'violet' | 'green' | 'orange' | 'rose'; label: string; value: string; detail: string; onEdit: () => void }) {
+function AnimatedNumber({ value, format, className }: { value: number; format: (value: number) => string; className?: string }) {
+  const [shown, setShown] = useState(value);
+  const [moving, setMoving] = useState(false);
+  const previousValue = useRef(value);
+
+  useEffect(() => {
+    const from = previousValue.current;
+    if (from === value) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setShown(value); previousValue.current = value; return; }
+    const startedAt = performance.now();
+    const duration = 520;
+    let frame = 0;
+    setMoving(true);
+    const animate = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setShown(Math.round(from + (value - from) * eased));
+      if (progress < 1) { frame = requestAnimationFrame(animate); return; }
+      previousValue.current = value;
+      setMoving(false);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  return <span className={`${className || ''} ${moving ? 'pipeline-number-moving' : ''}`}>{format(shown)}</span>;
+}
+
+function PipelineMetric({ color, label, value, format, detail, onEdit }: { color: 'violet' | 'green' | 'orange' | 'rose'; label: string; value: number; format: (value: number) => string; detail: string; onEdit: () => void }) {
   const palette = { violet: 'bg-[#EEF0FF] text-[#5164C9]', green: 'bg-[#EAF6F0] text-[#277157]', orange: 'bg-[#FFF2E3] text-[#A46024]', rose: 'bg-[#F8EAF1] text-[#8F456B]' }[color];
-  return <article className={`rounded-[22px] p-5 ${palette}`}><div className="flex items-center gap-1"><p className="text-[9px] font-semibold uppercase tracking-[0.1em] opacity-65">{label}</p><LabelEditButton label={`Editar nome de ${label}`} onClick={onEdit} /></div><strong className="mt-3 block text-[25px] font-semibold tracking-[-0.045em] text-[#1D1D1F]">{value}</strong><p className="mt-3 text-[9px] text-black/40">{detail}</p></article>;
+  return <article className={`rounded-[22px] p-5 ${palette}`}><div className="flex items-center gap-1"><p className="text-[9px] font-semibold uppercase tracking-[0.1em] opacity-65">{label}</p><LabelEditButton label={`Editar nome de ${label}`} onClick={onEdit} /></div><AnimatedNumber value={value} format={format} className="mt-3 block text-[25px] font-semibold tracking-[-0.045em] text-[#1D1D1F]" /><p className="mt-3 text-[9px] text-black/40">{detail}</p></article>;
 }
 
 function CompanyDialog({ open, onOpenChange, companies, activeCompanyId, onSelect, onCreate, onRename }: { open: boolean; onOpenChange: (open: boolean) => void; companies: PipelineCompany[]; activeCompanyId: string; onSelect: (id: string) => void; onCreate: (name: string) => Promise<string>; onRename: (id: string, name: string) => Promise<string> }) {
