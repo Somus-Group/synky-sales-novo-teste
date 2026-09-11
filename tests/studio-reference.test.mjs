@@ -20,7 +20,7 @@ const worker = await build({
           if (key.startsWith('https://cloudflare-dns.com/')) return Response.json({Answer:(addresses || ['104.21.12.34']).map(data => ({type:data.includes(':') ? 28 : 1,data}))});
           const resource = resources[key];
           if (!resource) return new Response('Missing fixture', {status:404});
-          return new Response(resource.body || '', {status:resource.status || 200,headers:resource.headers || {'content-type':'text/html'}});
+          return new Response(resource.base64 ? Uint8Array.from(atob(resource.base64), c => c.charCodeAt(0)) : resource.body || '', {status:resource.status || 200,headers:resource.headers || {'content-type':'text/html'}});
         } : realFetch;
         try { return Response.json({reference: await readStudioReference(url), visited}); }
         catch(error) { return Response.json({error:error.message,code:error.code,visited}, {status:error.status || 500}); }
@@ -214,8 +214,54 @@ test(
         textLength: result.reference.text.length,
         structureLength: result.reference.structure.length,
         styleLength: result.reference.styles.length,
+        media: result.reference.media.map(({ dataUrl, ...item }) => ({
+          ...item,
+          bytes: dataUrl.length,
+        })),
+        mediaWarnings: result.reference.mediaWarnings,
         sample: result.reference.text.slice(0, 900),
       }),
     );
+    if (process.env.STUDIO_LIVE_REFERENCE_URL.includes('somus-bpo.lovable.app'))
+      assert.ok(
+        result.reference.media.some((item) => item.kind === 'logo'),
+        'The actual Somus logo must be imported',
+      );
   },
 );
+
+test('imports real logo bytes, while rejecting private image redirects', async () => {
+  const png =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=';
+  const result = await run({
+    url: 'https://example.com/',
+    resources: {
+      'https://example.com/': {
+        body: html.replace(
+          '<body>',
+          '<body><img src="/logo.png" alt="Marca"><img class="brand" src="/private.png">',
+        ),
+      },
+      'https://example.com/logo.png': {
+        base64: png,
+        headers: { 'content-type': 'image/png' },
+      },
+      'https://example.com/private.png': {
+        status: 302,
+        headers: { location: 'https://127.0.0.1/logo.png' },
+      },
+    },
+  });
+  assert.equal(result.status, 200, result.error);
+  assert.equal(result.reference.media.length, 1);
+  assert.equal(result.reference.media[0].kind, 'logo');
+  assert.equal(
+    result.reference.media[0].dataUrl,
+    'data:image/png;base64,' + png,
+  );
+  assert.equal(result.reference.mediaWarnings.length, 1);
+  assert.equal(
+    result.visited.some((item) => item.url.includes('127.0.0.1')),
+    false,
+  );
+});

@@ -6,6 +6,13 @@ export type StudioMessage = {
   at: number;
   sources?: string[];
   reference?: { url: string; title: string; method: 'html' | 'react-source' };
+  review?: {
+    headings: string[];
+    imageCount: number;
+    logo: boolean;
+    missing: string[];
+    warnings: string[];
+  };
   attachment?: { name: string; mime: string };
   intent?: 'edit' | 'plan';
 };
@@ -185,11 +192,18 @@ export function studioVisualInput(value: unknown): StudioVisualEdit {
 export const studioOutputSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['message', 'title', 'html', 'reference_status'],
+  required: [
+    'message',
+    'title',
+    'html',
+    'reference_status',
+    'missing_information',
+  ],
   properties: {
     message: { type: 'string' },
     title: { type: 'string' },
     html: { type: 'string' },
+    missing_information: { type: 'array', items: { type: 'string' } },
     reference_status: {
       type: 'string',
       enum: ['used', 'unavailable', 'not_requested'],
@@ -227,11 +241,25 @@ export function parseStudioOutput(text: string) {
       502,
     );
   }
+  if (
+    p.missing_information !== undefined &&
+    (!Array.isArray(p.missing_information) ||
+      p.missing_information.length > 12 ||
+      p.missing_information.some(
+        (item) => typeof item !== 'string' || item.length > 200,
+      ))
+  )
+    throw new StudioError(
+      'A IA retornou uma revisão inválida. Tente novamente.',
+      502,
+    );
+  p.missing_information ||= [];
   return p as {
     message: string;
     title: string;
     html: string;
     reference_status: string;
+    missing_information: string[];
   };
 }
 

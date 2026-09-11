@@ -1,5 +1,6 @@
 import { referenceUrl, StudioError } from '@/lib/studio';
 import { extractReactReference } from '@/lib/studio-reference-react';
+import { imageDataUrl, type StudioMedia } from '@/lib/studio-media';
 
 export type StudioReference = {
   url: string;
@@ -8,6 +9,8 @@ export type StudioReference = {
   text: string;
   structure: string;
   styles: string;
+  media: StudioMedia[];
+  mediaWarnings: string[];
 };
 const unavailable = (message: string) =>
   new StudioError(message, 422, 'reference_unavailable');
@@ -115,7 +118,7 @@ export async function readStudioReference(
   }
   async function download(
     address: string,
-    kind: 'page' | 'style' | 'script',
+    kind: 'page' | 'style' | 'script' | 'image',
     limit: number,
   ) {
     let current = referenceUrl(address);
@@ -130,7 +133,9 @@ export async function readStudioReference(
               ? 'text/html,application/xhtml+xml'
               : kind === 'style'
                 ? 'text/css'
-                : 'application/javascript,text/javascript',
+                : kind === 'image'
+                  ? 'image/png,image/jpeg,image/webp,image/gif'
+                  : 'application/javascript,text/javascript',
         },
       });
       if ([301, 302, 303, 307, 308].includes(response.status)) {
@@ -155,13 +160,47 @@ export async function readStudioReference(
             ? /text\/html|application\/xhtml\+xml/i
             : kind === 'style'
               ? /text\/css/i
-              : /(?:java|ecma)script|text\/plain/i
+              : kind === 'image'
+                ? /^image\/(png|jpeg|webp|gif)(;|$)/i
+                : /(?:java|ecma)script|text\/plain/i
         ).test(mime)
       ) {
         await response.body?.cancel();
         throw unavailable(
           'Esse link não abriu uma página de proposta. Use o link público da apresentação, não o endereço do editor ou download.',
         );
+      }
+      if (kind === 'image') {
+        if (Number(response.headers.get('content-length')) > limit) {
+          await response.body?.cancel();
+          throw unavailable('Imagem de referência muito grande.');
+        }
+        const reader = response.body?.getReader();
+        const chunks: Uint8Array[] = [];
+        let size = 0;
+        if (!reader) throw unavailable('Imagem indisponível.');
+        try {
+          while (true) {
+            const part = await reader.read();
+            if (part.done) break;
+            size += part.value.length;
+            if (size > limit)
+              throw unavailable('Imagem de referência muito grande.');
+            chunks.push(part.value);
+          }
+        } finally {
+          await reader.cancel().catch(() => {});
+        }
+        const bytes = new Uint8Array(size);
+        let offset = 0;
+        for (const chunk of chunks) {
+          bytes.set(chunk, offset);
+          offset += chunk.length;
+        }
+        const dataUrl = imageDataUrl(bytes, mime.split(';')[0].toLowerCase());
+        if (!dataUrl)
+          throw unavailable('A imagem da referência não é um arquivo válido.');
+        return { url: current, text: dataUrl };
       }
       const text = await boundedText(
         response,
@@ -178,6 +217,7 @@ export async function readStudioReference(
     const page = await download(url, 'page', 1_000_000);
     const stylesheets: string[] = [];
     const scripts: string[] = [];
+    const images: Array<{ src: string; alt: string; logo: boolean }> = [];
     let title = '';
     let text = '';
     let structure = '';
@@ -219,6 +259,19 @@ export async function readStudioReference(
       .on('style', {
         text(chunk) {
           if (css.length < 48000) css += chunk.text;
+        },
+      })
+      .on('img[src]', {
+        element(element) {
+          const src = element.getAttribute('src') || '';
+          const alt = element.getAttribute('alt') || '';
+          images.push({
+            src,
+            alt,
+            logo: /logo|brand/i.test(
+              `${src} ${alt} ${element.getAttribute('class') || ''}`,
+            ),
+          });
         },
       })
       .on('body *', {
@@ -278,6 +331,7 @@ export async function readStudioReference(
           appText += '\n' + extracted.text;
           appStructure += '\n' + extracted.structure;
           appHeadings += extracted.headings;
+          images.push(...extracted.images);
           for (const path of extracted.imports) {
             const next = referenceUrl(new URL(path, script.url).href);
             if (
@@ -301,10 +355,44 @@ export async function readStudioReference(
       throw unavailable(
         'O link abriu, mas não trouxe conteúdo suficiente da proposta. Use a página pública completa ou anexe imagens do modelo. Sua proposta atual não foi alterada.',
       );
+    const media: StudioMedia[] = [];
+    const mediaWarnings: string[] = [];
+    const uniqueImages = images
+      .filter(
+        (item, index) =>
+          images.findIndex((other) => other.src === item.src) === index,
+      )
+      .sort((a, b) => Number(b.logo) - Number(a.logo))
+      .slice(0, 4);
+    for (const candidate of uniqueImages) {
+      try {
+        const data = await download(
+          resolveAsset(candidate.src),
+          'image',
+          200000,
+        );
+        media.push({
+          id: `reference-${media.length + 1}`,
+          label:
+            candidate.alt ||
+            (candidate.logo ? 'Logo da referência' : 'Imagem da referência'),
+          kind: candidate.logo ? 'logo' : 'image',
+          source: 'reference',
+          dataUrl: data.text,
+        });
+      } catch {
+        if (candidate.logo)
+          mediaWarnings.push(
+            'A logo do modelo não pôde ser importada. Anexe uma versão PNG, JPG ou WebP.',
+          );
+      }
+    }
     return {
       url: page.url,
       title: compact(title).slice(0, 200),
       method,
+      media,
+      mediaWarnings,
       text: compact(text).slice(0, 24000),
       structure: structure.slice(0, 55000),
       styles:

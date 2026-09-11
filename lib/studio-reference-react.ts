@@ -155,5 +155,14 @@ export function extractReactReference(source: string) {
     headings: useful.filter((item) => /^h[1-6]$/.test(item.tag) && item.text)
       .length,
     imports: [...new Set(imports)].slice(0, 4),
+    images: useful
+      .filter(
+        (item) => item.tag === 'img' && typeof item.attributes.src === 'string',
+      )
+      .map((item) => ({
+        src: String(item.attributes.src),
+        alt: String(item.attributes.alt || ''),
+        logo: /logo|brand|h-10|h-12|h-8/i.test(JSON.stringify(item.attributes)),
+      })),
   };
 }

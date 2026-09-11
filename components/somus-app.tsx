@@ -140,7 +140,9 @@ function updatePipelineLabel(labels: PipelineLabels, key: PipelineLabelKey, valu
 export function SomusApp({ userName, userEmail }: { userName: string; userEmail: string }) {
   const [view, setView] = useState<View>('overview');
   const [mobileNav, setMobileNav] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarPreference, setSidebarCollapsed] = useState(false);
+  const [studioNavOpen, setStudioNavOpen] = useState(false);
+  const sidebarCollapsed = view === 'studio' && !mobileNav ? !studioNavOpen : sidebarPreference;
   const [opportunities, setOpportunities] = useState(opportunitiesSeed);
   const [clients, setClients] = useState<Client[]>([]);
   const [proposals, setProposals] = useState(proposalsSeed);
@@ -254,8 +256,8 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   }, [theme]);
 
   useEffect(() => {
-    window.localStorage.setItem('synky-sidebar-collapsed', String(sidebarCollapsed));
-  }, [sidebarCollapsed]);
+    window.localStorage.setItem('synky-sidebar-collapsed', String(sidebarPreference));
+  }, [sidebarPreference]);
 
   useEffect(() => {
     type Tool = { name: string; title: string; description: string; inputSchema: Record<string, object | string | boolean>; annotations: { readOnlyHint: boolean; untrustedContentHint: boolean }; execute: (input: Record<string, unknown>) => unknown };
@@ -425,7 +427,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
           <button onClick={() => setView('overview')} className="brand-lockup flex items-center" aria-label="Synky Sales">
               <img src="/synky-sales-logo-transparent.png" alt="Synky Sales" className="brand-logo h-9 w-[148px] object-contain object-left" />
           </button>
-          <Button variant="ghost" size="icon-sm" className="sidebar-collapse-toggle hidden lg:grid" onClick={() => setSidebarCollapsed((value) => !value)} aria-label={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}>{sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</Button>
+          <Button variant="ghost" size="icon-sm" className="sidebar-collapse-toggle hidden lg:grid" onClick={() => view === 'studio' ? setStudioNavOpen((value) => !value) : setSidebarCollapsed((value) => !value)} aria-label={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}>{sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</Button>
           <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label="Fechar navegação" onClick={() => setMobileNav(false)}><X /></Button>
         </div>
 

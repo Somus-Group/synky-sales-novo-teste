@@ -17,12 +17,14 @@ import {
   ArrowUp,
   Check,
   CheckCheck,
+  CircleAlert,
+  ScanLine,
+  PanelsTopLeft,
   ChevronDown,
   Code2,
   Download,
   ExternalLink,
   FileText,
-  FlaskConical,
   FolderOpen,
   History,
   ImagePlus,
@@ -53,7 +55,11 @@ import {
   type StudioVersion,
   type StudioVisualEdit,
 } from '@/lib/studio';
-import { StudioCanvas, type StudioSelection } from './studio-canvas';
+import {
+  StudioCanvas,
+  type StudioSelection,
+  type StudioCanvasReport,
+} from './studio-canvas';
 import styles from './studio-lab.module.css';
 type ProjectResponse = { project: StudioProject; versions: StudioVersion[] };
 type ContextDraft = { title: string; briefing: string; referenceUrl: string };
@@ -97,7 +103,12 @@ export function StudioLab() {
   const [briefFile, setBriefFile] = useState<File | null>(null);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentUrl, setAttachmentUrl] = useState('');
-  const [tab, setTab] = useState<'chat' | 'context' | 'history'>('chat');
+  const [tab, setTab] = useState<'chat' | 'context' | 'history' | 'review'>(
+    'chat',
+  );
+  const [canvasReport, setCanvasReport] = useState<StudioCanvasReport | null>(
+    null,
+  );
   const [mobilePane, setMobilePane] = useState<'chat' | 'preview'>('chat');
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>(
     'desktop',
@@ -113,7 +124,7 @@ export function StudioLab() {
   } | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const [chatWidth, setChatWidth] = useState(390);
+  const [chatWidth, setChatWidth] = useState(368);
   const [library, setLibrary] = useState(false);
   const [search, setSearch] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -132,6 +143,15 @@ export function StudioLab() {
       draft.referenceUrl !== project.referenceUrl);
   const blocked = busy || loading || !!project?.busy;
   const html = historical?.html ?? project?.html ?? '';
+  const review = [...(project?.messages || [])]
+    .reverse()
+    .find((message) => message.review)?.review;
+  const logo = canvasReport?.images.find((item) => item.logo);
+  const revisionLabel = historical?.revision ?? project?.revision ?? 0;
+  const reportCanvas = useCallback(
+    (value: StudioCanvasReport) => setCanvasReport(value),
+    [],
+  );
   async function loadProjects() {
     try {
       const result = await api<{ projects: StudioSummary[]; aiReady: boolean }>(
@@ -180,6 +200,7 @@ export function StudioLab() {
     return () => window.removeEventListener('keydown', close);
   }, []);
   function accept(result: ProjectResponse) {
+    setCanvasReport(null);
     sessionStorage.setItem('synky.studio.activeProject', result.project.id);
     setProject(result.project);
     setVersions(result.versions);
@@ -229,6 +250,7 @@ export function StudioLab() {
     }
     sessionStorage.removeItem('synky.studio.activeProject');
     setProject(null);
+    setCanvasReport(null);
     setVersions([]);
     setHistorical(null);
     setPrompt('');
@@ -260,14 +282,35 @@ export function StudioLab() {
   }
   async function imagePayload(file: File | null) {
     if (!file) return undefined;
-    const data = await new Promise<string>((resolve, reject) => {
+    let data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = () =>
         reject(new Error('Não foi possível ler a imagem.'));
       reader.readAsDataURL(file);
     });
-    return { name: file.name.slice(0, 180), mime: file.type, data };
+    let mime = file.type;
+    if (data.length > 400000) {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      const ratio = Math.min(1, 1200 / Math.max(bitmap.width, bitmap.height));
+      canvas.width = Math.round(bitmap.width * ratio);
+      canvas.height = Math.round(bitmap.height * ratio);
+      canvas
+        .getContext('2d')!
+        .drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      data = canvas.toDataURL('image/webp', 0.82);
+      mime = 'image/webp';
+      if (data.length > 450000) {
+        data = canvas.toDataURL('image/webp', 0.55);
+      }
+      if (data.length > 450000)
+        throw new Error(
+          'Esta imagem ainda ficou muito grande. Envie uma versão menor da logo.',
+        );
+    }
+    return { name: file.name.slice(0, 180), mime, data };
   }
   async function createProject(text: string, signal?: AbortSignal) {
     const body = new FormData();
@@ -501,7 +544,9 @@ export function StudioLab() {
     <div className={styles.studio}>
       <header className={styles.header}>
         <div className={styles.identity}>
-          <FlaskConical size={20} />
+          <span className={styles.studioSymbol}>
+            <PanelsTopLeft size={20} />
+          </span>
           <strong>
             Estúdio <span>Lab</span>
           </strong>
@@ -588,6 +633,7 @@ export function StudioLab() {
               [
                 { id: 'chat', label: 'Conversa', icon: MessageSquare },
                 { id: 'context', label: 'Contexto', icon: FileText },
+                { id: 'review', label: 'Revisão', icon: ScanLine },
                 { id: 'history', label: 'Versões', icon: History },
               ] as const
             ).map(({ id, label, icon: Icon }) => (
@@ -598,6 +644,11 @@ export function StudioLab() {
               >
                 <Icon size={15} />
                 {label}
+                {id === 'review' && !!review?.missing.length && (
+                  <span className={styles.reviewCount}>
+                    {review.missing.length}
+                  </span>
+                )}
                 {id === 'context' && dirty && (
                   <span className={styles.unsavedDot} />
                 )}
@@ -679,7 +730,14 @@ export function StudioLab() {
                     )}
                     {message.intent === 'plan' && <small>Planejamento</small>}
                   </span>
-                  <p>{message.text}</p>
+                  {message.text.length > 420 && message.role === 'user' ? (
+                    <details className={styles.messageDetails}>
+                      <summary>{message.text.slice(0, 130)}…</summary>
+                      <p>{message.text}</p>
+                    </details>
+                  ) : (
+                    <p>{message.text}</p>
+                  )}
                   {message.attachment && (
                     <span className={styles.attachmentTag}>
                       <Paperclip size={13} />
@@ -693,7 +751,17 @@ export function StudioLab() {
                       onClick={() => void viewVersion(message.revision!)}
                     >
                       <Check size={14} />
-                      Versão {message.revision}
+                      <span>
+                        Versão {message.revision}
+                        {message.review && (
+                          <small>
+                            {message.review.logo
+                              ? 'Logo incluída'
+                              : 'Proposta atualizada'}{' '}
+                            · {message.review.headings.length} seções
+                          </small>
+                        )}
+                      </span>
                       <ExternalLink size={13} />
                     </button>
                   )}
@@ -780,6 +848,38 @@ export function StudioLab() {
               <div className={styles.sectionHeading}>
                 <h2>Contexto do projeto</h2>
                 <span>{project ? 'Salvo no projeto' : 'Opcional'}</span>
+              </div>
+              <div className={styles.brandRow}>
+                <div className={styles.brandPreview}>
+                  {logo ? (
+                    <img src={logo.src} alt={logo.alt} />
+                  ) : (
+                    <ImagePlus size={24} />
+                  )}
+                </div>
+                <div>
+                  <strong>Logo da proposta</strong>
+                  <span>
+                    {logo
+                      ? logo.alt
+                      : draft.referenceUrl
+                        ? 'Importação pelo modelo'
+                        : 'Nenhuma logo adicionada'}
+                  </span>
+                </div>
+                <IconButton
+                  label="Adicionar ou trocar logo"
+                  disabled={blocked}
+                  onClick={() => {
+                    setPrompt(
+                      'Use a imagem anexada como logo no cabeçalho da proposta, sem recortar. Preserve o restante.',
+                    );
+                    setTab('chat');
+                    imageInput.current?.click();
+                  }}
+                >
+                  <ImagePlus size={18} />
+                </IconButton>
               </div>
               <label>
                 Nome do projeto
@@ -904,6 +1004,108 @@ export function StudioLab() {
                 </button>
               </div>
             </form>
+          )}
+          {tab === 'review' && (
+            <div className={styles.reviewPanel}>
+              <div className={styles.sectionHeading}>
+                <h2>Revisão da proposta</h2>
+                <span>
+                  {revisionLabel ? `Versão ${revisionLabel}` : 'Sem versão'}
+                </span>
+              </div>
+              {html ? (
+                <>
+                  <div className={styles.reviewChecks}>
+                    <div>
+                      <FileText size={17} />
+                      <span>Seções</span>
+                      <strong>
+                        {canvasReport?.headings.length ??
+                          review?.headings.length ??
+                          0}
+                      </strong>
+                    </div>
+                    <div>
+                      <ImagePlus size={17} />
+                      <span>Imagens</span>
+                      <strong>
+                        {canvasReport?.images.length ?? review?.imageCount ?? 0}
+                      </strong>
+                    </div>
+                    <div>
+                      {logo ? <Check size={17} /> : <CircleAlert size={17} />}
+                      <span>Logo</span>
+                      <strong>{logo ? 'Incluída' : 'Não incluída'}</strong>
+                    </div>
+                  </div>
+                  {!!canvasReport?.brokenImages && (
+                    <p className={styles.reviewWarning}>
+                      {canvasReport.brokenImages} imagem(ns) não carregou(aram).
+                    </p>
+                  )}
+                  {canvasReport?.overflow && (
+                    <p className={styles.reviewWarning}>
+                      Há conteúdo ultrapassando a largura desta prévia.
+                    </p>
+                  )}
+                  {!!review?.missing.length && !historical && (
+                    <section className={styles.missingInfo}>
+                      <h3>
+                        <CircleAlert size={17} /> Informações a definir
+                      </h3>
+                      {review.missing.map((item) => (
+                        <button
+                          key={item}
+                          onClick={() =>
+                            choosePrompt(
+                              `Complete a proposta com esta informação: ${item}: `,
+                            )
+                          }
+                        >
+                          {item}
+                          <Plus size={15} />
+                        </button>
+                      ))}
+                    </section>
+                  )}
+                  {!!review?.warnings.length &&
+                    review.warnings.map((item) => (
+                      <p key={item} className={styles.reviewWarning}>
+                        {item}
+                      </p>
+                    ))}
+                  <h3 className={styles.outlineTitle}>Na apresentação</h3>
+                  <ol className={styles.pageOutline}>
+                    {(canvasReport?.headings || review?.headings || []).map(
+                      (heading, index) => (
+                        <li key={`${index}-${heading}`}>
+                          <span>{String(index + 1).padStart(2, '0')}</span>
+                          {heading}
+                        </li>
+                      ),
+                    )}
+                  </ol>
+                  <button
+                    className={styles.secondary}
+                    disabled={blocked || !!historical}
+                    onClick={() =>
+                      void send(
+                        undefined,
+                        'Revise e complete esta proposta. Corrija imagens ausentes, a logo, seções vazias, contraste, espaçamentos e links. Preserve todos os fatos. Liste informações ainda não fornecidas na revisão, sem inventá-las.',
+                        'edit',
+                      )
+                    }
+                  >
+                    <Sparkles size={16} />
+                    Revisar com IA
+                  </button>
+                </>
+              ) : (
+                <p className={styles.emptyText}>
+                  A revisão ficará disponível com a primeira versão.
+                </p>
+              )}
+            </div>
           )}
           {tab === 'history' && (
             <div className={styles.history}>
@@ -1315,6 +1517,21 @@ export function StudioLab() {
               ))}
             </div>
             <div className={styles.previewActions}>
+              {html && (
+                <button
+                  className={styles.editToolbar}
+                  aria-pressed={selecting}
+                  disabled={blocked || !!historical}
+                  onClick={() => {
+                    setSelecting(!selecting);
+                    setSelection(null);
+                    setVisualEdit({});
+                  }}
+                >
+                  <MousePointer2 size={16} />
+                  <span>{selecting ? 'Selecionando' : 'Editar visual'}</span>
+                </button>
+              )}
               <IconButton
                 label="Baixar proposta HTML"
                 disabled={!html}
@@ -1367,6 +1584,14 @@ export function StudioLab() {
                   selecting={selecting && !blocked && !historical}
                   onSelect={selectElement}
                   className={styles.previewFrame}
+                  deviceWidth={
+                    device === 'desktop'
+                      ? 1280
+                      : device === 'tablet'
+                        ? 768
+                        : 390
+                  }
+                  onReport={reportCanvas}
                 />
               )
             ) : (
@@ -1375,14 +1600,6 @@ export function StudioLab() {
                   src="/synky-sales-logo-transparent.png"
                   alt="Synky Sales"
                 />
-                <div className={styles.emptyDocument} aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                  <div />
-                  <span />
-                  <span />
-                </div>
                 <h2>
                   {pending ? 'Preparando sua proposta' : 'Sua proposta, aqui'}
                 </h2>
@@ -1395,29 +1612,6 @@ export function StudioLab() {
               </div>
             )}
           </div>
-          {html && previewMode === 'preview' && (
-            <div className={styles.canvasTools}>
-              <button
-                aria-pressed={selecting}
-                disabled={blocked || !!historical}
-                onClick={() => {
-                  setSelecting(!selecting);
-                  setSelection(null);
-                  setVisualEdit({});
-                }}
-              >
-                <MousePointer2 size={16} />
-                {selecting ? 'Selecionando' : 'Editar visual'}
-              </button>
-              <IconButton
-                label="Recarregar prévia"
-                disabled={busy}
-                onClick={() => setPreviewKey((value) => value + 1)}
-              >
-                <RotateCcw size={15} />
-              </IconButton>
-            </div>
-          )}
           <footer className={styles.previewFooter}>
             <span>
               {historical
@@ -1436,6 +1630,21 @@ export function StudioLab() {
                 'Prévia privada'
               )}
             </span>
+            <span className={styles.canvasSize}>
+              {device === 'desktop'
+                ? '1280'
+                : device === 'tablet'
+                  ? '768'
+                  : '390'}{' '}
+              px
+            </span>
+            <IconButton
+              label="Recarregar prévia"
+              disabled={busy}
+              onClick={() => setPreviewKey((value) => value + 1)}
+            >
+              <RotateCcw size={14} />
+            </IconButton>
             {project && (
               <button
                 onClick={() => {

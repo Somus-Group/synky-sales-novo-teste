@@ -172,9 +172,9 @@
 }
 .panelTabs {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   min-height: 49px;
-  padding: 0 18px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
@@ -758,7 +758,7 @@
   justify-content: center;
   flex: 1;
   min-height: 0;
-  padding: 20px 20px 68px;
+  padding: 20px;
   overflow: auto;
 }
 .previewFrame {
@@ -935,7 +935,7 @@
   box-shadow: 0 0 0 30px #15233c80;
 }
 .expanded .previewStage {
-  padding-bottom: 115px;
+  padding-bottom: 100px;
 }
 .expanded .canvasTools {
   bottom: 95px;
@@ -1302,54 +1302,661 @@
   background: var(--sales-surface);
   color: var(--ink);
 }
-.studio :is(.header, .conversation, .composerArea, .composer, .secondary, .libraryDialog, .floatingComposer) {
+.studio
+  :is(
+    .header,
+    .conversation,
+    .composerArea,
+    .composer,
+    .secondary,
+    .libraryDialog,
+    .floatingComposer
+  ) {
   background: var(--sales-surface);
   color: var(--ink);
   border-color: var(--line);
 }
-.studio :is(.previewToolbar, .previewFooter, .deviceControls, .canvasTools, .inspector, .userMessage, .attachmentTag, .referenceTag) {
+.studio
+  :is(
+    .previewToolbar,
+    .previewFooter,
+    .deviceControls,
+    .canvasTools,
+    .inspector,
+    .userMessage,
+    .attachmentTag,
+    .referenceTag
+  ) {
   background: var(--sales-inset);
   border-color: var(--line);
   color: var(--ink);
 }
-.studio :is(.preview, .previewStage, .resizeHandle) { background: var(--sales-canvas); }
-.studio :is(.context input, .context textarea, .inspector textarea, .urlInput, .visualControls input[type='number']) {
+.studio :is(.preview, .previewStage, .resizeHandle) {
+  background: var(--sales-canvas);
+}
+.studio
+  :is(
+    .context input,
+    .context textarea,
+    .inspector textarea,
+    .urlInput,
+    .visualControls input[type='number']
+  ) {
   background: var(--sales-surface);
   border-color: var(--line);
   color: var(--ink);
 }
-.studio :is(.projectPicker, .userMessage > p, .assistantMessage > p, .context > label, .inspector > label) { color: var(--ink); }
-.studio :is(.composer > textarea, .floatingComposer input) { background: transparent !important; color: var(--ink) !important; }
-.studio :is(.composer > textarea, .floatingComposer input)::placeholder { color: var(--muted); }
-.studio :is(.primary, .send) { background: var(--blue); color: #fff; border-color: transparent; }
-.studio :is(.primary, .send):hover:not(:disabled) { background: var(--sales-primary-hover); }
-.studio :is(.secondary, .iconButton):hover:not(:disabled) { background: var(--sales-hover); color: var(--ink); }
-.studio :is(.intentSwitch button, .iconButton, .canvasTools > button, .starterModes button, .mobileTabs button)[aria-pressed='true'] {
+.studio
+  :is(
+    .projectPicker,
+    .userMessage > p,
+    .assistantMessage > p,
+    .context > label,
+    .inspector > label
+  ) {
+  color: var(--ink);
+}
+.studio :is(.composer > textarea, .floatingComposer input) {
+  background: transparent !important;
+  color: var(--ink) !important;
+}
+.studio :is(.composer > textarea, .floatingComposer input)::placeholder {
+  color: var(--muted);
+}
+.studio :is(.primary, .send) {
+  background: var(--blue);
+  color: #fff;
+  border-color: transparent;
+}
+.studio :is(.primary, .send):hover:not(:disabled) {
+  background: var(--sales-primary-hover);
+}
+.studio :is(.secondary, .iconButton):hover:not(:disabled) {
+  background: var(--sales-hover);
+  color: var(--ink);
+}
+.studio
+  :is(
+    .intentSwitch button,
+    .iconButton,
+    .canvasTools > button,
+    .starterModes button,
+    .mobileTabs button
+  )[aria-pressed='true'] {
   background: var(--sales-hover);
   color: var(--sales-focus);
   border-color: var(--sales-focus);
 }
-.studio :is(.mobileTabs, .panelTabs) { background: var(--sales-surface); }
-.studio .panelTabs button[aria-current='page'] { color: var(--ink); border-color: var(--sales-focus); }
-.studio :is(.iconButton, .previewActions > a, .suggestions button, .messageBy, .historyItem time, .historyItem p, .optional, .libraryList small, .emptyPreview p, .emptyPreview h2) { color: var(--muted); }
-.studio :is(.assistantMark, .projectIcon) { background: var(--sales-inset); border-color: var(--line); color: var(--sales-focus); }
-.studio :is(.composer, .floatingComposer, .libraryDialog, .canvasTools) { border-radius: 12px; box-shadow: var(--sales-shadow); }
-.studio .previewFrame { border-color: var(--line); box-shadow: var(--sales-shadow); }
-.studio .emptyPreview > img { background: transparent; padding: 0; }
-.studio .emptyDocument { background: var(--sales-surface); border-color: var(--line); box-shadow: 8px 8px 0 var(--sales-inset); }
-.studio .emptyDocument > span { background: var(--line); }
-.studio .emptyDocument > div { background: var(--sales-inset); border-color: var(--line); }
-.studio .composer:focus-within { border-color: var(--sales-focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sales-focus) 18%, transparent); }
-.studio .resizeHandle:is(:hover, :focus-visible) { background: var(--sales-focus); }
-.studio :is(.messages, .context, .history) { scrollbar-color: var(--line) transparent; }
-.studio :is(.starterModes button, .intentSwitch button) { color: var(--muted); }
-.studio :is(.suggestions button, .historyItem, .libraryList > button) { border-color: var(--line); }
-.studio .identity > svg { color: var(--sales-focus); }
-:global(.theme-dark) .studio .saveStatus { color: #8bc8b0; }
+.studio :is(.mobileTabs, .panelTabs) {
+  background: var(--sales-surface);
+}
+.studio .panelTabs button[aria-current='page'] {
+  color: var(--ink);
+  border-color: var(--sales-focus);
+}
+.studio
+  :is(
+    .iconButton,
+    .previewActions > a,
+    .suggestions button,
+    .messageBy,
+    .historyItem time,
+    .historyItem p,
+    .optional,
+    .libraryList small,
+    .emptyPreview p,
+    .emptyPreview h2
+  ) {
+  color: var(--muted);
+}
+.studio :is(.assistantMark, .projectIcon) {
+  background: var(--sales-inset);
+  border-color: var(--line);
+  color: var(--sales-focus);
+}
+.studio :is(.composer, .floatingComposer, .libraryDialog, .canvasTools) {
+  border-radius: 12px;
+  box-shadow: var(--sales-shadow);
+}
+.studio .previewFrame {
+  border-color: var(--line);
+  box-shadow: var(--sales-shadow);
+}
+.studio .emptyPreview > img {
+  background: transparent;
+  padding: 0;
+}
+.studio .emptyDocument {
+  background: var(--sales-surface);
+  border-color: var(--line);
+  box-shadow: 8px 8px 0 var(--sales-inset);
+}
+.studio .emptyDocument > span {
+  background: var(--line);
+}
+.studio .emptyDocument > div {
+  background: var(--sales-inset);
+  border-color: var(--line);
+}
+.studio .composer:focus-within {
+  border-color: var(--sales-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sales-focus) 18%, transparent);
+}
+.studio .resizeHandle:is(:hover, :focus-visible) {
+  background: var(--sales-focus);
+}
+.studio :is(.messages, .context, .history) {
+  scrollbar-color: var(--line) transparent;
+}
+.studio :is(.starterModes button, .intentSwitch button) {
+  color: var(--muted);
+}
+.studio :is(.suggestions button, .historyItem, .libraryList > button) {
+  border-color: var(--line);
+}
+.studio .identity > svg {
+  color: var(--sales-focus);
+}
+:global(.theme-dark) .studio .saveStatus {
+  color: #8bc8b0;
+}
 @media (max-width: 760px) {
-  .studio .header { flex-wrap: wrap; gap: 8px; }
-  .studio textarea { font-size: 16px; }
+  .studio .header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .studio textarea {
+    font-size: 16px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .studio, .studio * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .studio,
+  .studio * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* The editor has its own neutral working surface; proposal styling stays isolated. */
+.studio.studio {
+  --ink: #25282e;
+  --muted: #67707c;
+  --line: #e2e5e9;
+  --blue: #1669d6;
+  --studio-surface: #fff;
+  --studio-inset: #f6f7f9;
+  --studio-canvas: #e9ecf0;
+  background: var(--studio-surface);
+  font-size: 14px;
+}
+:global(.theme-dark) .studio.studio {
+  --ink: #f1f2f4;
+  --muted: #acb2bc;
+  --line: #363a41;
+  --blue: #6eacff;
+  --studio-surface: #24262b;
+  --studio-inset: #2b2e34;
+  --studio-canvas: #191b20;
+}
+.studio .header {
+  min-height: 68px;
+  gap: 20px;
+  padding: 12px 22px;
+  background: var(--studio-surface);
+}
+.studioSymbol {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: var(--studio-inset);
+  border-radius: 8px;
+  color: var(--blue);
+}
+.studio .identity strong {
+  font-size: 16px;
+}
+.studio .projectPicker {
+  max-width: 440px;
+  padding-left: 20px;
+  color: var(--ink);
+  font-weight: 500;
+}
+.studio .saveStatus {
+  color: #27745e;
+  font-size: 12px;
+}
+.studio .conversation,
+.studio .composerArea,
+.studio .panelTabs {
+  background: var(--studio-surface);
+}
+.studio .panelTabs {
+  min-height: 54px;
+  justify-content: space-between;
+  gap: 4px;
+}
+.studio .panelTabs button {
+  font-size: 13px;
+  gap: 5px;
+  padding: 0 2px;
+}
+.studio .panelTabs button[aria-current='page'] {
+  color: var(--blue);
+  border-color: var(--blue);
+}
+.studio .messages {
+  padding: 24px 20px;
+}
+.studio .userMessage {
+  margin-left: 14px;
+  padding: 13px 15px;
+  background: var(--studio-inset);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.studio .assistantMessage {
+  padding: 0 2px 22px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.studio .assistantMessage > p,
+.studio .userMessage > p,
+.messageDetails {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.65;
+}
+.studio .messageBy {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.messageDetails summary {
+  cursor: pointer;
+  line-height: 1.6;
+}
+.messageDetails p {
+  margin-top: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.studio .versionChip {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  background: var(--studio-inset);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: left;
+}
+.versionChip > svg:first-child {
+  color: #258468;
+}
+.versionChip > span {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+.versionChip small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.studio .sources a {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 2px 0;
+}
+.studio .composerArea {
+  padding: 14px;
+  border-top: 0;
+}
+.studio .composer {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--studio-surface);
+  box-shadow: 0 3px 14px #00000008;
+}
+.studio .composer textarea {
+  min-height: 92px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink) !important;
+}
+.studio .composerFooter {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.studio .composerAttachments {
+  margin-bottom: 10px;
+}
+.studio .send {
+  background: #176bd6;
+  color: #fff;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+}
+.studio .intentSwitch {
+  background: var(--studio-inset);
+  border-radius: 6px;
+  padding: 2px;
+}
+.studio .intentSwitch button {
+  font-size: 12px;
+  padding: 5px 6px;
+}
+.studio .intentSwitch button[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--studio-surface);
+  box-shadow: 0 1px 3px #0000000d;
+}
+.studio .preview,
+.studio .previewStage {
+  background: var(--studio-canvas);
+}
+.studio .previewToolbar {
+  background: var(--studio-surface);
+  min-height: 54px;
+  padding: 8px 16px;
+}
+.studio .previewFrame {
+  border: 0;
+  border-radius: 6px;
+  box-shadow: 0 3px 18px #171a2420;
+}
+.studio .deviceControls {
+  background: var(--studio-inset);
+  border: 0;
+  padding: 3px;
+}
+.studio .deviceControls .iconButton[aria-pressed='true'] {
+  background: var(--studio-surface);
+  color: var(--blue);
+  box-shadow: 0 1px 4px #00000012;
+}
+.studio .iconButton {
+  color: var(--muted);
+}
+.studio .previewFooter {
+  min-height: 34px;
+  padding: 5px 16px;
+  background: var(--studio-surface);
+  color: var(--muted);
+}
+.studio .previewFooter .iconButton {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+}
+.editToolbar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 9px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  margin-right: 8px;
+}
+.editToolbar[aria-pressed='true'] {
+  background: var(--studio-inset);
+  color: var(--blue);
+  border-color: var(--blue);
+}
+.studio .emptyPreview {
+  color: var(--ink);
+  max-width: 460px;
+  align-self: center;
+  margin: auto;
+  padding: 36px;
+  border: 0;
+}
+.studio .emptyPreview > img {
+  width: 160px;
+  height: 64px;
+  opacity: 1;
+  margin-bottom: 24px;
+}
+.studio .emptyPreview h2 {
+  font-size: 22px;
+  color: var(--ink);
+  text-align: center;
+  line-height: 1.35;
+}
+.studio .emptyPreview p {
+  color: var(--muted);
+  font-size: 14px;
+}
+.studio .welcome {
+  padding: 15px 0;
+}
+.studio .welcome h2 {
+  font-size: 24px;
+  line-height: 1.3;
+}
+.studio .welcome > p {
+  color: var(--muted);
+}
+.studio .assistantMark {
+  background: var(--studio-inset);
+  color: var(--blue);
+  border-color: var(--line);
+}
+.studio .starterModes button {
+  font-size: 13px;
+  padding: 12px 7px;
+}
+.studio .suggestions button {
+  color: var(--muted);
+}
+.studio .context {
+  padding: 22px 18px;
+}
+.studio .context > label {
+  color: var(--ink);
+  font-size: 14px;
+}
+.studio .context input,
+.studio .context textarea,
+.studio .urlInput {
+  background: var(--studio-surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.studio .contextActions {
+  margin-top: 20px;
+}
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+}
+.brandPreview {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 58px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: #89919b;
+  padding: 8px;
+}
+.brandPreview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.brandRow > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+.brandRow strong {
+  display: block;
+  font-size: 14px;
+}
+.brandRow span {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.reviewCount {
+  font-size: 10px;
+  background: #fbeacb;
+  color: #81530f;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+.reviewPanel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px 20px;
+}
+.reviewChecks {
+  border-block: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.reviewChecks > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  color: var(--muted);
+}
+.reviewChecks > div + div {
+  border-top: 1px solid var(--line);
+}
+.reviewChecks strong {
+  margin-left: auto;
+  color: var(--ink);
+  font-size: 13px;
+}
+.missingInfo {
+  margin: 0 0 24px;
+}
+.missingInfo h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.missingInfo h3 svg {
+  color: #b07518;
+}
+.missingInfo button {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.reviewWarning {
+  color: #a0640d;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 12px !important;
+}
+.outlineTitle {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.pageOutline {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+}
+.pageOutline li {
+  display: flex;
+  gap: 10px;
+  padding: 9px 0;
+  line-height: 1.45;
+  color: var(--muted);
+  font-size: 13px;
+}
+.pageOutline li > span {
+  color: var(--blue);
+  font-size: 12px;
+  min-width: 18px;
+  padding-top: 1px;
+}
+.studio .feedback {
+  max-height: 140px;
+  overflow: auto;
+}
+@media (max-width: 1100px) {
+  .editToolbar span {
+    display: none;
+  }
+  .editToolbar {
+    margin-right: 3px;
+  }
+  .studio .previewToolbar {
+    padding-inline: 8px;
+    gap: 6px;
+  }
+}
+@media (max-width: 760px) {
+  .studio .header {
+    min-height: 60px;
+    padding: 10px 12px;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+  .studioSymbol {
+    width: 30px;
+    height: 30px;
+  }
+  .studio .identity {
+    gap: 6px;
+  }
+  .studio .identity strong {
+    font-size: 14px;
+  }
+  .studio .projectPicker {
+    padding-left: 10px;
+    font-size: 13px;
+  }
+  .studio .previewStage {
+    padding: 12px;
+  }
+  .studio .panelTabs {
+    padding-inline: 16px;
+  }
+  .studio .composer textarea {
+    font-size: 16px;
+  }
+  .studio .previewFooter {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+  .canvasSize {
+    display: none;
+  }
 }

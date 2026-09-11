@@ -102,6 +102,27 @@ function fixture() {
     'cloudflare:workers': { env },
     '@/db': { getD1: () => d1 },
     '@/lib/studio': studio,
+    '@/lib/studio-media': {
+      prepareStudioMedia: async (
+        _db,
+        _bucket,
+        _workspace,
+        _reference,
+        value,
+      ) => ({ assets: [], currentHtml: value, warnings: [] }),
+      embedStudioMedia: async (value) => ({
+        html: value,
+        used: [],
+        unresolved: [],
+      }),
+    },
+    '@/lib/studio-review': {
+      reviewStudioHtml: async () => ({
+        headings: ['Proposta teste'],
+        imageCount: 0,
+        issues: [],
+      }),
+    },
     '@/lib/studio-reference': {
       readStudioReference: async (url) => {
         const response = await fetch(url);
@@ -146,6 +167,7 @@ function fixture() {
     );
   }
   return {
+    modules,
     sqlite,
     d1,
     database,
@@ -426,6 +448,82 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
       409,
     );
     await f.database.unlockStudioProject(project.id, lock);
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('missing logo triggers one repair; a complete version stores review results and a second failure preserves history', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  const logo = {
+    id: 'reference-1',
+    label: 'Somus',
+    kind: 'logo',
+    source: 'reference',
+    dataUrl: 'data:image/png;base64,aGVsbG8=',
+  };
+  f.modules['@/lib/studio-media'].prepareStudioMedia = async () => ({
+    assets: [logo],
+    currentHtml: '',
+    warnings: [],
+  });
+  f.modules['@/lib/studio-media'].embedStudioMedia = async (value) => ({
+    html: value,
+    used: value.includes('studio-asset:reference-1') ? [logo] : [],
+    unresolved: [],
+  });
+  const calls = [];
+  let fixed = true;
+  globalThis.fetch = async (_url, options) => {
+    calls.push(JSON.parse(options.body));
+    return Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Teste',
+        message: 'Proposta revisada.',
+        html:
+          fixed && calls.length === 2
+            ? html.replace(
+                '<body>',
+                '<body><img src="studio-asset:reference-1">',
+              )
+            : html,
+        reference_status: 'not_requested',
+        missing_information: ['Honorários mensais'],
+      }),
+    });
+  };
+  try {
+    const { project } = await (await f.create()).json();
+    const response = await f.messages.POST(
+      request({ message: 'Crie a proposta com a logo.', revision: 0 }),
+      context(project.id),
+    );
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 2);
+    const input = JSON.parse(calls[0].input[0].content[0].text);
+    assert.equal(input.preferredLogoId, logo.id);
+    assert.equal(input.mediaCatalog[0].dataUrl, undefined);
+    assert.equal(calls[0].input[0].content.at(-1).image_url, logo.dataUrl);
+    assert.match(calls[1].input[0].content.at(-1).text, /Inclua a logo real/);
+    const result = await response.json();
+    assert.equal(result.project.messages.at(-1).review.logo, true);
+    assert.deepEqual(result.project.messages.at(-1).review.missing, [
+      'Honorários mensais',
+    ]);
+    fixed = false;
+    const failed = await f.messages.POST(
+      request({ message: 'Melhore a proposta.', revision: 1 }),
+      context(project.id),
+    );
+    assert.equal(failed.status, 502);
+    assert.equal(calls.length, 4);
+    const row = await f.database.studioProject(project.id, 'one');
+    assert.equal(row.revision, 1);
+    assert.equal(row.html, result.project.html);
+    assert.equal(row.lockToken, '');
   } finally {
     globalThis.fetch = originalFetch;
     f.sqlite.close();

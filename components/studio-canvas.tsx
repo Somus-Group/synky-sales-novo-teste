@@ -11,6 +11,12 @@ export type StudioSelection = {
   fontSize: number;
   align: string;
 };
+export type StudioCanvasReport = {
+  headings: string[];
+  images: Array<{ src: string; alt: string; logo: boolean }>;
+  brokenImages: number;
+  overflow: boolean;
+};
 function hex(value: string, fallback: string) {
   const rgb = value.match(
     /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/,
@@ -28,14 +34,61 @@ export function StudioCanvas({
   selecting,
   className,
   onSelect,
+  deviceWidth = 1280,
+  onReport,
 }: {
   html: string;
   selecting: boolean;
   className?: string;
   onSelect: (selection: StudioSelection) => void;
+  deviceWidth?: number;
+  onReport?: (report: StudioCanvasReport) => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const surface = useRef<HTMLDivElement>(null);
+  const [bounds, setBounds] = useState({ width: 0, height: 600 });
   const [loaded, setLoaded] = useState(0);
+  const scale = Math.min(1, (bounds.width || deviceWidth) / deviceWidth);
+  useEffect(() => {
+    if (!surface.current) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setBounds({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      }),
+    );
+    observer.observe(surface.current);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const doc = frame.current?.contentDocument;
+    if (!doc || !loaded || !onReport) return;
+    let active = true;
+    const imgs = Array.from(doc.images);
+    const report = () => {
+      if (active)
+        onReport({
+          headings: Array.from(doc.querySelectorAll('h1,h2'))
+            .map((item) => item.textContent?.trim() || '')
+            .filter(Boolean)
+            .slice(0, 20),
+          images: imgs
+            .filter((img) => img.src.startsWith('data:image/'))
+            .map((img) => ({
+              src: img.src,
+              alt: img.alt,
+              logo: img.dataset.studioRole === 'logo',
+            })),
+          brokenImages: imgs.filter((img) => img.complete && !img.naturalWidth)
+            .length,
+          overflow: doc.documentElement.scrollWidth > deviceWidth + 2,
+        });
+    };
+    void Promise.allSettled(imgs.map((img) => img.decode())).then(report);
+    return () => {
+      active = false;
+    };
+  }, [loaded, html, deviceWidth, onReport]);
   useEffect(() => {
     const doc = frame.current?.contentDocument;
     if (!doc || !selecting) return;
@@ -98,14 +151,32 @@ export function StudioCanvas({
     };
   }, [html, loaded, selecting, onSelect]);
   return (
-    <iframe
-      ref={frame}
-      title="Proposta-site"
+    <div
+      ref={surface}
       className={className}
-      sandbox="allow-same-origin"
-      referrerPolicy="no-referrer"
-      srcDoc={studioPreviewDocument(html)}
-      onLoad={() => setLoaded((value) => value + 1)}
-    />
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        width: `min(100%, ${deviceWidth}px)`,
+      }}
+    >
+      <iframe
+        ref={frame}
+        title="Proposta-site"
+        style={{
+          display: 'block',
+          border: 0,
+          width: deviceWidth,
+          height: Math.max(300, bounds.height / scale),
+          maxWidth: 'none',
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left',
+        }}
+        sandbox="allow-same-origin"
+        referrerPolicy="no-referrer"
+        srcDoc={studioPreviewDocument(html)}
+        onLoad={() => setLoaded((value) => value + 1)}
+      />
+    </div>
   );
 }
