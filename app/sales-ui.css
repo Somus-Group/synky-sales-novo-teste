@@ -608,6 +608,35 @@
   [class*='shadow-'][class*='rgba(11,111,232'] {
   box-shadow: var(--sales-shadow) !important;
 }
+
+/* The proposal agent uses status panels before its form is available. Keep them
+   intentionally warm but fully legible on the graphite dark surface. */
+.sales-app.theme-dark .proposal-workflow-notice {
+  border-color: #8f7226 !important;
+  background: #302817 !important;
+  color: #fff1bd !important;
+}
+.sales-app.theme-dark .proposal-workflow-notice p {
+  color: #fff1bd !important;
+}
+.sales-app.theme-dark .proposal-workflow-notice button {
+  border-color: #d8ae4b !important;
+  background: #e0b34e !important;
+  color: #201a0e !important;
+}
+.sales-app.theme-dark .proposal-workflow-notice button:hover {
+  background: #f1c55e !important;
+}
+.sales-app.theme-dark .proposal-workflow-error {
+  border-color: #8f4a49 !important;
+  background: #321f22 !important;
+  color: #ffd3d0 !important;
+}
+.sales-app.theme-dark .proposal-workflow-busy {
+  border: 1px solid #35536d;
+  background: #1d2a35 !important;
+  color: #d5e9ff !important;
+}
 .sales-app .sales-client-metric {
   padding-inline: 8px;
 }
