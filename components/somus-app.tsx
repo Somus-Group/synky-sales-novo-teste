@@ -21,6 +21,7 @@ import {
   Eye,
   Flag,
   FileText,
+  FlaskConical,
   Grid2X2,
   GripVertical,
   Image as ImageIcon,
@@ -66,9 +67,14 @@ import { ProposalArtwork, ProposalThumbnail, proposalTemplates } from '@/compone
 import { createFallbackProposalSections, ProposalOnePage } from '@/components/proposal-onepage';
 import { proposalNiches, type ProposalNiche, type ProposalTemplateTheme } from '@/lib/proposal-templates';
 import { ProposalWorkflow } from './proposal-workflow';
+import { StudioLab } from './studio-lab';
 
-type View = 'overview' | 'agent' | 'agent_setup' | 'pipeline' | 'tasks' | 'clients' | 'proposals' | 'team' | 'editor';
+type View = 'overview' | 'agent' | 'agent_setup' | 'studio' | 'pipeline' | 'tasks' | 'clients' | 'proposals' | 'team' | 'editor';
 type Stage = 'Novo contato' | 'Diagnóstico' | 'Proposta enviada' | 'Negociação';
+type PipelineCompany = { id: string; name: string; createdAt: number };
+type PipelineLabels = { title: string; description: string; newOpportunity: string; period: string; metrics: { pipeline: string; forecast: string; ticket: string; negotiation: string }; stages: Record<Stage, string> };
+type PipelineLabelKey = 'title' | 'newOpportunity' | 'period' | 'metrics.pipeline' | 'metrics.forecast' | 'metrics.ticket' | 'metrics.negotiation' | `stages.${Stage}`;
+type PipelineLabelEdit = { key: PipelineLabelKey; label: string };
 type Opportunity = { id: number; client: string; project: string; value: number; stage: Stage; due: string; source: string; tags: string[]; customFields: Record<string, string>; createdAt: number; updatedAt: number };
 type OpportunityInput = Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>;
 type Client = { id: number; name: string; company: string; email: string; phone: string; document: string; status: 'Lead' | 'Ativo' | 'Inativo' | 'Arquivado'; contractValue: number; tags: string[]; notes: string; customFields: Record<string, string>; createdAt: number; updatedAt: number };
@@ -108,8 +114,25 @@ const proposalsSeed: Proposal[] = [
 ];
 
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
-const defaultAgentProfile: AgentProfile = { businessName: '', legalName: '', segment: '', description: '', website: '', email: '', phone: '', address: '', instagram: '', primaryColor: '#172A25', secondaryColor: '#B86538', services: [], audience: '', tone: 'Consultivo, claro e confiante', differentiators: '', proposalStructure: 'Capa, contexto, solução, escopo, investimento e próximos passos', instructions: '', status: 'draft' };
-const stageColors: Record<Stage, string> = { 'Novo contato': '#6875F5', Diagnóstico: '#E09252', 'Proposta enviada': '#20A37A', Negociação: '#A44C7D' };
+const defaultAgentProfile: AgentProfile = { businessName: '', legalName: '', segment: '', description: '', website: '', email: '', phone: '', address: '', instagram: '', primaryColor: '#0B6FE8', secondaryColor: '#6BB8FF', services: [], audience: '', tone: 'Consultivo, claro e confiante', differentiators: '', proposalStructure: 'Capa, contexto, solução, escopo, investimento e próximos passos', instructions: '', status: 'draft' };
+const stageColors: Record<Stage, string> = { 'Novo contato': '#3B82F6', Diagnóstico: '#0EA5E9', 'Proposta enviada': '#14B8A6', Negociação: '#6366F1' };
+const defaultPipelineLabels: PipelineLabels = { title: 'Pipeline comercial', description: 'Edite, filtre e mova oportunidades entre etapas. Os valores se atualizam em tempo real.', newOpportunity: 'Nova oportunidade', period: 'Período de entrada', metrics: { pipeline: 'Pipeline filtrado', forecast: 'Previsão ponderada', ticket: 'Ticket médio', negotiation: 'Em negociação' }, stages: { 'Novo contato': 'Novo contato', Diagnóstico: 'Diagnóstico', 'Proposta enviada': 'Proposta enviada', Negociação: 'Negociação' } };
+
+function getPipelineLabel(labels: PipelineLabels, key: PipelineLabelKey) {
+  if (key === 'title' || key === 'newOpportunity' || key === 'period') return labels[key];
+  if (key.startsWith('metrics.')) return labels.metrics[key.replace('metrics.', '') as keyof PipelineLabels['metrics']];
+  return labels.stages[key.replace('stages.', '') as Stage];
+}
+
+function updatePipelineLabel(labels: PipelineLabels, key: PipelineLabelKey, value: string): PipelineLabels {
+  if (key === 'title' || key === 'newOpportunity' || key === 'period') return { ...labels, [key]: value };
+  if (key.startsWith('metrics.')) {
+    const metric = key.replace('metrics.', '') as keyof PipelineLabels['metrics'];
+    return { ...labels, metrics: { ...labels.metrics, [metric]: value } };
+  }
+  const stage = key.replace('stages.', '') as Stage;
+  return { ...labels, stages: { ...labels.stages, [stage]: value } };
+}
 
 export function SomusApp({ userName, userEmail }: { userName: string; userEmail: string }) {
   const [view, setView] = useState<View>('overview');
@@ -139,9 +162,14 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   const [memberError, setMemberError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState('');
-  const [workspaceBackground, setWorkspaceBackground] = useState('#F5F5F7');
-  const [workspaceColorInput, setWorkspaceColorInput] = useState('#F5F5F7');
+  const [workspaceBackground, setWorkspaceBackground] = useState('#F2F7FF');
+  const [workspaceColorInput, setWorkspaceColorInput] = useState('#F2F7FF');
   const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [companies, setCompanies] = useState<PipelineCompany[]>([]);
+  const [activeCompanyId, setActiveCompanyId] = useState('');
+  const [pipelineLabels, setPipelineLabels] = useState<PipelineLabels>(defaultPipelineLabels);
+  const [companyDialog, setCompanyDialog] = useState(false);
+  const [pipelineLabelEdit, setPipelineLabelEdit] = useState<PipelineLabelEdit | null>(null);
 
   const pipelineValue = useMemo(() => opportunities.reduce((total, item) => total + item.value, 0), [opportunities]);
   const searchResults = useMemo(() => {
@@ -186,8 +214,36 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   }, []);
 
   useEffect(() => {
+    void fetch('/api/companies').then(async (response) => {
+      if (!response.ok) return;
+      const data = await response.json() as { companies: PipelineCompany[] };
+      setCompanies(data.companies);
+      if (data.companies[0]) setActiveCompanyId(data.companies[0].id);
+    }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!activeCompanyId) return;
+    const headers = { 'X-Company-Id': activeCompanyId };
+    void Promise.all([fetch('/api/opportunities', { headers }), fetch('/api/pipeline-settings', { headers })]).then(async ([opportunitiesResponse, settingsResponse]) => {
+      if (opportunitiesResponse.ok) {
+        const data = await opportunitiesResponse.json() as { opportunities: Array<Omit<Opportunity, 'value'> & { valueCents: number }> };
+        setOpportunities(data.opportunities.map((item) => ({ ...item, value: item.valueCents / 100 })));
+      }
+      if (settingsResponse.ok) {
+        const data = await settingsResponse.json() as { labels: PipelineLabels };
+        setPipelineLabels(data.labels);
+      }
+    }).catch(() => undefined);
+  }, [activeCompanyId]);
+
+  useEffect(() => {
     const saved = window.localStorage.getItem('somus-workspace-background');
-    if (saved && /^#[0-9a-f]{6}$/i.test(saved)) { setWorkspaceBackground(saved); setWorkspaceColorInput(saved.toUpperCase()); }
+    if (saved && /^#[0-9a-f]{6}$/i.test(saved)) {
+      const migrated = saved.toUpperCase() === '#F5F5F7' ? '#F2F7FF' : saved.toUpperCase();
+      setWorkspaceBackground(migrated); setWorkspaceColorInput(migrated);
+      if (migrated !== saved) window.localStorage.setItem('somus-workspace-background', migrated);
+    }
   }, []);
 
   useEffect(() => {
@@ -218,12 +274,39 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
 
   function openAgent() { setView('agent'); }
 
+  const pipelineRequestHeaders = (): Record<string, string> => activeCompanyId ? { 'X-Company-Id': activeCompanyId } : {};
+
+  async function createCompany(name: string) {
+    const response = await fetch('/api/companies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }).catch(() => null);
+    const payload = response ? await response.json().catch(() => ({})) as { company?: PipelineCompany; error?: string } : {};
+    if (!response?.ok || !payload.company) return payload.error || 'Não foi possível criar a empresa.';
+    setCompanies((items) => [...items, payload.company!]);
+    setActiveCompanyId(payload.company.id);
+    setPipelineLabels(defaultPipelineLabels);
+    notify(`Empresa ${payload.company.name} criada`);
+    return '';
+  }
+
+  async function savePipelineLabels(labels: PipelineLabels) {
+    const response = await fetch('/api/pipeline-settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...pipelineRequestHeaders() }, body: JSON.stringify({ labels }) }).catch(() => null);
+    const payload = response ? await response.json().catch(() => ({})) as { labels?: PipelineLabels; error?: string } : {};
+    if (!response?.ok || !payload.labels) return payload.error || 'Não foi possível salvar os nomes.';
+    setPipelineLabels(payload.labels);
+    notify('Nomes do pipeline atualizados');
+    return '';
+  }
+
+  async function saveSinglePipelineLabel(value: string) {
+    if (!pipelineLabelEdit) return '';
+    return savePipelineLabels(updatePipelineLabel(pipelineLabels, pipelineLabelEdit.key, value));
+  }
+
   function openNewOpportunity(stage: Stage = 'Novo contato') { setEditingOpportunity(null); setNewOpportunityStage(stage); setOpportunityError(''); setOpportunityDialog(true); }
   function openOpportunity(opportunity: Opportunity) { setEditingOpportunity(opportunity); setOpportunityError(''); setOpportunityDialog(true); }
 
   async function saveOpportunity(input: OpportunityInput) {
     setOpportunitySaving(true); setOpportunityError('');
-    const response = await fetch('/api/opportunities', { method: editingOpportunity ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, id: editingOpportunity?.id }) }).catch(() => null);
+    const response = await fetch('/api/opportunities', { method: editingOpportunity ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json', ...pipelineRequestHeaders() }, body: JSON.stringify({ ...input, id: editingOpportunity?.id }) }).catch(() => null);
     const payload = response ? await response.json().catch(() => ({})) as { opportunity?: Omit<Opportunity, 'value'> & { valueCents: number }; error?: string } : {};
     setOpportunitySaving(false);
     if (!response?.ok || !payload.opportunity) { setOpportunityError(payload.error || 'Não foi possível salvar esta oportunidade.'); return false; }
@@ -238,13 +321,13 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
     const current = opportunities.find((item) => item.id === id);
     if (!current || current.stage === stage) return;
     setOpportunities((items) => items.map((item) => item.id === id ? { ...item, stage, updatedAt: Date.now() } : item));
-    const response = await fetch('/api/opportunities', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, stage }) }).catch(() => null);
+    const response = await fetch('/api/opportunities', { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...pipelineRequestHeaders() }, body: JSON.stringify({ id, stage }) }).catch(() => null);
     if (!response?.ok) { setOpportunities((items) => items.map((item) => item.id === id ? current : item)); notify('Não foi possível mover o card'); return; }
     notify(`Movido para ${stage}`);
   }
 
   async function deleteOpportunity(id: number) {
-    const response = await fetch('/api/opportunities', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }).catch(() => null);
+    const response = await fetch('/api/opportunities', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...pipelineRequestHeaders() }, body: JSON.stringify({ id }) }).catch(() => null);
     if (!response?.ok) { setOpportunityError('Não foi possível excluir esta oportunidade.'); return false; }
     setOpportunities((items) => items.filter((item) => item.id !== id)); setOpportunityDialog(false); setEditingOpportunity(null); notify('Oportunidade excluída'); return true;
   }
@@ -324,24 +407,20 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   if (view === 'editor') return <ProposalEditor proposal={activeProposal} onBack={() => setView('proposals')} onNotify={notify} />;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] transition-colors" style={{ backgroundColor: workspaceBackground }}>
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[232px] border-r border-black/[0.06] bg-white/95 p-3 backdrop-blur-2xl transition-transform lg:translate-x-0 ${mobileNav ? 'translate-x-0' : '-translate-x-full'}`}>
+    <div className="min-h-screen bg-[#F2F7FF] text-[#11244A] transition-colors" style={{ backgroundColor: workspaceBackground }}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[232px] border-r border-[#0B6FE8]/10 bg-white/95 p-3 backdrop-blur-2xl transition-transform lg:translate-x-0 ${mobileNav ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-14 items-center justify-between px-3">
           <button onClick={() => setView('overview')} className="flex items-center gap-2.5" aria-label="Synky Sales">
-            <span className="grid size-8 place-items-center rounded-[10px] bg-black text-[13px] font-semibold text-white">S</span>
-            <span className="text-[15px] font-semibold tracking-[-0.01em]">Synky Sales</span>
+              <img src="/synky-sales-logo.webp" alt="Synky Sales" className="h-10 w-[172px] object-contain object-left" />
           </button>
           <Button variant="ghost" size="icon-sm" className="lg:hidden" onClick={() => setMobileNav(false)}><X /></Button>
         </div>
 
-        <div className="mx-1 mt-4 rounded-xl bg-[#f5f5f7] p-1.5">
-          <div className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium"><span className="grid size-6 place-items-center rounded-md bg-white text-[9px] font-semibold shadow-sm">SG</span><span className="flex-1 truncate">Somus Group</span><span className="size-2 rounded-full bg-[#42a66b]" aria-label="Workspace ativo" /></div>
-        </div>
-
-        <nav className="mt-5 space-y-1" aria-label="Menu principal">
+        <nav className="mt-4 space-y-1" aria-label="Menu principal">
           <Nav active={view === 'overview'} icon={LayoutDashboard} label="Visão geral" onClick={() => setView('overview')} />
           <Nav active={view === 'agent'} icon={Sparkles} label="Agente de propostas" onClick={openAgent} />
           <Nav active={view === 'agent_setup'} icon={SlidersHorizontal} label="Configurar agente" onClick={() => setView('agent_setup')} />
+          <Nav active={view === 'studio'} icon={FlaskConical} label="Estúdio Lab" onClick={() => { setView('studio'); setMobileNav(false); }} />
           <Nav active={view === 'pipeline'} icon={BarChart3} label="Pipeline" badge={opportunities.length} onClick={() => setView('pipeline')} />
           <Nav active={view === 'tasks'} icon={ListTodo} label="Ações" badge={tasks.filter((task) => task.status !== 'Concluída').length} onClick={() => setView('tasks')} />
           <Nav active={view === 'clients'} icon={Users2} label="Clientes" onClick={() => setView('clients')} />
@@ -350,14 +429,14 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
         </nav>
 
         <div className="absolute inset-x-3 bottom-3">
-          <button onClick={() => setView('team')} className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-[#f5f5f7]"><span className="grid size-8 place-items-center rounded-full bg-[#dbe8e2] text-[10px] font-semibold text-[#31594e]">{userName.slice(0, 2).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{userName}</span><span className="block truncate text-[10px] text-[#8e8e93]">{userEmail}</span></span><ChevronRight className="size-4 text-[#8e8e93]" /></button>
+          <button onClick={() => setView('team')} className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-[#EAF2FF]"><span className="grid size-8 place-items-center rounded-full bg-[#DCEBFF] text-[10px] font-semibold text-[#0B6FE8]">{userName.slice(0, 2).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{userName}</span><span className="block truncate text-[10px] text-[#8e8e93]">{userEmail}</span></span><ChevronRight className="size-4 text-[#8e8e93]" /></button>
         </div>
       </aside>
 
       {mobileNav && <button onClick={() => setMobileNav(false)} className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden" aria-label="Fechar menu" />}
 
       <div className="lg:pl-[232px]">
-        <header className="sticky top-0 z-30 flex h-[68px] items-center border-b border-black/[0.06] bg-[#f5f5f7]/90 px-3 backdrop-blur-2xl sm:px-5 md:px-8" style={{ backgroundColor: workspaceBackground }}>
+        <header className="sticky top-0 z-30 flex h-[68px] items-center border-b border-[#0B6FE8]/10 bg-[#F2F7FF]/90 px-3 backdrop-blur-2xl sm:px-5 md:px-8" style={{ backgroundColor: workspaceBackground }}>
           <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => setMobileNav(true)}><Menu /></Button>
           <div className="relative hidden w-[360px] md:block"><Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-[#8e8e93]" /><Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="h-9 rounded-xl border-0 bg-black/[0.045] pl-9 shadow-none focus-visible:ring-1" placeholder="Buscar cliente, projeto ou proposta" />{searchQuery.trim().length >= 2 && <div className="absolute left-0 right-0 top-11 z-50 overflow-hidden rounded-2xl border border-black/[0.08] bg-white p-2 shadow-2xl">{searchResults.length ? searchResults.map((result) => <button key={result.id} onClick={() => { setSearchQuery(''); if (result.client) openClient(result.client); else if (result.proposal) { setActiveProposal(result.proposal); setView('editor'); } else setView('pipeline'); }} className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[#f5f5f7]"><span className="grid size-8 place-items-center rounded-xl bg-[#edf1ef] text-[10px] font-semibold text-[#31594e]">{result.title.slice(0, 2).toUpperCase()}</span><span><strong className="block text-xs font-medium">{result.title}</strong><span className="mt-0.5 block text-[10px] text-[#8e8e93]">{result.subtitle}</span></span></button>) : <p className="px-3 py-4 text-center text-[11px] text-[#8e8e93]">Nenhum resultado encontrado</p>}</div>}</div>
           <div className="ml-auto flex items-center gap-2">
@@ -370,18 +449,19 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
                   <NativeColorInput value={workspaceBackground} onChange={changeWorkspaceBackground} ariaLabel="Abrir seletor de cor personalizada" />
                   <Input value={workspaceColorInput} onChange={(event) => { const value = event.target.value.toUpperCase(); setWorkspaceColorInput(value); if (/^#[0-9A-F]{6}$/.test(value)) changeWorkspaceBackground(value); }} onBlur={() => setWorkspaceColorInput(workspaceBackground)} className="h-8 border-0 bg-transparent px-1 font-mono text-[11px] uppercase shadow-none focus-visible:ring-0" aria-label="Código hexadecimal da cor do sistema" />
                 </div>
-                <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] pt-3"><Button type="button" variant="ghost" size="sm" className="rounded-xl text-[10px]" onClick={() => changeWorkspaceBackground('#F5F5F7')}>Restaurar padrão</Button><Button type="button" size="sm" className="rounded-xl bg-black px-4 text-white" onClick={() => { setAppearanceOpen(false); notify('Cor de fundo do sistema atualizada'); }}>Concluir</Button></div>
+                <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] pt-3"><Button type="button" variant="ghost" size="sm" className="rounded-xl text-[10px]" onClick={() => changeWorkspaceBackground('#F2F7FF')}>Restaurar padrão</Button><Button type="button" size="sm" className="rounded-xl bg-[#0B6FE8] px-4 text-white hover:bg-[#0757C8]" onClick={() => { setAppearanceOpen(false); notify('Cor de fundo do sistema atualizada'); }}>Concluir</Button></div>
               </div>}
             </div>
-            <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" aria-label="Notificações" onClick={() => notify('Você não tem novas notificações')}><Bell /></Button><Button variant="outline" className="hidden h-10 rounded-2xl border-black/10 bg-white px-4 shadow-sm md:flex" onClick={() => openNewOpportunity()}><Plus /> Oportunidade</Button><Button className="h-10 rounded-2xl bg-black px-3.5 text-white shadow-[0_8px_22px_rgba(0,0,0,0.16)] hover:bg-[#29292b] sm:px-4" onClick={openAgent}><Sparkles /><span className="hidden sm:inline">Criar com IA</span><span className="sm:hidden">IA</span></Button>
+            <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" aria-label="Notificações" onClick={() => notify('Você não tem novas notificações')}><Bell /></Button><Button variant="outline" className="hidden h-10 rounded-2xl border-[#0B6FE8]/20 bg-white px-4 shadow-sm hover:bg-[#EAF2FF] md:flex" onClick={() => openNewOpportunity()}><Plus /> Oportunidade</Button><Button className="h-10 rounded-2xl bg-[#0B6FE8] px-3.5 text-white shadow-[0_8px_22px_rgba(11,111,232,0.22)] hover:bg-[#0757C8] sm:px-4" onClick={openAgent}><Sparkles /><span className="hidden sm:inline">Criar com IA</span><span className="sm:hidden">IA</span></Button>
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-5 md:px-8 md:py-10">
+        <main className={view === 'studio' ? 'w-full' : 'mx-auto max-w-[1440px] px-4 py-6 sm:px-5 md:px-8 md:py-10'}>
+          {view === 'studio' && <StudioLab />}
           {view === 'overview' && <Overview name={userName} opportunities={opportunities} proposals={proposals} pipelineValue={pipelineValue} onPipeline={() => setView('pipeline')} onProposal={openAgent} onProposals={() => setView('proposals')} onOpenProposal={(proposal) => { setActiveProposal(proposal); setView('editor'); }} />}
           {view === 'agent' && <AgentStudio profile={agentProfile} onSetup={() => setView('agent_setup')} onGenerated={(proposal) => { setProposals((items) => [proposal, ...items]); setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
           {view === 'agent_setup' && <AgentSetup initialProfile={agentProfile} onSaved={(profile) => { setAgentProfile(profile); notify('Agente configurado para o seu negócio'); setView('agent'); }} onNotify={notify} />}
-          {view === 'pipeline' && <Pipeline opportunities={opportunities} onNew={openNewOpportunity} onEdit={openOpportunity} onMove={moveOpportunity} />}
+          {view === 'pipeline' && <Pipeline opportunities={opportunities} labels={pipelineLabels} companies={companies} activeCompanyId={activeCompanyId} companyName={companies.find((company) => company.id === activeCompanyId)?.name || 'Empresa principal'} onSelectCompany={setActiveCompanyId} onNew={openNewOpportunity} onEdit={openOpportunity} onMove={moveOpportunity} onEditLabel={(key, label) => setPipelineLabelEdit({ key, label })} onCompanies={() => setCompanyDialog(true)} />}
           {view === 'tasks' && <Actions tasks={tasks} onNew={openNewTask} onQuickAdd={createQuickTask} onEdit={openTask} onMove={moveTask} />}
           {view === 'clients' && <Clients clients={clients} onNew={openNewClient} onEdit={openClient} />}
           {view === 'proposals' && <Proposals proposals={proposals} onNew={openAgent} onOpen={(proposal) => { setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
@@ -389,7 +469,9 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
         </main>
       </div>
 
-      <OpportunityDialog open={opportunityDialog} onOpenChange={setOpportunityDialog} opportunity={editingOpportunity} defaultStage={newOpportunityStage} saving={opportunitySaving} error={opportunityError} onSave={saveOpportunity} onDelete={deleteOpportunity} />
+      <OpportunityDialog open={opportunityDialog} onOpenChange={setOpportunityDialog} opportunity={editingOpportunity} defaultStage={newOpportunityStage} labels={pipelineLabels} saving={opportunitySaving} error={opportunityError} onSave={saveOpportunity} onDelete={deleteOpportunity} />
+      <CompanyDialog open={companyDialog} onOpenChange={setCompanyDialog} companies={companies} activeCompanyId={activeCompanyId} onSelect={setActiveCompanyId} onCreate={createCompany} />
+      <PipelineLabelDialog open={Boolean(pipelineLabelEdit)} onOpenChange={(open) => { if (!open) setPipelineLabelEdit(null); }} label={pipelineLabelEdit?.label || ''} value={pipelineLabelEdit ? getPipelineLabel(pipelineLabels, pipelineLabelEdit.key) : ''} onSave={saveSinglePipelineLabel} />
       <ClientDialog open={clientDialog} onOpenChange={setClientDialog} client={editingClient} saving={clientSaving} error={clientError} onSave={saveClient} onDelete={deleteClient} />
       <TaskDialog open={taskDialog} onOpenChange={setTaskDialog} task={editingTask} defaultStatus={newTaskStatus} saving={taskSaving} error={taskError} members={members} userName={userName} onSave={saveTask} onDelete={deleteTask} />
       <MemberDialog open={memberDialog} onOpenChange={setMemberDialog} onSubmit={createMember} error={memberError} />
@@ -399,22 +481,35 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
 }
 
 function Nav({ active, icon: Icon, label, badge, onClick }: { active: boolean; icon: typeof LayoutDashboard; label: string; badge?: number; onClick?: () => void }) {
-  return <button onClick={onClick} className={`flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[13px] transition-all ${active ? 'bg-black text-white shadow-sm' : 'text-[#5c5c62] hover:bg-[#f5f5f7] hover:text-black'}`}><Icon className="size-[17px]" strokeWidth={1.8} /><span>{label}</span>{badge !== undefined && <span className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-white/15 text-white' : 'bg-[#e8e8ed] text-[#6e6e73]'}`}>{badge}</span>}</button>;
+  return <button onClick={onClick} className={`flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[13px] transition-all ${active ? 'bg-[#0B6FE8] text-white shadow-[0_8px_18px_rgba(11,111,232,0.2)]' : 'text-[#41506B] hover:bg-[#EAF2FF] hover:text-[#0757C8]'}`}><Icon className="size-[17px]" strokeWidth={1.8} /><span>{label}</span>{badge !== undefined && <span className={`ml-auto rounded-full px-1.5 py-0.5 text-[10px] ${active ? 'bg-white/15 text-white' : 'bg-[#EAF2FF] text-[#416AA7]'}`}>{badge}</span>}</button>;
 }
 
-function PageTitle({ kicker, title, description, actions }: { kicker?: string; title: string; description: string; actions?: ReactNode }) {
-  return <div className="mb-7 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0">{kicker && <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6e6e73] sm:text-[11px]">{kicker}</p>}<h1 className="text-[30px] font-semibold leading-tight tracking-[-0.04em] md:text-[38px]">{title}</h1><p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#6e6e73] sm:text-sm">{description}</p></div>{actions && <div className="flex w-full shrink-0 gap-2 [&>button]:w-full sm:w-auto sm:[&>button]:w-auto">{actions}</div>}</div>;
+function PageTitle({ kicker, title, description, actions }: { kicker?: string; title: ReactNode; description: string; actions?: ReactNode }) {
+  return <div className="mb-7 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0">{kicker && <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6e6e73] sm:text-[11px]">{kicker}</p>}<h1 className="text-[30px] font-semibold leading-tight tracking-[-0.04em] md:text-[38px]">{title}</h1><p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#6e6e73] sm:text-sm">{description}</p></div>{actions && <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">{actions}</div>}</div>;
 }
 
 function Overview({ name, opportunities, proposals, pipelineValue, onPipeline, onProposal, onProposals, onOpenProposal }: { name: string; opportunities: Opportunity[]; proposals: Proposal[]; pipelineValue: number; onPipeline: () => void; onProposal: () => void; onProposals: () => void; onOpenProposal: (proposal: Proposal) => void }) {
   const monthly = [{ month: 'Abr', value: 182 }, { month: 'Mai', value: 236 }, { month: 'Jun', value: 218 }, { month: 'Jul', value: 328 }, { month: 'Ago', value: 392 }, { month: 'Set', value: Math.round(pipelineValue / 1000) }];
   const stages = (['Novo contato', 'Diagnóstico', 'Proposta enviada', 'Negociação'] as Stage[]).map((stage) => ({ stage, items: opportunities.filter((item) => item.stage === stage), total: opportunities.filter((item) => item.stage === stage).reduce((sum, item) => sum + item.value, 0) }));
   return <>
-    <PageTitle title={`Boa tarde, ${name}`} description="Seu estúdio comercial, claro e inspirador." actions={<Button className="h-10 rounded-xl bg-[#172A25] px-4 text-white shadow-lg shadow-[#172A25]/15" onClick={onProposal}><Sparkles /> Criar com IA</Button>} />
+    <section className="relative mb-5 overflow-hidden rounded-[26px] border border-[#0B6FE8]/15 bg-white px-5 py-6 shadow-[0_12px_35px_rgba(11,111,232,0.08)] sm:px-7 sm:py-7">
+      <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-[#0B6FE8]" />
+      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#EAF2FF] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#0757C8]"><span className="grid size-5 place-items-center rounded-full bg-[#0B6FE8] text-white"><LayoutDashboard className="size-3" /></span>Painel comercial</div>
+          <h1 className="mt-4 text-[30px] font-semibold leading-tight tracking-[-0.04em] text-[#11244A] sm:text-[36px]">Boa tarde, <span className="text-[#0B6FE8]">{name}</span></h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#60708B]">Tudo o que precisa acompanhar do seu comercial, em um só lugar.</p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3 rounded-2xl border border-[#0B6FE8]/10 bg-[#F7FAFF] px-3.5 py-3"><span className="grid size-9 place-items-center rounded-xl bg-white text-[#0B6FE8] shadow-sm"><CalendarDays className="size-4" /></span><span><strong className="block text-xs font-semibold text-[#11244A]">Seu dia começa aqui</strong><span className="mt-0.5 block text-[11px] text-[#60708B]">Acompanhe prioridades e oportunidades.</span></span></div>
+          <Button className="h-11 rounded-xl bg-[#0B6FE8] px-4 text-white shadow-[0_10px_22px_rgba(11,111,232,0.2)] hover:bg-[#0757C8]" onClick={onProposal}><Sparkles /> Criar com IA</Button>
+        </div>
+      </div>
+    </section>
 
-    <section className="relative mb-5 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#172A25] via-[#24493D] to-[#6D4B67] p-7 text-white shadow-[0_24px_70px_rgba(29,57,49,0.22)] md:p-9">
+    <section className="relative mb-5 overflow-hidden rounded-[30px] bg-gradient-to-br from-[#064CB5] via-[#0B6FE8] to-[#1D8FF2] p-7 text-white shadow-[0_24px_70px_rgba(11,111,232,0.22)] md:p-9">
       <div className="relative z-10 grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end"><div><span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-medium text-white/75 backdrop-blur"><Sparkles className="size-3" /> Inspiração do dia</span><blockquote className="mt-5 max-w-3xl text-[clamp(27px,4vw,48px)] font-semibold leading-[1.02] tracking-[-0.055em]">“Grandes projetos começam com uma conversa bem conduzida.”</blockquote><p className="mt-4 text-xs text-white/50">Transforme intenção em clareza. Clareza em confiança. Confiança em novos projetos.</p></div><div className="flex justify-start lg:justify-end"><button onClick={onProposal} className="group flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left text-[#172A25] shadow-xl transition-transform hover:-translate-y-0.5"><span className="grid size-10 place-items-center rounded-xl bg-[#E6F2EC]"><Sparkles className="size-4" /></span><span><strong className="block text-xs">Começar uma proposta</strong><span className="mt-0.5 block text-[10px] text-black/45">Descreva. A IA organiza.</span></span><ChevronRight className="ml-3 size-4 transition-transform group-hover:translate-x-0.5" /></button></div></div>
-      <div className="absolute -right-12 -top-20 size-72 rounded-full bg-[#F0B96A]/20 blur-2xl" /><div className="absolute -bottom-28 left-[46%] size-72 rounded-full bg-[#7E8BFF]/20 blur-3xl" />
+      <div className="absolute -right-12 -top-20 size-72 rounded-full border border-white/15" /><div className="absolute -bottom-28 left-[46%] size-72 rounded-full border border-white/10" />
     </section>
 
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -425,7 +520,7 @@ function Overview({ name, opportunities, proposals, pipelineValue, onPipeline, o
     </section>
 
     <section className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.85fr]">
-      <article className="rounded-[26px] border border-black/[0.06] bg-white p-5 shadow-[0_8px_30px_rgba(25,38,34,0.04)] md:p-6"><SectionHeader title="Evolução comercial" subtitle="Volume do pipeline · últimos 6 meses" action="Ver pipeline" onAction={onPipeline} /><ChartContainer config={{ value: { label: 'Pipeline', color: '#526EE8' } }} className="mt-5 h-[230px] w-full aspect-auto"><AreaChart data={monthly} margin={{ left: 4, right: 4, top: 12 }}><defs><linearGradient id="pipelineGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#526EE8" stopOpacity={0.28} /><stop offset="95%" stopColor="#526EE8" stopOpacity={0.015} /></linearGradient></defs><CartesianGrid vertical={false} strokeDasharray="4 6" /><XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} /><ChartTooltip content={<ChartTooltipContent formatter={(value) => <span className="font-medium">R$ {Number(value)} mil</span>} />} /><Area type="monotone" dataKey="value" stroke="#526EE8" strokeWidth={3} fill="url(#pipelineGradient)" /></AreaChart></ChartContainer></article>
+      <article className="rounded-[26px] border border-black/[0.06] bg-white p-5 shadow-[0_8px_30px_rgba(25,38,34,0.04)] md:p-6"><SectionHeader title="Evolução comercial" subtitle="Volume do pipeline · últimos 6 meses" action="Ver pipeline" onAction={onPipeline} /><ChartContainer config={{ value: { label: 'Pipeline', color: '#0B6FE8' } }} className="mt-5 h-[230px] w-full aspect-auto"><AreaChart data={monthly} margin={{ left: 4, right: 4, top: 12 }}><defs><linearGradient id="pipelineGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0B6FE8" stopOpacity={0.28} /><stop offset="95%" stopColor="#0B6FE8" stopOpacity={0.015} /></linearGradient></defs><CartesianGrid vertical={false} strokeDasharray="4 6" /><XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} /><ChartTooltip content={<ChartTooltipContent formatter={(value) => <span className="font-medium">R$ {Number(value)} mil</span>} />} /><Area type="monotone" dataKey="value" stroke="#0B6FE8" strokeWidth={3} fill="url(#pipelineGradient)" /></AreaChart></ChartContainer></article>
       <article className="rounded-[26px] border border-black/[0.06] bg-white p-5 shadow-[0_8px_30px_rgba(25,38,34,0.04)] md:p-6"><SectionHeader title="Funil de oportunidades" subtitle="Valor por etapa" action="Abrir CRM" onAction={onPipeline} /><div className="mt-7 space-y-5">{stages.map(({ stage, items, total }, index) => <button onClick={onPipeline} key={stage} className="block w-full text-left"><div className="mb-2 flex items-center justify-between"><span className="flex items-center gap-2 text-[11px] font-medium"><i className="size-2 rounded-full" style={{ background: stageColors[stage] }} />{stage}</span><span className="text-[10px] text-[#8e8e93]">{items.length} · {money.format(total)}</span></div><div className="h-2.5 overflow-hidden rounded-full bg-[#f0f0f3]"><div className="h-full rounded-full transition-all" style={{ width: `${Math.max(24, 100 - index * 19)}%`, background: stageColors[stage] }} /></div></button>)}</div><div className="mt-7 flex items-center gap-3 rounded-2xl bg-[#F5F0E8] p-4"><span className="grid size-9 place-items-center rounded-xl bg-white text-[#9A6B37] shadow-sm"><TrendingUp className="size-4" /></span><p className="text-[10px] leading-4 text-[#6D5A45]"><strong className="block text-[11px] text-[#4A3A28]">Seu melhor movimento agora</strong>Priorize as propostas já visualizadas: elas têm maior intenção de compra.</p></div></article>
     </section>
 
@@ -440,7 +535,7 @@ function VisualStat({ color, icon: Icon, label, value, detail }: { color: 'viole
 function SectionHeader({ title, subtitle, action, onAction }: { title: string; subtitle: string; action?: string; onAction?: () => void }) { return <div className="flex items-start justify-between"><div><h2 className="text-[15px] font-semibold tracking-[-0.01em]">{title}</h2><p className="mt-1 text-[11px] text-[#8e8e93]">{subtitle}</p></div>{action && <button onClick={onAction} className="flex items-center gap-1 text-[11px] font-medium text-[#31594e]">{action}<ChevronRight className="size-3.5" /></button>}</div>; }
 function Task({ time, title, detail, urgent }: { time: string; title: string; detail: string; urgent?: boolean }) { return <div className="flex gap-3 rounded-xl p-3 hover:bg-[#f7f7f9]"><span className={`mt-0.5 text-[10px] font-medium ${urgent ? 'text-[#c04a3b]' : 'text-[#8e8e93]'}`}>{time}</span><span><strong className="block text-xs font-medium">{title}</strong><span className="mt-1 block text-[10px] text-[#8e8e93]">{detail}</span></span></div>; }
 
-function Pipeline({ opportunities, onNew, onEdit, onMove }: { opportunities: Opportunity[]; onNew: (stage?: Stage) => void; onEdit: (opportunity: Opportunity) => void; onMove: (id: number, stage: Stage) => void }) {
+function Pipeline({ opportunities, labels, companies, activeCompanyId, companyName, onSelectCompany, onNew, onEdit, onMove, onEditLabel, onCompanies }: { opportunities: Opportunity[]; labels: PipelineLabels; companies: PipelineCompany[]; activeCompanyId: string; companyName: string; onSelectCompany: (id: string) => void; onNew: (stage?: Stage) => void; onEdit: (opportunity: Opportunity) => void; onMove: (id: number, stage: Stage) => void; onEditLabel: (key: PipelineLabelKey, label: string) => void; onCompanies: () => void }) {
   const stages: Stage[] = ['Novo contato', 'Diagnóstico', 'Proposta enviada', 'Negociação'];
   const [period, setPeriod] = useState<'all' | '7' | '30' | '90' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');
@@ -461,17 +556,17 @@ function Pipeline({ opportunities, onNew, onEdit, onMove }: { opportunities: Opp
   const weightedForecast = filtered.reduce((sum, item) => sum + item.value * weights[item.stage], 0);
 
   return <>
-    <PageTitle kicker="CRM inteligente" title="Pipeline comercial" description="Edite, filtre e mova oportunidades entre etapas. Os valores se atualizam em tempo real." actions={<Button onClick={() => onNew()} className="rounded-xl bg-black px-4 text-white"><Plus /> Nova oportunidade</Button>} />
+    <PageTitle kicker={`CRM inteligente · ${companyName}`} title={<span className="inline-flex items-center gap-2">{labels.title}<LabelEditButton label="Editar nome do pipeline" onClick={() => onEditLabel('title', 'Nome do pipeline')} /></span>} description={labels.description} actions={<><div className="flex w-full min-w-0 items-center gap-2 sm:w-auto"><Building2 className="size-4 shrink-0 text-[#0B6FE8]" /><AppSelect value={activeCompanyId} onValueChange={onSelectCompany} ariaLabel="Empresa exibida no pipeline" className="min-w-0 flex-1 sm:w-[190px]" options={companies.map((company) => ({ value: company.id, label: company.name }))} /><Button onClick={onCompanies} variant="outline" size="icon" className="shrink-0 rounded-xl border-[#0B6FE8]/20 bg-white text-[#0B6FE8]" aria-label="Adicionar empresa"><Plus /></Button></div><Button onClick={() => onNew()} className="flex-1 rounded-xl bg-[#0B6FE8] px-4 text-white shadow-[0_8px_18px_rgba(11,111,232,0.18)] hover:bg-[#0757C8] sm:flex-none"><Plus /> {labels.newOpportunity}</Button><LabelEditButton label="Editar nome do botão principal" onClick={() => onEditLabel('newOpportunity', 'Nome do botão principal')} /></>} />
     <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <PipelineMetric color="violet" label="Pipeline filtrado" value={money.format(pipelineValue)} detail={`${filtered.length} oportunidades`} />
-      <PipelineMetric color="green" label="Previsão ponderada" value={money.format(weightedForecast)} detail="Probabilidade por etapa" />
-      <PipelineMetric color="orange" label="Ticket médio" value={money.format(averageTicket)} detail="Valor médio por oportunidade" />
-      <PipelineMetric color="rose" label="Em negociação" value={String(filtered.filter((item) => item.stage === 'Negociação').length)} detail={money.format(filtered.filter((item) => item.stage === 'Negociação').reduce((sum, item) => sum + item.value, 0))} />
+      <PipelineMetric color="violet" label={labels.metrics.pipeline} value={money.format(pipelineValue)} detail={`${filtered.length} oportunidades`} onEdit={() => onEditLabel('metrics.pipeline', 'Nome do indicador')} />
+      <PipelineMetric color="green" label={labels.metrics.forecast} value={money.format(weightedForecast)} detail="Probabilidade por etapa" onEdit={() => onEditLabel('metrics.forecast', 'Nome do indicador')} />
+      <PipelineMetric color="orange" label={labels.metrics.ticket} value={money.format(averageTicket)} detail="Valor médio por oportunidade" onEdit={() => onEditLabel('metrics.ticket', 'Nome do indicador')} />
+      <PipelineMetric color="rose" label={labels.metrics.negotiation} value={String(filtered.filter((item) => item.stage === 'Negociação').length)} detail={money.format(filtered.filter((item) => item.stage === 'Negociação').reduce((sum, item) => sum + item.value, 0))} onEdit={() => onEditLabel('metrics.negotiation', 'Nome do indicador')} />
     </section>
 
     <section className="mb-5 flex flex-col gap-3 rounded-[22px] border border-black/[0.06] bg-white p-3 shadow-sm md:flex-row md:items-center">
-      <div className="flex items-center gap-2 px-2"><CalendarRange className="size-4 text-[#6E6E73]" /><span className="text-[11px] font-semibold">Período de entrada</span></div>
-      <AppSelect value={period} onValueChange={(value) => setPeriod(value as typeof period)} ariaLabel="Período de entrada" className="w-full md:w-52" options={[{ value: 'all', label: 'Todo o período' }, { value: '7', label: 'Últimos 7 dias' }, { value: '30', label: 'Últimos 30 dias' }, { value: '90', label: 'Últimos 90 dias' }, { value: 'custom', label: 'Período personalizado' }]} />
+      <div className="flex items-center gap-2 px-2"><CalendarRange className="size-4 text-[#6E6E73]" /><span className="text-[11px] font-semibold">{labels.period}</span><LabelEditButton label="Editar nome do filtro" onClick={() => onEditLabel('period', 'Nome do filtro')} /></div>
+      <AppSelect value={period} onValueChange={(value) => setPeriod(value as typeof period)} ariaLabel={labels.period} className="w-full md:w-52" options={[{ value: 'all', label: 'Todo o período' }, { value: '7', label: 'Últimos 7 dias' }, { value: '30', label: 'Últimos 30 dias' }, { value: '90', label: 'Últimos 90 dias' }, { value: 'custom', label: 'Período personalizado' }]} />
       {period === 'custom' && <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 md:w-auto"><Input aria-label="Data inicial" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="h-11 min-w-0 rounded-2xl bg-[#F7F7F9] text-[11px]" /><span className="text-[10px] text-[#8E8E93]">até</span><Input aria-label="Data final" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="h-11 min-w-0 rounded-2xl bg-[#F7F7F9] text-[11px]" /></div>}
       <span className="px-2 text-[10px] text-[#8E8E93] md:ml-auto">Arraste os cards para mudar de etapa</span>
     </section>
@@ -480,22 +575,77 @@ function Pipeline({ opportunities, onNew, onEdit, onMove }: { opportunities: Opp
       const items = filtered.filter((item) => item.stage === stage);
       const stageValue = items.reduce((sum, item) => sum + item.value, 0);
       return <section key={stage} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDrop={(event) => { event.preventDefault(); const id = Number(event.dataTransfer.getData('text/opportunity-id') || draggedId); if (id) onMove(id, stage); setDraggedId(null); }} className={`min-h-[430px] rounded-[24px] border p-3 transition-colors ${draggedId ? 'border-[#83908B] bg-[#EEF4F1]' : 'border-transparent bg-black/[0.025]'}`}>
-        <header className="px-2 py-2"><div className="flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: stageColors[stage] }} /><h2 className="text-xs font-semibold">{stage}</h2><span className="ml-auto rounded-full bg-white px-2 py-1 text-[9px] text-[#6E6E73] shadow-sm">{items.length}</span></div><strong className="mt-3 block text-[17px] font-semibold tracking-[-0.03em]">{money.format(stageValue)}</strong><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/[0.055]"><div className="h-full rounded-full" style={{ width: `${pipelineValue ? Math.max(5, stageValue / pipelineValue * 100) : 0}%`, background: stageColors[stage] }} /></div></header>
+        <header className="px-2 py-2"><div className="flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: stageColors[stage] }} /><h2 className="text-xs font-semibold">{labels.stages[stage]}</h2><LabelEditButton label={`Editar nome de ${labels.stages[stage]}`} onClick={() => onEditLabel(`stages.${stage}`, 'Nome da etapa')} /><span className="ml-auto rounded-full bg-white px-2 py-1 text-[9px] text-[#6E6E73] shadow-sm">{items.length}</span></div><strong className="mt-3 block text-[17px] font-semibold tracking-[-0.03em]">{money.format(stageValue)}</strong><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/[0.055]"><div className="h-full rounded-full" style={{ width: `${pipelineValue ? Math.max(5, stageValue / pipelineValue * 100) : 0}%`, background: stageColors[stage] }} /></div></header>
         <div className="mt-2 space-y-3">{items.map((item) => <article key={item.id} draggable onDragStart={(event) => { event.dataTransfer.setData('text/opportunity-id', String(item.id)); event.dataTransfer.effectAllowed = 'move'; setDraggedId(item.id); }} onDragEnd={() => setDraggedId(null)} onClick={() => onEdit(item)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onEdit(item); }} role="button" tabIndex={0} className={`group cursor-grab rounded-[18px] border border-black/[0.06] bg-white p-4 shadow-[0_4px_18px_rgba(0,0,0,0.035)] transition-all active:cursor-grabbing ${draggedId === item.id ? 'scale-[0.98] opacity-50' : 'hover:-translate-y-0.5 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)]'}`}>
           <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#F2F3F5] text-[9px] font-semibold">{item.client.split(' ').map((word) => word[0]).join('').slice(0, 2)}</span><div className="min-w-0 flex-1"><h3 className="truncate text-[13px] font-semibold">{item.project}</h3><p className="mt-1 truncate text-[10px] text-[#8E8E93]">{item.client}</p></div><GripVertical className="size-4 text-[#C4C4C7] transition-colors group-hover:text-[#6E6E73]" /></div>
           {item.tags.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{item.tags.slice(0, 3).map((tag, index) => <span key={tag} className={`rounded-full px-2 py-1 text-[8px] font-medium ${index % 3 === 0 ? 'bg-[#EEF0FF] text-[#5164C9]' : index % 3 === 1 ? 'bg-[#EAF6F0] text-[#277157]' : 'bg-[#FFF2E3] text-[#A46024]'}`}>{tag}</span>)}</div>}
           {Object.entries(item.customFields).slice(0, 2).map(([label, value]) => <div key={label} className="mt-2 flex items-center justify-between text-[9px]"><span className="text-[#AEAEB2]">{label}</span><span className="max-w-[55%] truncate text-[#5C5C62]">{value}</span></div>)}
           <div className="mt-4 flex items-center justify-between border-t border-black/[0.055] pt-3"><strong className="text-xs font-semibold">{money.format(item.value)}</strong><span className="flex items-center gap-1 text-[9px] text-[#8E8E93]"><Clock3 className="size-3" />{item.due}</span></div>
           <div className="mt-2 flex items-center justify-between text-[8px] text-[#AEAEB2]"><span>{item.source}</span><span className="flex items-center gap-1"><Pencil className="size-2.5" />Editar</span></div>
-        </article>)}<button onClick={() => onNew(stage)} className="flex w-full items-center justify-center gap-1.5 rounded-[16px] border border-dashed border-black/10 py-3 text-[10px] font-medium text-[#8E8E93] hover:border-black/20 hover:bg-white hover:text-black"><Plus className="size-3.5" />Adicionar nesta etapa</button></div>
+        </article>)}<button onClick={() => onNew(stage)} className="flex w-full items-center justify-center gap-1.5 rounded-[16px] border border-dashed border-black/10 py-3 text-[10px] font-medium text-[#8E8E93] hover:border-black/20 hover:bg-white hover:text-black"><Plus className="size-3.5" />Adicionar em {labels.stages[stage]}</button></div>
       </section>;
     })}</div></div>
   </>;
 }
 
-function PipelineMetric({ color, label, value, detail }: { color: 'violet' | 'green' | 'orange' | 'rose'; label: string; value: string; detail: string }) {
+function LabelEditButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return <Button type="button" variant="ghost" size="icon-sm" className="size-6 shrink-0 rounded-lg text-current opacity-55 transition-opacity hover:bg-white/65 hover:opacity-100" aria-label={label} onClick={onClick}><Pencil className="size-3" /></Button>;
+}
+
+function PipelineMetric({ color, label, value, detail, onEdit }: { color: 'violet' | 'green' | 'orange' | 'rose'; label: string; value: string; detail: string; onEdit: () => void }) {
   const palette = { violet: 'bg-[#EEF0FF] text-[#5164C9]', green: 'bg-[#EAF6F0] text-[#277157]', orange: 'bg-[#FFF2E3] text-[#A46024]', rose: 'bg-[#F8EAF1] text-[#8F456B]' }[color];
-  return <article className={`rounded-[22px] p-5 ${palette}`}><p className="text-[9px] font-semibold uppercase tracking-[0.1em] opacity-65">{label}</p><strong className="mt-3 block text-[25px] font-semibold tracking-[-0.045em] text-[#1D1D1F]">{value}</strong><p className="mt-3 text-[9px] text-black/40">{detail}</p></article>;
+  return <article className={`rounded-[22px] p-5 ${palette}`}><div className="flex items-center gap-1"><p className="text-[9px] font-semibold uppercase tracking-[0.1em] opacity-65">{label}</p><LabelEditButton label={`Editar nome de ${label}`} onClick={onEdit} /></div><strong className="mt-3 block text-[25px] font-semibold tracking-[-0.045em] text-[#1D1D1F]">{value}</strong><p className="mt-3 text-[9px] text-black/40">{detail}</p></article>;
+}
+
+function CompanyDialog({ open, onOpenChange, companies, activeCompanyId, onSelect, onCreate }: { open: boolean; onOpenChange: (open: boolean) => void; companies: PipelineCompany[]; activeCompanyId: string; onSelect: (id: string) => void; onCreate: (name: string) => Promise<string> }) {
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (open) { setName(''); setError(''); setSaving(false); } }, [open]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    const message = await onCreate(name);
+    setSaving(false);
+    if (message) { setError(message); return; }
+    onOpenChange(false);
+  }
+
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-w-lg rounded-[26px] p-5 sm:p-6">
+      <DialogHeader><span className="mb-2 grid size-11 place-items-center rounded-2xl bg-[#0B6FE8] text-white"><Building2 /></span><DialogTitle className="text-xl font-semibold tracking-[-0.025em]">Empresas do pipeline</DialogTitle><DialogDescription>Cada empresa mantém suas oportunidades separadas das demais.</DialogDescription></DialogHeader>
+      <div className="mt-2 space-y-2">{companies.map((company) => <button key={company.id} type="button" onClick={() => { onSelect(company.id); onOpenChange(false); }} className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${company.id === activeCompanyId ? 'border-[#0B6FE8] bg-[#EAF2FF]' : 'border-black/[0.07] hover:bg-[#F2F7FF]'}`}><span className="grid size-9 place-items-center rounded-xl bg-white text-[#0B6FE8] shadow-sm"><Building2 className="size-4" /></span><span className="min-w-0 flex-1"><strong className="block truncate text-xs">{company.name}</strong><span className="mt-0.5 block text-[10px] text-[#8E8E93]">{company.id === activeCompanyId ? 'Empresa em exibição' : 'Abrir este pipeline'}</span></span>{company.id === activeCompanyId && <Check className="size-4 text-[#0B6FE8]" />}</button>)}</div>
+      <form onSubmit={submit} className="mt-5 border-t border-black/[0.06] pt-5"><Field label="Nova empresa"><Input autoFocus value={name} onChange={(event) => setName(event.target.value)} maxLength={80} placeholder="Ex.: Nova empresa" className="h-11 rounded-xl" /></Field>{error && <p className="mt-3 rounded-xl bg-[#FFF0EE] px-3 py-2 text-[10px] font-medium text-[#B54336]">{error}</p>}<DialogFooter className="mt-4"><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Fechar</Button><Button disabled={saving || !name.trim()} type="submit" className="bg-[#0B6FE8] px-5 text-white hover:bg-[#0757C8]">{saving ? 'Criando...' : <><Plus /> Adicionar empresa</>}</Button></DialogFooter></form>
+    </DialogContent>
+  </Dialog>;
+}
+
+function PipelineLabelDialog({ open, onOpenChange, label, value, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; label: string; value: string; onSave: (value: string) => Promise<string> }) {
+  const [draft, setDraft] = useState(value);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (open) { setDraft(value); setError(''); setSaving(false); } }, [open, value]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const next = draft.trim();
+    if (!next) { setError('Informe um nome.'); return; }
+    setSaving(true);
+    const message = await onSave(next);
+    setSaving(false);
+    if (message) { setError(message); return; }
+    onOpenChange(false);
+  }
+
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-w-md rounded-[26px] p-5 sm:p-6">
+      <DialogHeader><span className="mb-2 grid size-11 place-items-center rounded-2xl bg-[#0B6FE8] text-white"><Pencil /></span><DialogTitle className="text-xl font-semibold tracking-[-0.025em]">{label}</DialogTitle><DialogDescription>Altere somente este nome.</DialogDescription></DialogHeader>
+      <form onSubmit={submit} className="mt-5"><Field label="Novo nome"><Input autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={100} className="h-12 rounded-xl text-sm" /></Field>{error && <p className="mt-3 rounded-xl bg-[#FFF0EE] px-3 py-2 text-[11px] font-medium text-[#B54336]">{error}</p>}<DialogFooter className="mt-5"><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button><Button disabled={saving || !draft.trim()} type="submit" className="bg-[#0B6FE8] px-5 text-white hover:bg-[#0757C8]">{saving ? 'Salvando...' : 'Salvar'}</Button></DialogFooter></form>
+    </DialogContent>
+  </Dialog>;
 }
 
 const taskStatusColors: Record<TaskStatus, { dot: string; soft: string; text: string }> = {
@@ -927,7 +1077,7 @@ function EditorTool({ icon: Icon, label, active, onClick }: { icon: typeof Type;
 function MemberDialog({ open, onOpenChange, onSubmit, error }: { open: boolean; onOpenChange: (open: boolean) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void; error: string }) {
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-md rounded-[26px] p-5 sm:p-6"><DialogHeader><span className="mb-2 grid size-11 place-items-center rounded-2xl bg-[#172A25] text-white"><UserPlus /></span><DialogTitle className="text-xl font-semibold tracking-[-0.025em]">Adicionar usuário</DialogTitle><DialogDescription>Prepare o acesso ao workspace da Somus. Quando a pessoa entrar com este e-mail, ela verá os mesmos dados da equipe.</DialogDescription></DialogHeader><form onSubmit={onSubmit} className="space-y-4"><Field label="Nome completo"><Input name="name" required className="h-11 rounded-2xl" placeholder="Ex.: Ana Martins" /></Field><Field label="E-mail de acesso"><Input name="email" required type="email" className="h-11 rounded-2xl" placeholder="ana@empresa.com.br" /></Field><Field label="Função"><AppSelect name="role" defaultValue="Administrador" ariaLabel="Função do usuário" options={['Administrador', 'Comercial', 'Editor', 'Visualizador'].map((value) => ({ value, label: value }))} /></Field><div className="rounded-2xl bg-[#EEF0FF] p-4"><div className="flex gap-3"><ShieldCheck className="mt-0.5 size-4 text-[#5164C9]" /><p className="text-[10px] leading-4 text-[#56608B]"><strong className="block text-[11px] text-[#344174]">Acesso seguro</strong>O usuário será reconhecido pelo e-mail usado no login com ChatGPT.</p></div></div>{error && <p className="text-[10px] font-medium text-[#C03F32]">{error}</p>}<DialogFooter className="-mx-5 -mb-5 rounded-b-[26px] sm:-mx-6 sm:-mb-6"><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button><Button type="submit" className="bg-[#172A25] px-5 text-white">Adicionar à equipe</Button></DialogFooter></form></DialogContent></Dialog>;
 }
-function OpportunityDialog({ open, onOpenChange, opportunity, defaultStage, saving, error, onSave, onDelete }: { open: boolean; onOpenChange: (open: boolean) => void; opportunity: Opportunity | null; defaultStage: Stage; saving: boolean; error: string; onSave: (input: OpportunityInput) => Promise<boolean>; onDelete: (id: number) => Promise<boolean> }) {
+function OpportunityDialog({ open, onOpenChange, opportunity, defaultStage, labels, saving, error, onSave, onDelete }: { open: boolean; onOpenChange: (open: boolean) => void; opportunity: Opportunity | null; defaultStage: Stage; labels: PipelineLabels; saving: boolean; error: string; onSave: (input: OpportunityInput) => Promise<boolean>; onDelete: (id: number) => Promise<boolean> }) {
   const [form, setForm] = useState<OpportunityInput>({ client: '', project: '', value: 0, stage: 'Novo contato', due: 'Hoje', source: 'Indicação', tags: [], customFields: {} });
   const [tagsText, setTagsText] = useState('');
   const [fields, setFields] = useState<Array<{ key: string; value: string }>>([]);
@@ -958,7 +1108,7 @@ function OpportunityDialog({ open, onOpenChange, opportunity, defaultStage, savi
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 overscroll-contain sm:px-6">
           <div className="grid gap-4 md:grid-cols-2"><Field label="Cliente"><Input required value={form.client} onChange={(event) => update('client', event.target.value)} className="h-11 rounded-xl" placeholder="Nome do cliente" /></Field><Field label="Oportunidade ou projeto"><Input required value={form.project} onChange={(event) => update('project', event.target.value)} className="h-11 rounded-xl" placeholder="Ex.: Implantação comercial" /></Field></div>
-          <div className="grid gap-4 md:grid-cols-2"><Field label="Valor estimado"><Input required min="0" type="number" value={form.value || ''} onChange={(event) => update('value', Number(event.target.value))} className="h-11 rounded-xl" /></Field><Field label="Etapa"><AppSelect value={form.stage} onValueChange={(value) => update('stage', value as Stage)} ariaLabel="Etapa da oportunidade" options={(['Novo contato', 'Diagnóstico', 'Proposta enviada', 'Negociação'] as Stage[]).map((value) => ({ value, label: value }))} /></Field></div>
+          <div className="grid gap-4 md:grid-cols-2"><Field label="Valor estimado"><Input required min="0" type="number" value={form.value || ''} onChange={(event) => update('value', Number(event.target.value))} className="h-11 rounded-xl" /></Field><Field label="Etapa"><AppSelect value={form.stage} onValueChange={(value) => update('stage', value as Stage)} ariaLabel="Etapa da oportunidade" options={(['Novo contato', 'Diagnóstico', 'Proposta enviada', 'Negociação'] as Stage[]).map((value) => ({ value, label: labels.stages[value] }))} /></Field></div>
           <div className="grid gap-4 md:grid-cols-2"><Field label="Próxima ação"><Input value={form.due} onChange={(event) => update('due', event.target.value)} className="h-11 rounded-xl" placeholder="Ex.: Retornar sexta, 14h" /></Field><Field label="Origem"><Input value={form.source} onChange={(event) => update('source', event.target.value)} className="h-11 rounded-xl" placeholder="Ex.: Indicação, site, evento" /></Field></div>
           <Field label="Tags"><div className="relative"><Tag className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8E8E93]" /><Input value={tagsText} onChange={(event) => setTagsText(event.target.value)} className="h-11 rounded-xl pl-9" placeholder="Prioridade, alto valor, follow-up" /></div></Field>
 

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Synky Sales · CRM e Propostas',
     description: 'Gestão comercial e propostas para escritórios de arquitetura.',
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Somus Flow — CRM e propostas para arquitetura' }],
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Synky Sales — CRM e propostas' }],
   },
   twitter: {
     card: 'summary_large_image',

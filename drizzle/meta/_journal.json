@@ -57,6 +57,20 @@
       "when": 1788557219176,
       "tag": "0007_nifty_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789130368961,
+      "tag": "0008_stormy_roughhouse",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1789132548027,
+      "tag": "0009_real_thunderbolt",
+      "breakpoints": true
     }
   ]
 }

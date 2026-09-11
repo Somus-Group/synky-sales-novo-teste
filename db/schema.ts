@@ -11,11 +11,26 @@ export const workspaces = sqliteTable(
   (table) => [uniqueIndex('idx_workspaces_owner_user_id').on(table.ownerUserId)],
 );
 
+export const companies = sqliteTable(
+  'companies',
+  {
+    id: text('id').primaryKey(),
+    workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
+    name: text('name').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_companies_workspace_name').on(table.workspaceId, table.name),
+    index('idx_companies_workspace').on(table.workspaceId),
+  ],
+);
+
 export const opportunities = sqliteTable(
   'opportunities',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
+    companyId: text('company_id').notNull().default(''),
     clientName: text('client_name').notNull(),
     projectName: text('project_name').notNull(),
     valueCents: integer('value_cents').notNull(),
@@ -27,8 +42,14 @@ export const opportunities = sqliteTable(
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at').notNull().default(0),
   },
-  (table) => [index('idx_opportunities_workspace_stage').on(table.workspaceId, table.stage)],
+  (table) => [index('idx_opportunities_workspace_stage').on(table.workspaceId, table.stage), index('idx_opportunities_company_stage').on(table.companyId, table.stage)],
 );
+
+export const pipelineSettings = sqliteTable('pipeline_settings', {
+  companyId: text('company_id').primaryKey().references(() => companies.id),
+  labelsJson: text('labels_json').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
 
 export const clients = sqliteTable(
   'clients',
@@ -175,3 +196,31 @@ export const proposalReferences = sqliteTable(
   },
   (table) => [index('idx_proposal_references_workspace').on(table.workspaceId)],
 );
+
+export const studioProjects = sqliteTable('studio_projects', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
+  title: text('title').notNull(),
+  mode: text('mode').notNull(),
+  briefing: text('briefing').notNull().default(''),
+  referenceUrl: text('reference_url').notNull().default(''),
+  fileKey: text('file_key').notNull().default(''),
+  fileName: text('file_name').notNull().default(''),
+  html: text('html').notNull().default(''),
+  revision: integer('revision').notNull().default(0),
+  messagesJson: text('messages_json').notNull().default('[]'),
+  lockToken: text('lock_token').notNull().default(''),
+  lockedUntil: integer('locked_until').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, table => [index('idx_studio_projects_workspace_updated').on(table.workspaceId, table.updatedAt)]);
+
+export const studioVersions = sqliteTable('studio_versions', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => studioProjects.id),
+  revision: integer('revision').notNull(),
+  title: text('title').notNull(),
+  html: text('html').notNull(),
+  summary: text('summary').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, table => [uniqueIndex('idx_studio_versions_project_revision').on(table.projectId, table.revision)]);

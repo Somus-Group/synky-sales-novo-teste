@@ -75,13 +75,13 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid color-mix(in srgb, #526ee8 28%, transparent);
+  outline: 3px solid color-mix(in srgb, #0b6fe8 32%, transparent);
   outline-offset: 2px;
 }
 
 ::selection {
-  background: #cbd8d2;
-  color: #18352d;
+  background: #cfe2ff;
+  color: #073b91;
 }
 
 :root {
@@ -91,32 +91,32 @@ textarea:focus-visible {
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.30 0.055 162);
+  --primary: oklch(0.52 0.19 258);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.95 0.025 155);
-  --accent-foreground: oklch(0.30 0.055 162);
+  --accent: oklch(0.95 0.035 255);
+  --accent-foreground: oklch(0.40 0.16 258);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.60 0.13 260);
-  --chart-1: oklch(0.62 0.17 265);
-  --chart-2: oklch(0.62 0.12 160);
-  --chart-3: oklch(0.70 0.13 65);
-  --chart-4: oklch(0.55 0.12 345);
-  --chart-5: oklch(0.45 0.07 165);
+  --ring: oklch(0.58 0.19 258);
+  --chart-1: oklch(0.58 0.19 258);
+  --chart-2: oklch(0.64 0.15 220);
+  --chart-3: oklch(0.69 0.14 185);
+  --chart-4: oklch(0.58 0.13 290);
+  --chart-5: oklch(0.48 0.14 250);
   --radius: 0.8rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.30 0.055 162);
+  --sidebar-primary: oklch(0.52 0.19 258);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.60 0.13 260);
+  --sidebar-ring: oklch(0.58 0.19 258);
 }
 
 .dark {
