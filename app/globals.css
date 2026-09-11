@@ -153,6 +153,28 @@ textarea:focus-visible {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.theme-dark {
+  color-scheme: dark;
+}
+
+.theme-dark [class*="bg-white"] {
+  background-color: #16243a !important;
+}
+
+.theme-dark [class*="bg-[#F5F5F7]"],
+.theme-dark [class*="bg-[#F7F7F9]"],
+.theme-dark [class*="bg-[#FAFAFB]"] {
+  background-color: #1d2d46 !important;
+}
+
+.theme-dark [class*="border-black"] {
+  border-color: rgb(255 255 255 / 12%) !important;
+}
+
+.theme-dark [class*="text-[#11244A]"] {
+  color: #eaf2ff !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

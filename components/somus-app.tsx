@@ -44,6 +44,7 @@ import {
   SlidersHorizontal,
   Shapes,
   Sparkles,
+  Sun,
   TrendingUp,
   Trash2,
   Tag,
@@ -55,6 +56,7 @@ import {
   X,
   ZoomIn,
   ZoomOut,
+  Moon,
 } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
 
@@ -162,9 +164,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   const [memberError, setMemberError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState('');
-  const [workspaceBackground, setWorkspaceBackground] = useState('#F2F7FF');
-  const [workspaceColorInput, setWorkspaceColorInput] = useState('#F2F7FF');
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [companies, setCompanies] = useState<PipelineCompany[]>([]);
   const [activeCompanyId, setActiveCompanyId] = useState('');
   const [pipelineLabels, setPipelineLabels] = useState<PipelineLabels>(defaultPipelineLabels);
@@ -238,13 +238,14 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   }, [activeCompanyId]);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem('somus-workspace-background');
-    if (saved && /^#[0-9a-f]{6}$/i.test(saved)) {
-      const migrated = saved.toUpperCase() === '#F5F5F7' ? '#F2F7FF' : saved.toUpperCase();
-      setWorkspaceBackground(migrated); setWorkspaceColorInput(migrated);
-      if (migrated !== saved) window.localStorage.setItem('somus-workspace-background', migrated);
-    }
+    const savedTheme = window.localStorage.getItem('synky-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') setTheme(savedTheme);
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    window.localStorage.setItem('synky-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     type Tool = { name: string; title: string; description: string; inputSchema: Record<string, object | string | boolean>; annotations: { readOnlyHint: boolean; untrustedContentHint: boolean }; execute: (input: Record<string, unknown>) => unknown };
@@ -262,14 +263,6 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(''), 2600);
-  }
-
-  function changeWorkspaceBackground(color: string) {
-    if (!/^#[0-9a-f]{6}$/i.test(color)) return;
-    const normalized = color.toUpperCase();
-    setWorkspaceBackground(normalized);
-    setWorkspaceColorInput(normalized);
-    window.localStorage.setItem('somus-workspace-background', normalized);
   }
 
   function openAgent() { setView('agent'); }
@@ -416,8 +409,8 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
   if (view === 'editor') return <ProposalEditor proposal={activeProposal} onBack={() => setView('proposals')} onNotify={notify} />;
 
   return (
-    <div className="min-h-screen bg-[#F2F7FF] text-[#11244A] transition-colors" style={{ backgroundColor: workspaceBackground }}>
-      <aside className={`fixed inset-y-0 left-0 z-50 w-[232px] border-r border-[#0B6FE8]/10 bg-white/95 p-3 backdrop-blur-2xl transition-transform lg:translate-x-0 ${mobileNav ? 'translate-x-0' : '-translate-x-full'}`}>
+    <div className={`min-h-screen transition-colors ${theme === 'dark' ? 'theme-dark bg-[#0B1220] text-[#EAF2FF]' : 'bg-[#F2F7FF] text-[#11244A]'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[232px] border-r p-3 backdrop-blur-2xl transition-transform lg:translate-x-0 ${theme === 'dark' ? 'border-white/10 bg-[#111C30]/95 text-[#EAF2FF]' : 'border-[#0B6FE8]/10 bg-white/95'} ${mobileNav ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-14 items-center justify-between px-3">
           <button onClick={() => setView('overview')} className="flex items-center gap-2.5" aria-label="Synky Sales">
               <img src="/synky-sales-logo.webp" alt="Synky Sales" className="h-10 w-[172px] object-contain object-left" />
@@ -445,21 +438,13 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
       {mobileNav && <button onClick={() => setMobileNav(false)} className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden" aria-label="Fechar menu" />}
 
       <div className="lg:pl-[232px]">
-        <header className="sticky top-0 z-30 flex h-[68px] items-center border-b border-[#0B6FE8]/10 bg-[#F2F7FF]/90 px-3 backdrop-blur-2xl sm:px-5 md:px-8" style={{ backgroundColor: workspaceBackground }}>
+        <header className={`sticky top-0 z-30 flex h-[68px] items-center border-b px-3 backdrop-blur-2xl sm:px-5 md:px-8 ${theme === 'dark' ? 'border-white/10 bg-[#0B1220]/90 text-[#EAF2FF]' : 'border-[#0B6FE8]/10 bg-[#F2F7FF]/90'}`}>
           <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => setMobileNav(true)}><Menu /></Button>
           <div className="relative hidden w-[360px] md:block"><Search className="absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-[#8e8e93]" /><Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="h-9 rounded-xl border-0 bg-black/[0.045] pl-9 shadow-none focus-visible:ring-1" placeholder="Buscar cliente, projeto ou proposta" />{searchQuery.trim().length >= 2 && <div className="absolute left-0 right-0 top-11 z-50 overflow-hidden rounded-2xl border border-black/[0.08] bg-white p-2 shadow-2xl">{searchResults.length ? searchResults.map((result) => <button key={result.id} onClick={() => { setSearchQuery(''); if (result.client) openClient(result.client); else if (result.proposal) { setActiveProposal(result.proposal); setView('editor'); } else setView('pipeline'); }} className="flex w-full items-center gap-3 rounded-xl p-3 text-left hover:bg-[#f5f5f7]"><span className="grid size-8 place-items-center rounded-xl bg-[#edf1ef] text-[10px] font-semibold text-[#31594e]">{result.title.slice(0, 2).toUpperCase()}</span><span><strong className="block text-xs font-medium">{result.title}</strong><span className="mt-0.5 block text-[10px] text-[#8e8e93]">{result.subtitle}</span></span></button>) : <p className="px-3 py-4 text-center text-[11px] text-[#8e8e93]">Nenhum resultado encontrado</p>}</div>}</div>
           <div className="ml-auto flex items-center gap-2">
-            <div className="relative">
-              <Button variant="ghost" size="icon" className={`rounded-full ${appearanceOpen ? 'bg-black/[0.06]' : ''}`} aria-label="Personalizar cor do sistema" onClick={() => setAppearanceOpen((open) => !open)}><Palette /></Button>
-              {appearanceOpen && <div className="absolute right-0 top-11 z-50 w-[280px] rounded-[22px] border border-black/[0.08] bg-white p-4 shadow-2xl">
-                <div className="flex items-start justify-between"><div><p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8E8E93]">Aparência do sistema</p><p className="mt-1 text-[10px] text-[#6E6E73]">Escolha a cor de fundo do workspace.</p></div><span className="size-8 rounded-xl border border-black/10 shadow-inner" style={{ backgroundColor: workspaceBackground }} /></div>
-                <div className="mt-4 grid grid-cols-6 gap-2">{['#F5F5F7', '#F2EEE8', '#EDF3F0', '#EEF0FA', '#F8EFEF', '#ECEBE7'].map((color) => <button key={color} type="button" onClick={() => changeWorkspaceBackground(color)} className={`size-8 rounded-full border border-black/10 transition-transform hover:scale-110 ${workspaceBackground === color ? 'ring-2 ring-black ring-offset-2' : ''}`} style={{ backgroundColor: color }} aria-label={`Aplicar fundo ${color}`} />)}</div>
-                <div className="mt-4 flex items-center gap-2 rounded-xl border border-black/[0.08] bg-[#F7F7F9] p-2">
-                  <NativeColorInput value={workspaceBackground} onChange={changeWorkspaceBackground} ariaLabel="Abrir seletor de cor personalizada" />
-                  <Input value={workspaceColorInput} onChange={(event) => { const value = event.target.value.toUpperCase(); setWorkspaceColorInput(value); if (/^#[0-9A-F]{6}$/.test(value)) changeWorkspaceBackground(value); }} onBlur={() => setWorkspaceColorInput(workspaceBackground)} className="h-8 border-0 bg-transparent px-1 font-mono text-[11px] uppercase shadow-none focus-visible:ring-0" aria-label="Código hexadecimal da cor do sistema" />
-                </div>
-                <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] pt-3"><Button type="button" variant="ghost" size="sm" className="rounded-xl text-[10px]" onClick={() => changeWorkspaceBackground('#F2F7FF')}>Restaurar padrão</Button><Button type="button" size="sm" className="rounded-xl bg-[#0B6FE8] px-4 text-white hover:bg-[#0757C8]" onClick={() => { setAppearanceOpen(false); notify('Cor de fundo do sistema atualizada'); }}>Concluir</Button></div>
-              </div>}
+            <div className={`flex items-center rounded-full border p-1 shadow-sm ${theme === 'dark' ? 'border-white/10 bg-white/10' : 'border-[#0B6FE8]/15 bg-white'}`} aria-label="Tema do sistema">
+              <Button type="button" variant="ghost" size="icon-sm" className={`rounded-full ${theme === 'light' ? 'bg-[#0B6FE8] text-white hover:bg-[#0757C8] hover:text-white' : 'text-[#8E8E93]'}`} aria-label="Usar tema claro" aria-pressed={theme === 'light'} onClick={() => setTheme('light')}><Sun /></Button>
+              <Button type="button" variant="ghost" size="icon-sm" className={`rounded-full ${theme === 'dark' ? 'bg-[#0B6FE8] text-white hover:bg-[#0757C8] hover:text-white' : 'text-[#8E8E93]'}`} aria-label="Usar tema escuro" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}><Moon /></Button>
             </div>
             <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" aria-label="Notificações" onClick={() => notify('Você não tem novas notificações')}><Bell /></Button><Button variant="outline" className="hidden h-10 rounded-2xl border-[#0B6FE8]/20 bg-white px-4 shadow-sm hover:bg-[#EAF2FF] md:flex" onClick={() => openNewOpportunity()}><Plus /> Oportunidade</Button><Button className="h-10 rounded-2xl bg-[#0B6FE8] px-3.5 text-white shadow-[0_8px_22px_rgba(11,111,232,0.22)] hover:bg-[#0757C8] sm:px-4" onClick={openAgent}><Sparkles /><span className="hidden sm:inline">Criar com IA</span><span className="sm:hidden">IA</span></Button>
           </div>
