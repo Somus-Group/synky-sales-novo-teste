@@ -6,6 +6,7 @@ export type StudioMessage = {
   at: number;
   sources?: string[];
   attachment?: { name: string; mime: string };
+  intent?: 'edit' | 'plan';
 };
 export type StudioProject = {
   id: string;
@@ -77,15 +78,15 @@ export function studioInput(value: unknown) {
     throw new StudioError('Escreva um pedido de até 8.000 caracteres.');
   if (!Number.isInteger(p.revision) || (p.revision as number) < 0)
     throw new StudioError('Reabra o projeto para atualizar a versão.');
-  let image:
-    | { name: string; mime: string; data: string }
-    | undefined;
+  let image: { name: string; mime: string; data: string } | undefined;
   if (p.image !== undefined) {
     if (!p.image || typeof p.image !== 'object')
       throw new StudioError('A imagem anexada é inválida.');
     const item = p.image as Record<string, unknown>;
     const mime = String(item.mime || '');
-    const name = String(item.name || '').trim().slice(0, 180);
+    const name = String(item.name || '')
+      .trim()
+      .slice(0, 180);
     const data = String(item.data || '');
     const validMime = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     const prefix = `data:${mime};base64,`;
@@ -101,7 +102,82 @@ export function studioInput(value: unknown) {
       );
     image = { name, mime, data };
   }
-  return { message: p.message.trim(), revision: p.revision as number, image };
+  if (p.intent !== undefined && p.intent !== 'edit' && p.intent !== 'plan')
+    throw new StudioError('Escolha criar ou planejar.');
+  if (
+    p.selection !== undefined &&
+    (typeof p.selection !== 'string' || p.selection.length > 3000)
+  )
+    throw new StudioError('Selecione novamente o trecho na prévia.');
+  return {
+    message: p.message.trim(),
+    revision: p.revision as number,
+    image,
+    intent: p.intent === 'plan' ? ('plan' as const) : ('edit' as const),
+    selection: typeof p.selection === 'string' ? p.selection : '',
+  };
+}
+
+export const studioElementSelector =
+  'h1,h2,h3,h4,h5,h6,p,a,button,span,li,section,header,footer,div,img';
+export type StudioVisualEdit = {
+  index: number;
+  tag: string;
+  text?: string;
+  color?: string;
+  background?: string;
+  fontSize?: number;
+  align?: string;
+};
+export function studioVisualInput(value: unknown): StudioVisualEdit {
+  if (!value || typeof value !== 'object')
+    throw new StudioError('Selecione um elemento.');
+  const p = value as Record<string, unknown>;
+  if (
+    !Number.isInteger(p.index) ||
+    (p.index as number) < 0 ||
+    typeof p.tag !== 'string' ||
+    !studioElementSelector.split(',').includes(p.tag)
+  )
+    throw new StudioError('Selecione novamente o elemento.');
+  if (
+    p.text !== undefined &&
+    (typeof p.text !== 'string' || p.text.length > 2000)
+  )
+    throw new StudioError('Use até 2.000 caracteres.');
+  for (const key of ['color', 'background'])
+    if (
+      p[key] !== undefined &&
+      (typeof p[key] !== 'string' || !/^#[0-9a-f]{6}$/i.test(p[key] as string))
+    )
+      throw new StudioError('Escolha uma cor válida.');
+  if (
+    p.fontSize !== undefined &&
+    (!Number.isInteger(p.fontSize) ||
+      (p.fontSize as number) < 8 ||
+      (p.fontSize as number) > 160)
+  )
+    throw new StudioError('Use um tamanho entre 8 e 160.');
+  if (
+    p.align !== undefined &&
+    !['left', 'center', 'right'].includes(p.align as string)
+  )
+    throw new StudioError('Escolha um alinhamento válido.');
+  if (
+    ['text', 'color', 'background', 'fontSize', 'align'].every(
+      (key) => p[key] === undefined,
+    )
+  )
+    throw new StudioError('Faça uma alteração antes de salvar.');
+  return {
+    index: p.index as number,
+    tag: p.tag,
+    text: p.text as string | undefined,
+    color: p.color as string | undefined,
+    background: p.background as string | undefined,
+    fontSize: p.fontSize as number | undefined,
+    align: p.align as string | undefined,
+  };
 }
 
 export const studioOutputSchema = {

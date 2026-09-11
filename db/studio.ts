@@ -68,7 +68,7 @@ export async function lockStudioProject(row: ProjectRow, revision: number) {
   const token = crypto.randomUUID();
   const result = await getD1()
     .prepare(
-      'UPDATE studio_projects SET lock_token = ?, locked_until = ? WHERE id = ? AND workspace_id = ? AND revision = ? AND locked_until < ?',
+      'UPDATE studio_projects SET lock_token = ?, locked_until = ? WHERE id = ? AND workspace_id = ? AND revision = ? AND locked_until < ? AND updated_at = ?',
     )
     .bind(
       token,
@@ -77,6 +77,7 @@ export async function lockStudioProject(row: ProjectRow, revision: number) {
       row.workspaceId,
       revision,
       Date.now(),
+      row.updatedAt,
     )
     .run();
   if (!result.meta.changes)
@@ -105,7 +106,7 @@ export async function saveStudioVersion(
   summary: string,
 ) {
   const revision = row.revision + 1;
-  const now = Date.now();
+  const now = Math.max(Date.now(), row.updatedAt + 1);
   const db = getD1();
   // Conditional insert and update share a D1 transaction, including lock ownership.
   const results = await db.batch([

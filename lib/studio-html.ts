@@ -1,3 +1,37 @@
+import {
+  StudioError,
+  studioElementSelector,
+  type StudioVisualEdit,
+} from '@/lib/studio';
+
+export async function editStudioHtml(html: string, edit: StudioVisualEdit) {
+  let index = 0;
+  let matched = false;
+  const result = await new HTMLRewriter()
+    .on(studioElementSelector, {
+      element(element) {
+        if (index++ !== edit.index) return;
+        if (element.tagName !== edit.tag) return;
+        matched = true;
+        if (edit.text !== undefined) element.setInnerContent(edit.text);
+        const declarations = [element.getAttribute('style') || ''];
+        if (edit.color) declarations.push(`color:${edit.color} !important`);
+        if (edit.background)
+          declarations.push(`background-color:${edit.background} !important`);
+        if (edit.fontSize)
+          declarations.push(`font-size:${edit.fontSize}px !important`);
+        if (edit.align)
+          declarations.push(`text-align:${edit.align} !important`);
+        element.setAttribute('style', declarations.join(';'));
+      },
+    })
+    .transform(new Response(html))
+    .text();
+  if (!matched)
+    throw new StudioError('O trecho mudou. Selecione-o novamente.', 409);
+  return sanitizeStudioHtml(result);
+}
+
 export async function sanitizeStudioHtml(html: string) {
   if (!html) return '';
   return new HTMLRewriter()

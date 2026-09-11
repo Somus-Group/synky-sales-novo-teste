@@ -104,7 +104,11 @@ function fixture() {
     '@/lib/studio': studio,
     '@/app/chatgpt-auth': { getChatGPTUser: async () => user },
     '@/db/workspace': { getWorkspaceForUser: async (user) => user.userId },
-    '@/lib/studio-html': { sanitizeStudioHtml: async (value) => value },
+    '@/lib/studio-html': {
+      sanitizeStudioHtml: async (value) => value,
+      editStudioHtml: async (value, edit) =>
+        value.replace('Proposta teste', edit.text),
+    },
   };
   const database = load('db/studio.ts', modules);
   modules['@/db/studio'] = database;
@@ -507,8 +511,213 @@ test('conversation accepts a safe image reference without storing its data', asy
   }
 });
 
+test('project context can be edited without creating a version and rejects stale or cross-workspace writes', async () => {
+  const f = fixture();
+  try {
+    const { project } = await (
+      await f.create({ briefing: 'Escopo inicial' })
+    ).json();
+    const payload = {
+      action: 'context',
+      revision: 0,
+      updatedAt: project.updatedAt,
+      title: 'Projeto atualizado',
+      briefing: 'Novo escopo',
+      referenceUrl: 'https://example.com/apresentacao',
+    };
+    const saved = await f.item.PATCH(
+      request(payload, 'PATCH'),
+      context(project.id),
+    );
+    assert.equal(saved.status, 200);
+    const result = await saved.json();
+    assert.equal(result.project.referenceUrl, payload.referenceUrl);
+    assert.equal(result.project.briefing, 'Novo escopo');
+    assert.equal(result.project.revision, 0);
+    assert.equal(result.versions.length, 0);
+    assert.equal(
+      (await f.item.PATCH(request(payload, 'PATCH'), context(project.id)))
+        .status,
+      409,
+    );
+    const current = { ...payload, updatedAt: result.project.updatedAt };
+    assert.equal(
+      (
+        await f.item.PATCH(
+          request({ ...current, referenceUrl: 'http://localhost/' }, 'PATCH'),
+          context(project.id),
+        )
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await f.item.PATCH(
+          request({ ...current, referenceUrl: '' }, 'PATCH'),
+          context(project.id),
+        )
+      ).status,
+      200,
+    );
+    f.setUser({ userId: 'two', email: 'two@example.com' });
+    assert.equal(
+      (await f.item.PATCH(request(current, 'PATCH'), context(project.id)))
+        .status,
+      404,
+    );
+  } finally {
+    f.sqlite.close();
+  }
+});
+
+test('planning preserves the page even if the model returns HTML, and applying the plan creates a version', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  let sent;
+  globalThis.fetch = async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Plano',
+        message: 'Organizar escopo, investimento e próximos passos.',
+        html,
+        reference_status: 'not_requested',
+      }),
+    });
+  };
+  try {
+    const { project } = await (await f.create()).json();
+    const planned = await f.messages.POST(
+      request({ message: 'Planeje a proposta', revision: 0, intent: 'plan' }),
+      context(project.id),
+    );
+    assert.equal(planned.status, 200);
+    const plan = await planned.json();
+    assert.equal(plan.project.html, '');
+    assert.equal(plan.project.revision, 0);
+    assert.equal(plan.versions.length, 0);
+    assert.equal(plan.project.messages.at(-1).intent, 'plan');
+    assert.match(sent.instructions, /MODO PLANEJAR/);
+    const applied = await f.messages.POST(
+      request({
+        message: 'Aplique o plano.',
+        revision: 0,
+        intent: 'edit',
+        selection: 'h1: Título',
+      }),
+      context(project.id),
+    );
+    assert.equal(applied.status, 200);
+    assert.equal((await applied.json()).project.revision, 1);
+    assert.equal(
+      JSON.parse(sent.input[0].content[0].text).selectedElement,
+      'h1: Título',
+    );
+    assert.throws(() =>
+      studio.studioInput({ message: 'x', revision: 1, intent: 'invalid' }),
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('visual editing saves a restorable revision and stale context snapshots cannot acquire a lock', async () => {
+  const f = fixture();
+  try {
+    const { project } = await (await f.create()).json();
+    f.sqlite
+      .prepare('UPDATE studio_projects SET html = ? WHERE id = ?')
+      .run(html, project.id);
+    const payload = {
+      action: 'visual',
+      revision: 0,
+      updatedAt: project.updatedAt,
+      edit: { index: 0, tag: 'h1', text: 'Novo título' },
+    };
+    const response = await f.item.PATCH(
+      request(payload, 'PATCH'),
+      context(project.id),
+    );
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.project.revision, 1);
+    assert.match(result.project.html, /Novo título/);
+    assert.equal(result.versions.length, 1);
+    assert.equal(
+      (await f.item.PATCH(request(payload, 'PATCH'), context(project.id)))
+        .status,
+      409,
+    );
+    const snapshot = await f.database.studioProject(project.id, 'one');
+    f.sqlite
+      .prepare(
+        'UPDATE studio_projects SET updated_at = updated_at + 1 WHERE id = ?',
+      )
+      .run(project.id);
+    await assert.rejects(
+      () => f.database.lockStudioProject(snapshot, 1),
+      /atualizado/,
+    );
+  } finally {
+    f.sqlite.close();
+  }
+});
+
+test('visual changes escape text, preserve unrelated content and reject unsafe styles', async () => {
+  const workerSource = `const exports = {}; ${transpile('lib/studio.ts')} const require = () => exports; ${transpile('lib/studio-html.ts')} addEventListener('fetch', event => event.respondWith((async () => { try { const p = await event.request.json(); return new Response(await exports.editStudioHtml(p.html, exports.studioVisualInput(p.edit))); } catch(e) { return new Response(e.message, {status: e.status || 500}); } })()));`;
+  const mf = new Miniflare({
+    modules: false,
+    script: workerSource,
+    compatibilityDate: '2026-05-15',
+  });
+  const edit = {
+    index: 0,
+    tag: 'h1',
+    text: '<script>alert(1)</script> Novo título',
+    color: '#ff0000',
+    fontSize: 36,
+    align: 'center',
+  };
+  try {
+    const response = await mf.dispatchFetch('https://test.local', {
+      method: 'POST',
+      body: JSON.stringify({ html, edit }),
+    });
+    assert.equal(response.status, 200);
+    const result = await response.text();
+    assert.match(result, /&lt;script&gt;/);
+    assert.match(result, /color:#ff0000 !important/);
+    assert.match(result, /<p>Escopo confirmado<\/p>/);
+    assert.equal(
+      (
+        await mf.dispatchFetch('https://test.local', {
+          method: 'POST',
+          body: JSON.stringify({
+            html,
+            edit: { ...edit, color: 'red;background:url(https://example.com)' },
+          }),
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await mf.dispatchFetch('https://test.local', {
+          method: 'POST',
+          body: JSON.stringify({ html, edit: { ...edit, index: 90 } }),
+        })
+      ).status,
+      409,
+    );
+  } finally {
+    await mf.dispose();
+  }
+});
+
 test('actual Worker HTML parser removes active content and keeps proposal styling', async () => {
-  const workerSource = `const exports = {}; ${transpile('lib/studio-html.ts')} addEventListener('fetch', event => event.respondWith((async () => new Response(await exports.sanitizeStudioHtml(await event.request.text())))()));`;
+  const workerSource = `const exports = {}; ${transpile('lib/studio.ts')} const require = () => exports; ${transpile('lib/studio-html.ts')} addEventListener('fetch', event => event.respondWith((async () => new Response(await exports.sanitizeStudioHtml(await event.request.text())))()));`;
   const mf = new Miniflare({
     modules: false,
     script: workerSource,

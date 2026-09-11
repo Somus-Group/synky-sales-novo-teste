@@ -14,6 +14,24 @@ Agente de propostas, Configurar agente e Propostas continuam disponíveis.
 - A prévia é uma página web privada, com visualizações para computador, tablet e
   celular. A abertura em outra aba exige acesso ao mesmo workspace.
 
+## Editor por conversa
+
+- **Criar** executa pedidos na proposta atual; **Planejar** apenas conversa e salva
+  o plano. O servidor descarta qualquer HTML retornado no modo Planejar. **Aplicar
+  plano** executa o último plano em uma nova versão.
+- **Contexto** permite editar o nome, briefing e apresentação de referência em
+  projetos existentes, inclusive remover o link. Alterações pendentes devem ser
+  salvas ou descartadas antes de gerar, restaurar ou fazer uma edição visual.
+- **Editar visual** seleciona um elemento da prévia. O painel altera texto simples,
+  cor, fundo, tamanho e alinhamento sem chamada de IA, salvando uma nova versão.
+  Também é possível usar o trecho selecionado como contexto do próximo pedido à IA.
+- A prévia permite consultar o código e baixar a proposta em HTML. Isso exporta
+  uma cópia local; não publica nem cria um link público para a proposta.
+- A biblioteca tem busca por nome. O identificador do último projeto aberto é
+  uma preferência da sessão; conteúdo e histórico continuam vindo do servidor.
+- Validação visual local com navegador automatizado usa respostas simuladas de IA;
+  testes de persistência usam SQLite e o parser real de HTML dos Workers.
+
 ## Conexão da IA
 
 O servidor precisa de `OPENAI_API_KEY`. A chave nunca deve ser enviada no chat do
@@ -42,8 +60,12 @@ Wrangler D1 local no mesmo diretório de persistência do servidor.
 
 As consultas verificam o workspace, e a gravação de versões usa transação e controle
 de concorrência. Anexos PDF ficam no R2; conteúdo, mensagens e versões ficam no D1.
-Prévia em iframe sem permissões, HTML sanitizado e CSP bloqueiam scripts, formulários
+Prévia em iframe, HTML sanitizado e CSP bloqueiam scripts, formulários
 e conexões. Imagens remotas da prévia se limitam a `images.unsplash.com`.
+No editor, `allow-same-origin` permite somente ao código confiável da interface
+inspecionar e selecionar elementos; `allow-scripts` nunca é concedido. A prévia
+separada mantém o sandbox opaco. Edições visuais são validadas e sanitizadas no
+servidor; cores e estilos aceitam apenas valores limitados.
 
 Validação: `node --test tests/studio.test.mjs tests/proposal-workflow.test.mjs`,
 `npx tsc --noEmit` e `npm run build`.
