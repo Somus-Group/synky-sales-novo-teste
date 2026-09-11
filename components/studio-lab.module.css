@@ -2208,6 +2208,121 @@
 .floatingComposer textarea::placeholder {
   color: #c2d6ee;
 }
+
+/* Conversational studio workspace: a calm chat surface and a purposeful live preview. */
+.versionAction {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border: 1px solid #cddcf0;
+  border-radius: 9px;
+  color: #164779;
+  background: #fff;
+  font-weight: 650;
+}
+.versionAction:hover:not(:disabled) { border-color: #82afe6; background: #f4f8ff; color: var(--blue); }
+.conversation {
+  color: var(--ink);
+  background: linear-gradient(180deg, #fbfdff 0%, #fff 36%);
+}
+.conversationHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 12px 18px 8px;
+  border-bottom: 1px solid #e8edf4;
+}
+.conversationIcon {
+  display: grid;
+  width: 33px;
+  height: 33px;
+  place-items: center;
+  border: 1px solid #d7e5f7;
+  border-radius: 10px;
+  color: var(--blue);
+  background: #f2f7ff;
+}
+.conversationHeader strong, .conversationHeader small { display: block; }
+.conversationHeader strong { color: #17355f; font-size: 14px; font-weight: 680; }
+.conversationHeader small { max-width: 240px; margin-top: 2px; overflow: hidden; color: #7890ad; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.panelTabs { height: 48px; padding: 0 18px; border-bottom-color: #e5ebf3; background: #fff; }
+.panelTabs button { color: #70839d; }
+.panelTabs button[aria-selected='true'] { color: var(--blue); border-color: var(--blue); }
+.messages { background: transparent; scrollbar-color: #c5d4e7 transparent; }
+.welcome { padding: 0 0 20px; border-bottom: 1px solid #e5ebf3; background: transparent; }
+.welcome .assistantMark { border-color: #d8e6fa; background: #f1f6ff; color: var(--blue); }
+.welcome h2 { color: #17355f; }
+.welcome p { color: #667b99; }
+.chatPromise { color: #278269; }
+.promptSuggestions { grid-template-columns: 1fr; }
+.promptSuggestions button { border-color: #d8e4f2; color: #436483; background: #f8fbff; }
+.promptSuggestions button:hover:not(:disabled) { border-color: #8db7ea; background: #f0f6ff; color: var(--blue); }
+.userMessage { border-color: #d5e4f6; color: #173d70; background: #edf5ff; }
+.assistantMessage { border-bottom-color: #e5ebf3; color: #344b6c; }
+.messageBy { color: #6c82a0; }
+.assistantMessage .messageBy { color: var(--blue); }
+.composerArea { border-top-color: #e5ebf3; background: #fff; }
+.composer { border-color: #ccdced; background: #fff; box-shadow: 0 8px 22px #2d52740d; }
+.composer textarea { color: #233d61; }
+.composer textarea::placeholder { color: #91a2ba; }
+.composerFooter { border-top-color: #e7edf5; }
+.composerFooter > span { color: #7890ad; }
+.addImage { border-color: #d3e0ef; color: #426890; background: #f8fbff; }
+.send { border-radius: 9px; background: var(--blue); color: #fff; }
+.send:hover { background: #075ac0; }
+.startChat { background: linear-gradient(180deg, #f7fbff, #fff 57%); }
+.startChatIntro .eyebrow { color: #2878df; }
+.startChatIntro .assistantMark { border-color: #d8e6fa; background: #fff; color: var(--blue); box-shadow: 0 7px 18px #1a57951c; }
+.startChatIntro h2 { color: #17355f; }
+.startChatIntro p { color: #667b99; }
+.startComposer { border-color: #cbdced; background: #fff; box-shadow: 0 14px 30px #21456d12; }
+.startComposer textarea { color: #243b62; }
+.startComposer textarea::placeholder { color: #97a5ba; }
+.startComposerFooter { border-top-color: #e7edf5; }
+.startComposerFooter > span { color: #7c8da5; }
+.preview { background: #f4f7fb; }
+.previewToolbar { height: 58px; padding: 0 20px; border-bottom-color: #dbe4f0; background: #fbfcff; }
+.previewLabel { color: #29476f; font-size: 12px; font-weight: 700; }
+.deviceControls { padding: 3px; border: 1px solid #d8e3f1; border-radius: 9px; background: #f4f7fb; }
+.previewStage { padding: 24px clamp(20px, 3vw, 46px) 16px; background: linear-gradient(90deg, #eef3fa 0%, #f7f9fd 50%, #eef3fa 100%); }
+.previewFrame { border-color: #d5e1ee; border-radius: 12px; box-shadow: 0 18px 44px #2e4b6f12; }
+.versionRail {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  gap: 14px;
+  margin: 0 clamp(20px, 3vw, 46px) 12px;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid #dbe5f1;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 22px #2e4b6f08;
+}
+.versionRailTitle { min-width: 104px; }
+.versionRailTitle strong, .versionRailTitle span { display: block; }
+.versionRailTitle strong { color: #17355f; font-size: 12px; }
+.versionRailTitle span { margin-top: 3px; color: #7c8fa7; font-size: 10px; }
+.versionRailItems { display: flex; flex: 1; align-items: center; gap: 7px; }
+.versionRailItem, .versionRailItemActive { display: grid; width: 42px; height: 38px; place-items: center; border: 1px solid #dbe5f1; border-radius: 8px; color: #72859e; background: #f8fbff; font-size: 11px !important; font-weight: 650; }
+.versionRailItem:hover:not(:disabled) { border-color: #8db7ea; color: var(--blue); }
+.versionRailItemActive { border-color: #0b6fe8; color: #0b6fe8; background: #eef6ff; box-shadow: inset 0 0 0 1px #0b6fe8; }
+.versionRailAction { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 8px 10px; border: 1px solid #d3dfed; border-radius: 8px; color: #1d4f83; background: #fff; font-size: 11px !important; font-weight: 650; }
+.versionRailAction:hover { border-color: #86b2e8; color: var(--blue); background: #f4f8ff; }
+@media (max-width: 760px) {
+  .versionAction { padding: 8px; }
+  .versionAction span { display: none; }
+  .conversationHeader { min-height: 58px; padding: 10px 14px 6px; }
+  .versionRail { margin: 0 12px 10px; gap: 8px; padding: 8px 10px; }
+  .versionRailTitle { min-width: 76px; }
+  .versionRailTitle span { display: none; }
+  .versionRailAction { padding: 8px; }
+  .versionRailAction svg { margin: 0; }
+  .versionRailAction { font-size: 0 !important; }
+}
 .floatingAttach,
 .floatingSend {
   display: grid;

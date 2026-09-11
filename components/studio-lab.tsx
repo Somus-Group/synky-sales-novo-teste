@@ -367,8 +367,18 @@ export function StudioLab() {
           {project && (
             <span className={styles.saveStatus}>
               <CheckCheck size={14} />
-              Salvo
+              Salvo agora
             </span>
+          )}
+          {project && (
+            <button
+              className={styles.versionAction}
+              onClick={() => setTab('history')}
+              disabled={busy}
+            >
+              <History size={16} />
+              <span>Versões</span>
+            </button>
           )}
           <button
             className={styles.secondary}
@@ -526,6 +536,15 @@ export function StudioLab() {
             </form>
           ) : (
             <>
+              <div className={styles.conversationHeader}>
+                <span className={styles.conversationIcon}>
+                  <MessageSquare size={17} />
+                </span>
+                <span>
+                  <strong>Conversa</strong>
+                  <small>{project.title}</small>
+                </span>
+              </div>
               <div
                 className={styles.panelTabs}
                 role="tablist"
@@ -885,7 +904,7 @@ export function StudioLab() {
           <div className={styles.previewToolbar}>
             <span className={styles.previewLabel}>
               <span className={styles.previewDot} />
-              {busy ? 'Atualizando prévia…' : 'Prévia'}
+              {busy ? 'Atualizando prévia…' : 'Prévia atualizada'}
               {historical && <small>v{historical.revision}</small>}
             </span>
             <div
@@ -998,6 +1017,31 @@ export function StudioLab() {
               </div>
             )}
           </div>
+          {project && (
+            <div className={styles.versionRail}>
+              <div className={styles.versionRailTitle}>
+                <strong>Versão {historical?.revision ?? project.revision}</strong>
+                <span>{historical ? 'Visualizando histórico' : 'Atualizada agora'}</span>
+              </div>
+              <div className={styles.versionRailItems}>
+                {versions.slice(0, 3).map((version) => (
+                  <button
+                    key={version.revision}
+                    className={version.revision === (historical?.revision ?? project.revision) ? styles.versionRailItemActive : styles.versionRailItem}
+                    onClick={() => void viewVersion(version.revision)}
+                    disabled={busy}
+                    aria-label={`Abrir versão ${version.revision}`}
+                  >
+                    v{version.revision}
+                  </button>
+                ))}
+              </div>
+              <button className={styles.versionRailAction} onClick={() => setTab('history')}>
+                <History size={15} />
+                Ver versões
+              </button>
+            </div>
+          )}
           <footer className={styles.previewFooter}>
             <span>
               {html
