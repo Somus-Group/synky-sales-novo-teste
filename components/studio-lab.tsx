@@ -391,8 +391,12 @@ export function StudioLab() {
           {!project ? (
             <form className={styles.setup} onSubmit={create}>
               <div className={styles.sectionTitle}>
-                <span className={styles.eyebrow}>Ponto de partida</span>
+                <span className={styles.eyebrow}>01 · Ponto de partida</span>
                 <h2>O que vamos criar?</h2>
+                <p>
+                  Comece com o contexto certo. O Estúdio organiza a proposta e
+                  deixa a conversa cuidar do restante.
+                </p>
               </div>
               <div
                 className={styles.modeSelector}
@@ -405,7 +409,10 @@ export function StudioLab() {
                   onClick={() => setMode('briefing')}
                 >
                   <FileText size={17} />
-                  <span>Com briefing</span>
+                  <span>
+                    <strong>Com briefing</strong>
+                    <small>Parta das informações do cliente</small>
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -413,38 +420,43 @@ export function StudioLab() {
                   onClick={() => setMode('free')}
                 >
                   <Sparkles size={17} />
-                  <span>Criação livre</span>
+                  <span>
+                    <strong>Criação livre</strong>
+                    <small>Comece por uma ideia ou direção</small>
+                  </span>
                 </button>
               </div>
-              <label className={styles.field}>
-                Nome do projeto
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Proposta para o cliente"
-                  maxLength={120}
-                />
-              </label>
-              <label className={styles.field}>
-                {mode === 'briefing'
-                  ? 'Briefing do cliente'
-                  : 'Contexto inicial'}
-                {mode === 'free' && (
-                  <span className={styles.optional}>Opcional</span>
-                )}
-                <textarea
-                  value={briefing}
-                  onChange={(e) => setBriefing(e.target.value)}
-                  placeholder={
-                    mode === 'briefing'
-                      ? 'Cole o briefing, o escopo e o que o cliente precisa…'
-                      : 'Uma ideia, um serviço, uma direção visual…'
-                  }
-                  rows={6}
-                  maxLength={40000}
-                  required={mode === 'briefing' && !file}
-                />
-              </label>
+              <div className={styles.formStack}>
+                <label className={styles.field}>
+                  Nome do projeto
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Proposta para o cliente"
+                    maxLength={120}
+                  />
+                </label>
+                <label className={styles.field}>
+                  {mode === 'briefing'
+                    ? 'Briefing do cliente'
+                    : 'Contexto inicial'}
+                  {mode === 'free' && (
+                    <span className={styles.optional}>Opcional</span>
+                  )}
+                  <textarea
+                    value={briefing}
+                    onChange={(e) => setBriefing(e.target.value)}
+                    placeholder={
+                      mode === 'briefing'
+                        ? 'Cole o briefing, o escopo e o que o cliente precisa…'
+                        : 'Uma ideia, um serviço, uma direção visual…'
+                    }
+                    rows={6}
+                    maxLength={40000}
+                    required={mode === 'briefing' && !file}
+                  />
+                </label>
+              </div>
               <div className={styles.attachmentRow}>
                 <input
                   ref={fileInput}
@@ -485,7 +497,7 @@ export function StudioLab() {
                 )}
                 <small>PDF, TXT, MD · até 8 MB</small>
               </div>
-              <label className={styles.field}>
+              <label className={`${styles.field} ${styles.referenceField}`}>
                 Proposta de referência
                 <span className={styles.optional}>Opcional</span>
                 <span className={styles.urlField}>
@@ -885,23 +897,30 @@ export function StudioLab() {
                 <div className={styles.emptyBrand}>
                   <img src="/synky-sales-logo.webp" alt="Synky Sales" />
                 </div>
-                <span className={styles.emptyIcon}>
-                  <PanelsIllustration />
-                </span>
-                <h2>
-                  {busy && pendingPrompt
-                    ? 'Sua proposta está ganhando forma.'
-                    : 'Sua próxima proposta começa aqui.'}
-                </h2>
-                <p>
-                  {project
-                    ? 'Conte sua ideia na conversa.'
-                    : 'Briefing ou uma ideia. Você escolhe o começo.'}
-                </p>
-                <span className={styles.emptyTag}>
+                <div className={styles.proposalStarter}>
+                  <div className={styles.starterKicker}>
+                    <span /> Proposta digital
+                  </div>
+                  <h2>
+                    {busy && pendingPrompt
+                      ? 'Sua proposta está ganhando forma.'
+                      : 'Uma proposta que parece feita para o cliente.'}
+                  </h2>
+                  <p>
+                    {project
+                      ? 'Conte sua ideia na conversa e veja cada decisão ganhar uma página.'
+                      : 'Traga um briefing ou comece por uma ideia. A estrutura nasce aqui.'}
+                  </p>
+                  <div className={styles.starterSections} aria-hidden="true">
+                    <span>Contexto</span>
+                    <span>Solução</span>
+                    <span>Investimento</span>
+                  </div>
+                </div>
+                <div className={styles.emptyTag}>
                   <span />
-                  {project ? 'Workspace pronto' : 'Novo workspace'}
-                </span>
+                  {project ? 'Workspace pronto para criar' : 'Novo workspace'}
+                </div>
               </div>
             )}
           </div>
@@ -1011,17 +1030,5 @@ function ErrorMessage({ children }: { children: ReactNode }) {
     <p role="alert" className={styles.error}>
       {children}
     </p>
-  );
-}
-function PanelsIllustration() {
-  return (
-    <div className={styles.previewSymbol} aria-hidden="true">
-      <span>
-        <MessageSquare size={20} />
-      </span>
-      <span>
-        <Sparkles size={27} />
-      </span>
-    </div>
   );
 }
