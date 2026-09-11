@@ -424,9 +424,10 @@ textarea:focus-visible {
     pointer-events: none;
   }
   .sales-sidebar.sidebar-collapsed .nav-item {
+    display: grid !important;
+    place-items: center;
     width: 44px;
     margin-inline: auto;
-    justify-content: center;
     gap: 0;
     padding-inline: 0;
   }
@@ -436,19 +437,23 @@ textarea:focus-visible {
     gap: 6px;
   }
   .sales-sidebar.sidebar-collapsed .nav-item-icon {
-    position: relative;
-    display: grid !important;
-    place-items: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     width: 28px;
     height: 28px;
+    margin: 0;
+    line-height: 0;
     transition: transform 220ms ease, background-color 180ms ease;
   }
   .sales-sidebar.sidebar-collapsed .nav-item-icon > svg {
-    position: absolute;
-    inset: 0;
+    position: static;
+    display: block;
+    flex: 0 0 auto;
     width: 16px;
     height: 16px;
-    margin: auto;
+    margin: 0;
+    transform: none;
   }
   .sales-sidebar.sidebar-collapsed .nav-item:hover .nav-item-icon {
     transform: scale(1.07);
