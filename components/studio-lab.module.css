@@ -1053,6 +1053,90 @@
   border-bottom: 1px solid #eee2c8;
   font-size: 12px;
 }
+.studio:global(.theme-dark),
+:global(.theme-dark) .studio {
+  --ink: #e5e8ef;
+  --muted: #9ba5b3;
+  --line: #353942;
+  --blue: #508fd5;
+  background: #202329;
+  color: var(--ink);
+}
+:global(.theme-dark) .header,
+:global(.theme-dark) .conversation,
+:global(.theme-dark) .composerArea,
+:global(.theme-dark) .composer,
+:global(.theme-dark) .secondary,
+:global(.theme-dark) .libraryDialog,
+:global(.theme-dark) .floatingComposer {
+  background: #202329;
+  color: #e0e5ee;
+  border-color: #3c414c;
+}
+:global(.theme-dark) .previewToolbar,
+:global(.theme-dark) .previewFooter,
+:global(.theme-dark) .deviceControls,
+:global(.theme-dark) .canvasTools,
+:global(.theme-dark) .inspector {
+  background: #292d35;
+  border-color: #3b414b;
+}
+:global(.theme-dark) .preview,
+:global(.theme-dark) .resizeHandle {
+  background: #191c22;
+}
+:global(.theme-dark) .userMessage,
+:global(.theme-dark) .attachmentTag,
+:global(.theme-dark) .referenceTag {
+  background: #2c3139;
+  border-color: #3b444f;
+}
+:global(.theme-dark) .context input,
+:global(.theme-dark) .context textarea,
+:global(.theme-dark) .inspector textarea,
+:global(.theme-dark) .urlInput,
+:global(.theme-dark) .visualControls input[type='number'] {
+  background: #252a32;
+  border-color: #414855;
+  color: #e0e5ec;
+}
+:global(.theme-dark) .userMessage > p,
+:global(.theme-dark) .assistantMessage > p,
+:global(.theme-dark) .composer > textarea,
+:global(.theme-dark) .projectPicker,
+:global(.theme-dark) .context > label,
+:global(.theme-dark) .inspector > label {
+  color: #d7dce5;
+}
+:global(.theme-dark) .intentSwitch button[aria-pressed='true'],
+:global(.theme-dark) .iconButton[aria-pressed='true'],
+:global(.theme-dark) .canvasTools > button[aria-pressed='true'],
+:global(.theme-dark) .starterModes button[aria-pressed='true'] {
+  color: #a8c8ec;
+  background: #2c3c51;
+  border-color: #435b76;
+}
+:global(.theme-dark) .versionChip {
+  background: #263c34;
+  color: #a4ccb8;
+  border-color: #3c584b;
+}
+:global(.theme-dark) .applyPlan {
+  background: #2c3c51;
+  color: #b7cfea;
+  border-color: #435b76;
+}
+:global(.theme-dark) .error {
+  background: #442d32;
+  color: #efb8b8;
+  border-color: #67454b;
+}
+:global(.theme-dark) .emptyPreview > img {
+  background: #f0f4fb;
+  border-radius: 6px;
+  padding: 5px;
+  opacity: 1;
+}
 .mobileTabs {
   display: none;
 }
