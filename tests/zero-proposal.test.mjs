@@ -28,7 +28,9 @@ function load(path, mocks = {}) {
   );
   return module.exports;
 }
-const zero = load('lib/zero-proposal.ts');
+const zero = load('lib/zero-proposal.ts', {
+  './zero-proposal-styles': load('lib/zero-proposal-styles.ts'),
+});
 const limited = load('lib/imported-template.ts');
 const studio = load('lib/studio.ts');
 const service = (
@@ -120,11 +122,23 @@ test('untrusted text stays text in all three layouts; no executable or external 
     visit(parse(html));
     assert.equal(
       tags.filter((node) =>
-        ['script', 'img', 'iframe', 'link', 'form'].includes(node.tagName),
+        ['script', 'iframe', 'link', 'form'].includes(node.tagName),
       ).length,
       0,
     );
     assert.match(html, /script-src 'none'/);
+    const images = tags.filter((node) => node.tagName === 'img');
+    assert.equal(images.length, 1);
+    assert.equal(
+      images[0].attrs.find((attr) => attr.name === 'src').value,
+      zero.zeroCover(value),
+    );
+    assert.equal(
+      tags
+        .flatMap((node) => node.attrs)
+        .filter((attr) => /^on/i.test(attr.name)).length,
+      0,
+    );
     assert.match(html, /connect-src 'none'/);
     assert.match(html, /&lt;script&gt;/);
     assert.match(html, /@media print/);
@@ -141,6 +155,9 @@ test('normalization rejects unsafe assets, invalid amounts and duplicate service
     { accent: 'red;url(https://example.com)' },
     { logo: 'https://example.com/x.png' },
     { logo: '/api/studio/generate' },
+    { cover: 'https://example.com/image.png' },
+    { cover: '/api/agent/generate' },
+    { gallery: [{ url: 'javascript:alert(1)', caption: 'Untrusted' }] },
     { months: NaN },
     { months: 2.5 },
     { discountPercent: 101 },
@@ -157,6 +174,62 @@ test('normalization rejects unsafe assets, invalid amounts and duplicate service
     ),
     /src="data:image\/png;base64,YQ=="/,
   );
+});
+
+test('legacy drafts get a visual cover, and known service categories select relevant built-in art', () => {
+  const legacy = draft();
+  delete legacy.cover;
+  delete legacy.gallery;
+  const normalized = zero.normalizeZeroDraft(legacy);
+  assert.equal(normalized.cover, 'auto');
+  assert.deepEqual(normalized.gallery, []);
+  assert.equal(zero.zeroCover(normalized), '/team/organization-office.png');
+  assert.equal(
+    zero.zeroCover({
+      ...draft(),
+      services: [{ ...service(), title: 'Gestão de tráfego' }],
+    }),
+    '/proposal/campaign-cover.png',
+  );
+  assert.equal(
+    zero.zeroCover({
+      ...draft(),
+      services: [{ ...service(), title: 'Arquitetura residencial' }],
+    }),
+    '/proposal/architecture-cover.png',
+  );
+  for (const cover of zero.zeroCovers)
+    assert.ok(
+      readFileSync(new URL('../public' + cover.url, import.meta.url))
+        .byteLength > 0,
+    );
+});
+
+test('standalone output embeds cover and gallery, preserves full content, and never invents portfolio or steps', () => {
+  const image = '/api/assets/visual-own';
+  const value = {
+    ...draft(),
+    cover: image,
+    gallery: [{ url: image, caption: '<Projeto real>' }],
+    timeline: 'Primeira etapa: dados\nSegunda etapa: aprovação',
+    objective: 'Objetivo integral confirmado',
+  };
+  assert.deepEqual(zero.zeroImagePaths(value), [image]);
+  const html = zero.renderZeroProposal(value, '', '', {
+    [image]: 'data:image/png;base64,YQ==',
+  });
+  assert.equal(
+    (html.match(/src="data:image\/png;base64,YQ=="/g) || []).length,
+    2,
+  );
+  assert.match(html, /&lt;Projeto real&gt;/);
+  assert.match(html, /Objetivo integral confirmado/);
+  assert.match(html, /Primeira etapa: dados/);
+  assert.match(html, /Segunda etapa: aprovação/);
+  const empty = zero.renderZeroProposal(draft());
+  assert.doesNotMatch(empty, /<ol class="process/);
+  assert.doesNotMatch(empty, /<div class="portfolio/);
+  assert.doesNotMatch(empty, /href="https:\/\/wa.me/);
 });
 
 function fixture() {
@@ -267,6 +340,39 @@ test('stale or duplicated saves cannot overwrite another editor', async (t) => {
     (await f.route.POST(post({ ...draft(), title: '' }, 2))).status,
     400,
   );
+});
+
+test('cover and gallery saves require ownership of every selected image', async (t) => {
+  const f = fixture();
+  t.after(() => f.sqlite.close());
+  f.sqlite.exec(
+    "INSERT INTO brand_assets (workspace_id, public_token, kind, name, caption, object_key, content_type, size_bytes, created_at) VALUES ('one', 'photo-one', 'gallery', 'Own', '', 'own.png', 'image/png', 1, 1), ('two', 'photo-two', 'gallery', 'Other', '', 'other.png', 'image/png', 1, 1)",
+  );
+  const own = {
+    ...draft(),
+    cover: '/api/assets/photo-one',
+    gallery: [{ url: '/api/assets/photo-one', caption: 'Próprio' }],
+  };
+  assert.equal((await f.route.POST(post(own))).status, 200);
+  assert.equal(
+    (await f.route.POST(post({ ...own, cover: '/api/assets/photo-two' }, 1)))
+      .status,
+    400,
+  );
+  assert.equal(
+    (
+      await f.route.POST(
+        post(
+          { ...own, gallery: [{ url: '/api/assets/photo-two', caption: '' }] },
+          1,
+        ),
+      )
+    ).status,
+    400,
+  );
+  const found = await (await f.route.GET(get(id))).json();
+  assert.equal(found.project.draft.cover, '/api/assets/photo-one');
+  assert.equal(found.project.revision, 1);
 });
 
 test('reference route returns only visual hints and never calls an AI dependency', async (t) => {

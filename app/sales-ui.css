@@ -1265,19 +1265,19 @@
   box-shadow: 0 10px 32px rgb(0 0 0 / 12%);
 }
 .sales-app.theme-dark .sales-sidebar + div > header input,
-.sales-app.theme-dark .sales-content :is(input, textarea, select) {
+.sales-app.theme-dark .sales-content:not([data-view='zero']) :is(input, textarea, select) {
   border-color: #1a4669 !important;
   background-color: #0b2034 !important;
   color: #edf6ff !important;
   box-shadow: inset 0 1px 0 rgb(100 176 248 / 4%);
 }
-.sales-app.theme-dark .sales-content :is(input, textarea)::placeholder { color: #718aa3 !important; }
-.sales-app.theme-dark .sales-content :is(input, textarea, select):focus {
+.sales-app.theme-dark .sales-content:not([data-view='zero']) :is(input, textarea)::placeholder { color: #718aa3 !important; }
+.sales-app.theme-dark .sales-content:not([data-view='zero']) :is(input, textarea, select):focus {
   border-color: #258eff !important;
   box-shadow: 0 0 0 3px rgb(22 136 255 / 14%) !important;
 }
 
-.sales-app.theme-dark .sales-content:not([data-view='overview']) :is(h1, h2, h3) {
+.sales-app.theme-dark .sales-content:not([data-view='overview']):not([data-view='zero']) :is(h1, h2, h3) {
   color: #f7fbff !important;
   text-shadow: 0 0 24px rgb(60 151 255 / 5%);
 }

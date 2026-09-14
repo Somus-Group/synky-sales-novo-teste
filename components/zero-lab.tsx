@@ -29,6 +29,9 @@ import {
   readZeroBrief,
   renderZeroProposal,
   zeroCatalog,
+  zeroCovers,
+  zeroCover,
+  zeroImagePaths,
   zeroMoney,
   zeroReadiness,
   zeroTotals,
@@ -39,6 +42,13 @@ import {
 } from '@/lib/zero-proposal';
 import type { AgentProfile } from './somus-app';
 import styles from './zero-lab.module.css';
+
+type VisualAsset = {
+  url: string;
+  name: string;
+  kind: string;
+  caption?: string;
+};
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -115,6 +125,7 @@ export function ZeroLab({
   const [projects, setProjects] = useState<ZeroSummary[]>([]);
   const [library, setLibrary] = useState(false);
   const [logos, setLogos] = useState<Array<{ url: string; name: string }>>([]);
+  const [photos, setPhotos] = useState<VisualAsset[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -132,6 +143,7 @@ export function ZeroLab({
   const frame = useRef<HTMLIFrameElement>(null);
   const file = useRef<HTMLInputElement>(null);
   const briefFile = useRef<HTMLInputElement>(null);
+  const imageFile = useRef<HTMLInputElement>(null);
   const gate = useRef(false);
   const touched = useRef(false);
   const draftText = JSON.stringify(draft);
@@ -151,10 +163,11 @@ export function ZeroLab({
     void json<{ projects: ZeroSummary[] }>('/api/zero')
       .then((r) => setProjects(r.projects))
       .catch((e) => setError(e.message));
-    void json<{ assets: Array<{ kind: string; url: string; name: string }> }>(
-      '/api/agent/assets',
-    )
-      .then((r) => setLogos(r.assets.filter((a) => a.kind === 'logo')))
+    void json<{ assets: VisualAsset[] }>('/api/agent/assets')
+      .then((r) => {
+        setLogos(r.assets.filter((a) => a.kind === 'logo'));
+        setPhotos(r.assets.filter((a) => a.kind !== 'logo'));
+      })
       .catch(() => {});
   }, []);
   useEffect(() => {
@@ -337,20 +350,26 @@ export function ZeroLab({
     setBusy(true);
     setError('');
     try {
-      let logo = '';
-      if (draft.logo) {
-        const response = await fetch(draft.logo);
+      const images: Record<string, string> = {};
+      let totalBytes = 0;
+      for (const path of zeroImagePaths(draft)) {
+        const response = await fetch(path);
         if (!response.ok)
           throw new Error(
-            'A logo está indisponível. Remova-a ou escolha outra antes de exportar.',
+            'Uma imagem está indisponível. Escolha outra antes de exportar.',
           );
         const blob = await response.blob();
         if (
           blob.size > 8 * 1024 * 1024 ||
           !['image/png', 'image/jpeg', 'image/webp'].includes(blob.type)
         )
-          throw new Error('Logo inválida.');
-        logo = await new Promise<string>((resolve, reject) => {
+          throw new Error('Imagem inválida.');
+        totalBytes += blob.size;
+        if (totalBytes > 32 * 1024 * 1024)
+          throw new Error(
+            'As imagens excedem 32 MB. Use arquivos menores ou menos imagens.',
+          );
+        images[path] = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result));
           reader.onerror = reject;
@@ -358,7 +377,7 @@ export function ZeroLab({
         });
       }
       download(
-        renderZeroProposal(draft, origin, logo),
+        renderZeroProposal(draft, origin, images[draft.logo] || '', images),
         'proposta-' +
           (draft.client || 'zero')
             .normalize('NFD')
@@ -371,6 +390,59 @@ export function ZeroLab({
       setNotice('Proposta exportada.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao exportar.');
+    } finally {
+      gate.current = false;
+      setBusy(false);
+    }
+  }
+  async function uploadPhoto(selected?: File) {
+    if (!selected || gate.current) return;
+    if (
+      !['image/png', 'image/jpeg', 'image/webp'].includes(selected.type) ||
+      selected.size > 8 * 1024 * 1024
+    ) {
+      setError('Use uma imagem JPG, PNG ou WebP de até 8 MB.');
+      return;
+    }
+    gate.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const body = new FormData();
+      body.set('file', selected);
+      body.set('kind', 'gallery');
+      const { asset } = await json<{ asset: VisualAsset }>(
+        '/api/agent/assets',
+        { method: 'POST', body },
+      );
+      setPhotos((list) => [asset, ...list]);
+      change({ cover: asset.url });
+      setNotice('Imagem adicionada à biblioteca e selecionada como capa.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao enviar imagem.');
+    } finally {
+      gate.current = false;
+      setBusy(false);
+    }
+  }
+  async function printProposal() {
+    if (gate.current || missing.length) return;
+    gate.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const preview = frame.current?.contentWindow;
+      if (!preview) throw new Error('A prévia ainda não está pronta.');
+      for (const img of Array.from(preview.document.images)) {
+        img.loading = 'eager';
+        await img.decode();
+      }
+      preview.focus();
+      preview.print();
+    } catch {
+      setError(
+        'Aguarde as imagens da prévia. Se alguma imagem não carregar, escolha outra antes de imprimir.',
+      );
     } finally {
       gate.current = false;
       setBusy(false);
@@ -409,7 +481,9 @@ export function ZeroLab({
       months: 6,
       validity: '15 dias',
       timeline:
-        'Início a combinar após aprovação do escopo e disponibilização dos acessos.',
+        'Alinhamento inicial: confirmação do escopo, dos responsáveis e dos acessos.\nOrganização: preparação das rotinas financeiras e comerciais definidas no escopo.\nAcompanhamento: início da operação e dos relatórios contratados, em datas a combinar.',
+      terms:
+        'Condições de pagamento a combinar. Valores e escopo deste exemplo são ilustrativos.',
       exclusions: 'Investimentos em mídia e serviços não descritos no escopo.',
       services: zeroCatalog.slice(0, 2).map((s, i) => ({
         id: crypto.randomUUID(),
@@ -945,8 +1019,8 @@ export function ZeroLab({
                   {(
                     [
                       { key: 'editorial', label: 'Editorial' },
-                      { key: 'contrast', label: 'Contraste' },
-                      { key: 'compact', label: 'Objetiva' },
+                      { key: 'contrast', label: 'Estúdio' },
+                      { key: 'compact', label: 'Executiva' },
                     ] as const
                   ).map((d) => (
                     <button
@@ -954,11 +1028,138 @@ export function ZeroLab({
                       aria-pressed={draft.design === d.key}
                       onClick={() => change({ design: d.key })}
                     >
-                      <LayoutTemplate size={20} />
-                      {d.label}
+                      <span className={styles.designThumb} data-design={d.key}>
+                        <img src={zeroCover(draft)} alt="" />
+                        <span>{draft.supplier || 'Sua empresa'}</span>
+                      </span>
+                      <span>{d.label}</span>
                     </button>
                   ))}
                 </div>
+                <div className={styles.sectionTitle}>
+                  <h2>Imagem de capa</h2>
+                  <Icon
+                    label="Enviar imagem"
+                    onClick={() => imageFile.current?.click()}
+                  >
+                    <Upload />
+                  </Icon>
+                </div>
+                <div className={styles.coverChoices}>
+                  <button
+                    type="button"
+                    aria-pressed={draft.cover === 'auto'}
+                    onClick={() => change({ cover: 'auto' })}
+                  >
+                    <img src={zeroCover({ ...draft, cover: 'auto' })} alt="" />
+                    <span>Automática</span>
+                  </button>
+                  {zeroCovers.map((cover) => (
+                    <button
+                      type="button"
+                      key={cover.url}
+                      aria-pressed={draft.cover === cover.url}
+                      onClick={() => change({ cover: cover.url })}
+                    >
+                      <img src={cover.url} alt={cover.alt} loading="lazy" />
+                      <span>{cover.name}</span>
+                    </button>
+                  ))}
+                </div>
+                {!!photos.length && (
+                  <Field label="Capa da sua biblioteca">
+                    <select
+                      value={
+                        draft.cover.startsWith('/api/assets/')
+                          ? draft.cover
+                          : ''
+                      }
+                      onChange={(e) =>
+                        change({ cover: e.target.value || 'auto' })
+                      }
+                    >
+                      <option value="">Imagens de composição</option>
+                      {photos.map((photo) => (
+                        <option key={photo.url} value={photo.url}>
+                          {photo.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
+                <div className={styles.sectionTitle}>
+                  <h2>Imagens do projeto</h2>
+                  <span>{draft.gallery.length}/6</span>
+                </div>
+                {!!photos.length && (
+                  <div className={styles.photoChoices}>
+                    {photos.map((photo) => {
+                      const selected = draft.gallery.some(
+                        (item) => item.url === photo.url,
+                      );
+                      return (
+                        <label key={photo.url}>
+                          <img
+                            src={photo.url}
+                            alt={photo.name}
+                            loading="lazy"
+                          />
+                          <span>
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              disabled={!selected && draft.gallery.length >= 6}
+                              onChange={() =>
+                                change({
+                                  gallery: selected
+                                    ? draft.gallery.filter(
+                                        (item) => item.url !== photo.url,
+                                      )
+                                    : [
+                                        ...draft.gallery,
+                                        {
+                                          url: photo.url,
+                                          caption: photo.caption || '',
+                                        },
+                                      ],
+                                })
+                              }
+                            />
+                            {photo.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                {!photos.length && (
+                  <Button
+                    variant="outline"
+                    onClick={() => imageFile.current?.click()}
+                  >
+                    <Upload /> Adicionar imagem
+                  </Button>
+                )}
+                {draft.gallery.map((photo, index) => (
+                  <Field
+                    key={photo.url}
+                    label={`Legenda da imagem ${index + 1}`}
+                  >
+                    <Input
+                      value={photo.caption}
+                      maxLength={240}
+                      onChange={(e) =>
+                        change({
+                          gallery: draft.gallery.map((item, i) =>
+                            i === index
+                              ? { ...item, caption: e.target.value }
+                              : item,
+                          ),
+                        })
+                      }
+                    />
+                  </Field>
+                ))}
                 <div className={styles.colorRow}>
                   <Field label="Cor principal">
                     <input
@@ -1077,10 +1278,7 @@ export function ZeroLab({
               <Icon
                 label="Imprimir ou salvar PDF"
                 disabled={!!missing.length || busy}
-                onClick={() => {
-                  frame.current?.contentWindow?.focus();
-                  frame.current?.contentWindow?.print();
-                }}
+                onClick={() => void printProposal()}
               >
                 <Printer />
               </Icon>
@@ -1098,7 +1296,7 @@ export function ZeroLab({
               ref={frame}
               srcDoc={html}
               title="Proposta Zero"
-              sandbox="allow-same-origin allow-modals"
+              sandbox="allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox"
               referrerPolicy="no-referrer"
             />
           </div>
@@ -1122,6 +1320,16 @@ export function ZeroLab({
           </footer>
         </section>
       </div>
+      <input
+        ref={imageFile}
+        hidden
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        onChange={(e) => {
+          void uploadPhoto(e.target.files?.[0]);
+          e.target.value = '';
+        }}
+      />
       <input
         ref={file}
         hidden

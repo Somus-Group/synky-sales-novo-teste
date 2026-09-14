@@ -2,7 +2,7 @@ import { getD1 } from '@/db';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
 import { getWorkspaceForUser } from '@/db/workspace';
 import { limitedBody } from '@/lib/imported-template';
-import { normalizeZeroDraft } from '@/lib/zero-proposal';
+import { normalizeZeroDraft, zeroImagePaths } from '@/lib/zero-proposal';
 
 const uuid = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 export async function GET(request: Request) {
@@ -100,6 +100,21 @@ export async function POST(request: Request) {
       if (!asset)
         return Response.json(
           { error: 'Escolha uma logo do seu espaço.' },
+          { status: 400 },
+        );
+    }
+    for (const path of zeroImagePaths(draft).filter(
+      (path) => path.startsWith('/api/assets/') && path !== draft.logo,
+    )) {
+      const asset = await db
+        .prepare(
+          'SELECT id FROM brand_assets WHERE public_token = ? AND workspace_id = ? AND kind IN (?, ?)',
+        )
+        .bind(path.split('/').at(-1)!, workspace, 'gallery', 'portfolio')
+        .first();
+      if (!asset)
+        return Response.json(
+          { error: 'Escolha imagens da biblioteca do seu espaço.' },
           { status: 400 },
         );
     }

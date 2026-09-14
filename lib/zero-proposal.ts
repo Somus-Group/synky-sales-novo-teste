@@ -1,3 +1,5 @@
+import { zeroProposalStyles } from './zero-proposal-styles';
+
 export type ZeroService = {
   id: string;
   title: string;
@@ -25,6 +27,8 @@ export type ZeroDraft = {
   accent: string;
   serif: boolean;
   logo: string;
+  cover: string;
+  gallery: Array<{ url: string; caption: string }>;
   referenceUrl: string;
   services: ZeroService[];
 };
@@ -41,6 +45,55 @@ export type ZeroSummary = {
   revision: number;
   updatedAt: number;
 };
+
+export const zeroCovers = [
+  {
+    url: '/team/organization-office.png',
+    name: 'Negócios',
+    alt: 'Ambiente corporativo com vista para a cidade',
+  },
+  {
+    url: '/proposal/campaign-cover.png',
+    name: 'Campanha',
+    alt: 'Composição de papel e vidro coloridos',
+  },
+  {
+    url: '/proposal/architecture-cover.png',
+    name: 'Arquitetura',
+    alt: 'Arquitetura residencial e paisagem',
+  },
+  {
+    url: '/proposal/editorial-cover.png',
+    name: 'Interiores',
+    alt: 'Interior com luz natural e materiais',
+  },
+] as const;
+
+export function zeroCover(draft: ZeroDraft): string {
+  if (draft.cover && draft.cover !== 'auto') return draft.cover;
+  const scope = draft.services
+    .map((s) => s.title)
+    .join(' ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (/arquitet|interior/.test(scope)) return zeroCovers[2].url;
+  if (/trafego|conteudo|marketing|design|site|digital/.test(scope))
+    return zeroCovers[1].url;
+  return zeroCovers[0].url;
+}
+
+export function zeroImagePaths(draft: ZeroDraft): string[] {
+  return Array.from(
+    new Set(
+      [
+        draft.logo,
+        zeroCover(draft),
+        ...draft.gallery.map((item) => item.url),
+      ].filter(Boolean),
+    ),
+  );
+}
 
 export const zeroCatalog = [
   {
@@ -107,6 +160,8 @@ export function emptyZeroDraft(supplier = ''): ZeroDraft {
     accent: '#126a52',
     serif: true,
     logo: '',
+    cover: 'auto',
+    gallery: [],
     referenceUrl: '',
     services: [],
   };
@@ -137,6 +192,29 @@ export function normalizeZeroDraft(value: unknown): ZeroDraft {
   const logo = text('logo', 300);
   if (logo && !/^\/api\/assets\/[a-zA-Z0-9_-]{8,100}$/.test(logo))
     throw new Error('Escolha uma logo da sua biblioteca.');
+  const cover = p.cover === undefined ? 'auto' : p.cover;
+  const ownedImage = (url: unknown): url is string =>
+    typeof url === 'string' &&
+    /^\/api\/assets\/[a-zA-Z0-9_-]{8,100}$/.test(url);
+  if (
+    cover !== 'auto' &&
+    !zeroCovers.some((item) => item.url === cover) &&
+    !ownedImage(cover)
+  )
+    throw new Error('Escolha uma capa válida.');
+  const gallery = p.gallery === undefined ? [] : p.gallery;
+  if (!Array.isArray(gallery) || gallery.length > 6)
+    throw new Error('Escolha até seis imagens.');
+  const images = gallery.map((item) => {
+    if (
+      !item ||
+      !ownedImage(item.url) ||
+      typeof item.caption !== 'string' ||
+      item.caption.length > 240
+    )
+      throw new Error('Imagem ou legenda inválida.');
+    return { url: item.url, caption: item.caption.trim() };
+  });
   if (!Array.isArray(p.services) || p.services.length > 24)
     throw new Error('Use até 24 serviços.');
   const ids = new Set<string>();
@@ -196,6 +274,8 @@ export function normalizeZeroDraft(value: unknown): ZeroDraft {
     accent: p.accent as string,
     serif: p.serif,
     logo,
+    cover: cover as string,
+    gallery: images,
     referenceUrl: text('referenceUrl', 4096),
     services,
   };
@@ -335,45 +415,111 @@ export function renderZeroProposal(
   draft: ZeroDraft,
   assetOrigin = '',
   embeddedLogo = '',
+  embeddedImages: Record<string, string> = {},
 ) {
   const d = normalizeZeroDraft(draft);
   const totals = zeroTotals(d);
-  const accent = d.accent;
-  const rgb = accent
+  const rgb = d.accent
     .slice(1)
     .match(/../g)!
-    .map((v) => parseInt(v, 16));
-  const onAccent =
-    rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114 > 155
-      ? '#18231f'
-      : '#ffffff';
-  const logo =
-    embeddedLogo &&
-    /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(embeddedLogo)
-      ? embeddedLogo
-      : d.logo
-        ? assetOrigin + d.logo
-        : '';
+    .map((v) => parseInt(v, 16) / 255)
+    .map((v) =>
+      v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4),
+    );
+  const luminance = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+  const onAccent = luminance > 0.179 ? '#000000' : '#ffffff';
+  const ink = luminance > 0.18 ? '#294d3b' : d.accent;
+  const dataImage = (value: string) =>
+    /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(value);
+  const imageUrl = (path: string) =>
+    dataImage(embeddedImages[path] || '')
+      ? embeddedImages[path]
+      : assetOrigin + path;
+  const logo = dataImage(embeddedLogo)
+    ? embeddedLogo
+    : d.logo
+      ? imageUrl(d.logo)
+      : '';
+  const cover = zeroCover(d);
+  const coverAlt =
+    zeroCovers.find((item) => item.url === cover)?.alt ||
+    'Imagem de capa selecionada';
+  const middle = [
+    '02',
+    ...(d.timeline ? ['03'] : []),
+    ...(d.gallery.length ? ['04'] : []),
+  ];
+  const order = [
+    '01',
+    ...(d.design === 'compact' ? ['05', ...middle] : [...middle, '05']),
+    ...(d.terms || d.exclusions ? ['06'] : []),
+    '07',
+  ];
+  const label = (number: string, title: string) =>
+    `<span class="section-label">${String(order.indexOf(number) + 1).padStart(2, '0')} / ${title}</span>`;
+  const heading = (
+    number: string,
+    category: string,
+    title: string,
+    aside = '',
+  ) =>
+    `<div class="section-heading"><div>${label(number, category)}<h2>${title}</h2></div>${aside ? `<span>${aside}</span>` : ''}</div>`;
+  const facts = `<dl class="facts"><div><dt>Preparada para</dt><dd>${escape(d.client || 'Cliente a definir')}</dd></div>${d.services.length ? `<div><dt>Frentes de trabalho</dt><dd>${String(d.services.length).padStart(2, '0')}</dd></div>` : ''}${d.months ? `<div><dt>Vigência</dt><dd>${d.months} meses</dd></div>` : ''}${d.validity ? `<div><dt>Validade da proposta</dt><dd>${escape(d.validity)}</dd></div>` : ''}</dl>`;
+  const context = `<section class="section"><div class="wrap overview"><div>${label('01', 'O projeto')}<h2>${escape(d.title || 'Proposta comercial')}</h2>${d.objective ? `<div class="prose">${lines(d.objective)}</div>` : '<p class="draft-note">Objetivo a definir.</p>'}</div>${facts}</div></section>`;
   const serviceRows = d.services
     .map(
       (s, index) =>
-        `<article class="service"><div class="number">${String(index + 1).padStart(2, '0')}</div><div><h3>${escape(s.title || 'Serviço sem título')}</h3>${lines(s.description)}</div><div class="service-meta">${s.quantity} ${s.quantity === 1 ? 'unidade' : 'unidades'}<br>${s.billing === 'monthly' ? 'Mensal' : 'Pagamento único'}</div></article>`,
+        `<article class="service"><div class="service-top"><span class="service-icon" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><small>${s.billing === 'monthly' ? 'RECORRENTE' : 'PROJETO'}</small></div><h3>${escape(s.title || 'Serviço a definir')}</h3><ul class="deliverables">${s.description
+          .split(/\r?\n/)
+          .filter((line) => line.trim())
+          .map(
+            (line) =>
+              `<li><span aria-hidden="true">&#10003;</span><span>${escape(line)}</span></li>`,
+          )
+          .join(
+            '',
+          )}</ul><div class="service-bottom"><span>${s.quantity} ${s.quantity === 1 ? 'unidade' : 'unidades'}</span><span>${s.billing === 'monthly' ? 'Cobrança mensal' : 'Pagamento único'}</span></div></article>`,
     )
     .join('');
+  const scope = `<section id="escopo" class="section scope"><div class="wrap">${heading('02', 'Escopo de trabalho', 'O que está incluído.', d.services.length ? `${d.services.length} frentes de trabalho` : '')}<div class="services">${serviceRows || '<p class="draft-note">Nenhum serviço selecionado.</p>'}</div></div></section>`;
+  const steps = d.timeline.split(/\r?\n/).filter((line) => line.trim());
+  const process = steps.length
+    ? `<section id="cronograma" class="section"><div class="wrap">${heading('03', 'Cronograma', 'Etapas do projeto.')}<ol class="process${steps.length === 1 ? ' single' : ''}">${steps.map((step, index) => `<li><div class="step-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</div><p>${escape(step)}</p></li>`).join('')}</ol></div></section>`
+    : '';
+  const gallery = d.gallery.length
+    ? `<section class="section"><div class="wrap">${heading('04', 'Seleção visual', 'Referências do projeto.')}<div class="portfolio">${d.gallery.map((item) => `<figure><img src="${escape(imageUrl(item.url))}" alt="${escape(item.caption || 'Imagem selecionada para a proposta')}" width="800" height="600" loading="lazy">${item.caption ? `<figcaption>${escape(item.caption)}</figcaption>` : ''}</figure>`).join('')}</div></div></section>`
+    : '';
+  const monthlyPending = d.services.some(
+    (s) => s.billing === 'monthly' && s.unitCents === null,
+  );
+  const oncePending = d.services.some(
+    (s) => s.billing === 'once' && s.unitCents === null,
+  );
   const priceRows = d.services
     .map(
       (s) =>
         `<tr><td>${escape(s.title || 'Serviço')}</td><td>${s.quantity}</td><td>${s.billing === 'monthly' ? 'Mensal' : 'Único'}</td><td>${s.unitCents === null ? 'A definir' : zeroMoney(s.unitCents * s.quantity)}</td></tr>`,
     )
     .join('');
-  const scope = `<section id="escopo"><div class="section-label">01 / Entregas</div><h2>Escopo da proposta</h2>${serviceRows || '<p class="draft-note">Nenhum serviço selecionado.</p>'}</section>`;
-  const investment = `<section id="investimento"><div class="section-label">02 / Investimento</div><h2>Uma composição transparente.</h2><div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Qtd.</th><th>Recorrência</th><th>Valor</th></tr></thead><tbody>${priceRows}</tbody></table></div>${totals.pending ? '<p>Valores pendentes de definição. Os totais abaixo consideram somente os itens precificados.</p>' : ''}${totals.discount ? `<p>Desconto de ${d.discountPercent}%: ${zeroMoney(totals.discount)} sobre os valores mensais e únicos desta composição.</p>` : ''}<div class="totals">${d.services.some((s) => s.billing === 'monthly') ? `<div><span>Mensalidade${totals.pending ? ' parcial' : ''}</span><strong>${zeroMoney(totals.monthly)}</strong></div>` : ''}${d.services.some((s) => s.billing === 'once') ? `<div><span>Pagamento único${totals.pending ? ' parcial' : ''}</span><strong>${zeroMoney(totals.once)}</strong></div>` : ''}${d.months && totals.contract !== null ? `<div><span>Total em ${d.months} meses${totals.pending ? ' (parcial)' : ''}</span><strong>${zeroMoney(totals.contract)}</strong></div>` : ''}</div></section>`;
+  const totalBlock = (name: string, amount: number, note: string) =>
+    `<div class="total"><span>${name}</span><strong>${zeroMoney(amount)}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
+  const investment = `<section id="investimento" class="section investment"><div class="wrap">${heading('05', 'Investimento', 'Valores e condições.')}<div class="totals">${d.services.some((s) => s.billing === 'monthly') ? totalBlock('Mensalidade' + (monthlyPending ? ' parcial' : ''), totals.monthly, 'por mês') : ''}${d.services.some((s) => s.billing === 'once') ? totalBlock('Pagamento único' + (oncePending ? ' parcial' : ''), totals.once, 'sem recorrência') : ''}${d.months && totals.contract !== null ? totalBlock(`Total em ${d.months} meses${totals.pending ? ' (parcial)' : ''}`, totals.contract, 'mensalidades + pagamentos únicos') : ''}</div>${totals.pending ? '<p class="investment-note">Valores pendentes de definição. Os totais consideram somente os itens precificados.</p>' : ''}${totals.discount ? `<p class="investment-note">Desconto de ${d.discountPercent}% aplicado aos valores mensais e únicos. Desconto nesta composição: ${zeroMoney(totals.discount)}.</p>` : ''}<details class="price-detail" open><summary>Composição do investimento</summary><div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Qtd.</th><th>Recorrência</th><th>Valor</th></tr></thead><tbody>${priceRows}</tbody></table></div></details></div></section>`;
   const conditions =
-    d.timeline || d.terms || d.exclusions || d.validity || d.months
-      ? `<section id="condicoes"><div class="section-label">03 / Alinhamento</div><h2>Condições e próximos passos</h2><div class="conditions">${d.timeline ? `<div><h3>Cronograma</h3>${lines(d.timeline)}</div>` : ''}${d.terms ? `<div><h3>Condições comerciais</h3>${lines(d.terms)}</div>` : ''}${d.exclusions ? `<div><h3>Fora do escopo</h3>${lines(d.exclusions)}</div>` : ''}${d.validity || d.months ? `<div><h3>Vigência e validade</h3>${d.months ? `<p>Vigência: ${d.months} meses.</p>` : ''}${d.validity ? `<p>Validade da proposta: ${escape(d.validity)}.</p>` : ''}</div>` : ''}</div></section>`
+    d.terms || d.exclusions
+      ? `<section id="condicoes" class="section"><div class="wrap">${heading('06', 'Alinhamento', 'Combinados com clareza.')}<div class="conditions">${d.terms ? `<div><h3>Condições comerciais</h3>${lines(d.terms)}</div>` : ''}${d.exclusions ? `<div><h3>Fora do escopo</h3>${lines(d.exclusions)}</div>` : ''}</div></div></section>`
       : '';
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><title>${escape(d.title)}</title><style>
-p,h3,.summary,.brandbar,.closing{overflow-wrap:anywhere}.service>*,.conditions>*{min-width:0}
-*{box-sizing:border-box;letter-spacing:0}html{scroll-behavior:smooth}body{margin:0;color:#202623;background:#fff;font:16px/1.65 Arial,sans-serif}h1,h2,h3,p{margin:0}h1,h2{font-family:${d.serif ? 'Georgia,serif' : 'Arial,sans-serif'};font-weight:${d.serif ? '400' : '700'};line-height:1.14;overflow-wrap:anywhere}h1{font-size:52px;max-width:900px}h2{font-size:34px;margin:10px 0 28px}h3{font-size:19px;line-height:1.4;margin-bottom:10px}p+p{margin-top:8px}img{max-width:100%}.brandbar{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:28px 6%;border-bottom:1px solid #dfe5e1}.brandbar img{width:155px;max-height:68px;object-fit:contain;object-position:left}.brandbar strong{font-size:21px;overflow-wrap:anywhere}.brandbar small{font-size:12px;text-transform:uppercase}.hero{padding:64px 6% 48px;border-bottom:6px solid ${accent}}.hero .eyebrow,.section-label{font-size:12px;text-transform:uppercase;letter-spacing:0;color:${accent};font-weight:700}.hero h1{margin:18px 0 26px}.hero .client{font-size:20px}.intro{max-width:820px;margin-top:34px;border-top:1px solid #dfe5e1;padding-top:24px}.intro p{white-space:pre-wrap}.summary{display:flex;gap:36px;flex-wrap:wrap;margin-top:34px;font-size:14px}.summary strong{display:block;font-size:21px}.body-grid>section{padding:48px 6%;border-bottom:1px solid #dfe5e1}.service{display:grid;grid-template-columns:42px 1fr 140px;gap:20px;padding:24px 0;border-top:1px solid #dfe5e1;break-inside:avoid}.number{color:${accent};font-size:24px}.service-meta{font-size:13px;color:#5b665f;text-align:right}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:#5b665f;font-size:12px;text-transform:uppercase}td,th{padding:14px 8px;border-bottom:1px solid #dfe5e1;overflow-wrap:anywhere}td:last-child,th:last-child{text-align:right}.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-top:28px}.totals>div{padding:22px 0;border-top:3px solid ${accent}}.totals span{display:block;font-size:13px}.totals strong{font-size:25px;overflow-wrap:anywhere}.conditions{display:grid;grid-template-columns:1fr 1fr;gap:30px}.conditions p{white-space:pre-wrap}.closing{padding:40px 6%;background:#f1f5f2;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}.closing strong{font-size:22px}.contact{font-size:14px;overflow-wrap:anywhere}.draft-note{color:#6d746f}.contrast .hero{background:${accent};color:${onAccent};border-color:#d0eb65}.contrast .hero .eyebrow{color:inherit}.contrast .intro{border-color:currentColor}.contrast .summary{padding-top:20px}.contrast .body-grid #investimento{background:#f3f6f4}.contrast .service{grid-template-columns:55px 1fr 140px}.compact .hero{padding:36px 6%}.compact h1{font-size:38px}.compact h2{font-size:27px}.compact .body-grid>section{padding:30px 6%}.compact .service{padding:16px 0}.compact .intro{margin-top:20px;padding-top:18px}.compact .summary{margin-top:20px}.editorial .hero{border-left:18px solid ${accent}}.editorial .service h3{font-family:Georgia,serif;font-size:23px}@media(max-width:600px){h1{font-size:34px}h2{font-size:28px}.compact h1{font-size:32px}.brandbar{padding:22px 6%;align-items:flex-start}.brandbar small{display:none}.hero{padding:34px 6%}.body-grid>section{padding:32px 6%}.service,.contrast .service{grid-template-columns:28px minmax(0,1fr);gap:12px}.service-meta{grid-column:2;text-align:left}.conditions{grid-template-columns:1fr}.totals{grid-template-columns:1fr}.editorial .hero{border-left-width:8px}.closing{display:block}.contact{margin-top:12px}td,th{padding:10px 4px;font-size:12px}.summary{gap:20px}}@media print{@page{size:A4;margin:14mm}body{font-size:11pt}.brandbar,.hero,.body-grid>section,.closing{padding:20px 0}.hero{border-left:0!important}h1{font-size:32pt}h2{font-size:24pt}h3{font-size:15pt}.hero,.contrast .hero{background:#fff;color:#202623}.hero .eyebrow{color:${accent}}.totals,.conditions{break-inside:avoid}h2,h3{break-after:avoid}.table-wrap{overflow:visible}thead{display:table-header-group}tr{break-inside:avoid}.closing{background:#fff}*{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
-</style></head><body class="${d.design}"><header class="brandbar"><div>${logo ? `<img src="${escape(logo)}" alt="${escape(d.supplier || 'Fornecedor')}">` : `<strong>${escape(d.supplier || 'Fornecedor a definir')}</strong>`}</div><small>Proposta comercial</small></header><main><section class="hero"><div class="eyebrow">${escape(d.supplier || 'Proposta personalizada')}</div><h1>${escape(d.title || 'Proposta comercial')}</h1><p class="client">Para ${escape(d.client || 'cliente a definir')}</p>${d.objective ? `<div class="intro">${lines(d.objective)}</div>` : ''}<div class="summary">${d.services.length ? `<div><span>Frentes de trabalho</span><strong>${d.services.length}</strong></div>` : ''}${d.months ? `<div><span>Vigência</span><strong>${d.months} meses</strong></div>` : ''}${d.validity ? `<div><span>Validade</span><strong>${escape(d.validity)}</strong></div>` : ''}</div></section><div class="body-grid">${d.design === 'compact' ? investment + scope : scope + investment}${conditions}</div></main><footer class="closing"><div><strong>${escape(d.supplier)}</strong><p>${escape(d.client ? 'Proposta preparada para ' + d.client + '.' : '')}</p></div><div class="contact">${d.email ? `<p>${escape(d.email)}</p>` : ''}${d.phone ? `<p>${escape(d.phone)}</p>` : ''}</div></footer></body></html>`;
+  const email = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(d.email)
+    ? `mailto:${encodeURIComponent(d.email)}?subject=${encodeURIComponent('Proposta: ' + d.title)}`
+    : '';
+  const phone = d.phone.replace(/[^\d]/g, '');
+  const whatsapp =
+    phone.length >= 10 && phone.length <= 15
+      ? `https://wa.me/${phone.length <= 11 ? '55' + phone : phone}?text=${encodeURIComponent('Olá, gostaria de conversar sobre a proposta ' + d.title + '.')}`
+      : '';
+  const contact =
+    email || whatsapp
+      ? `<div class="contact">${email ? `<a href="${escape(email)}" target="_blank" rel="noopener noreferrer">Conversar sobre a proposta <span aria-hidden="true">&#8599;</span></a>` : ''}${whatsapp ? `<a class="secondary" href="${escape(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp <span aria-hidden="true">&#8599;</span></a>` : ''}</div>`
+      : '';
+  const closing = `<footer class="closing"><div class="wrap"><div class="closing-row"><div>${label('07', 'Próxima conversa')}<h2>Vamos alinhar os próximos passos?</h2>${d.client ? `<p>Proposta preparada para ${escape(d.client)}.</p>` : ''}${contact}</div></div><div class="signature"><strong>${escape(d.supplier)}</strong><span>${escape([d.email, d.phone].filter(Boolean).join(' / '))}</span></div></div></footer>`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><title>${escape(d.title)}</title><style>${zeroProposalStyles}</style></head><body class="${d.design}" style="--accent:${d.accent};--ink:${ink};--on-accent:${onAccent};--display:${d.serif ? 'Georgia,serif' : 'Arial,sans-serif'};--weight:${d.serif ? 400 : 700}"><header class="brandbar wrap"><div class="brand">${logo ? `<img src="${escape(logo)}" alt="${escape(d.supplier || 'Fornecedor')}">` : escape(d.supplier || 'Sua empresa')}</div><nav aria-label="Seções da proposta"><a href="#escopo">Escopo</a>${steps.length ? '<a href="#cronograma">Etapas</a>' : ''}<a href="#investimento">Investimento</a></nav></header><main><section class="hero"><img class="hero-media" src="${escape(imageUrl(cover))}" alt="${escape(coverAlt)}" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-copy"><div class="eyebrow">Proposta comercial / ${escape(d.supplier || 'Sua empresa')}</div><h1${d.title.length > 85 ? ' class="long-title"' : ''}>${escape(d.title || 'Proposta comercial')}</h1><p class="client">Preparada para ${escape(d.client || 'cliente a definir')}</p><div class="hero-foot"><span>${d.validity ? `Validade: ${escape(d.validity)}` : 'Escopo, investimento e próximos passos'}</span><a href="#escopo">Ver proposta <span aria-hidden="true">&#8595;</span></a></div></div></section>${context}${d.design === 'compact' ? investment + scope + process + gallery : scope + process + gallery + investment}${conditions}</main>${closing}</body></html>`;
 }

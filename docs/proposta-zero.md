@@ -27,8 +27,19 @@ hosting, D1 storage and optional logo/reference requests still use infrastructur
 - Quantities, discounts, one-off fees, monthly fees and duration recalculate
   locally using integer cents. No tax is calculated or implied. Contract totals
   multiply only monthly fees by duration and add one-off fees once.
-- Three compositions, accent color, system serif/sans typography and a logo from
-  the current workspace's existing library are available. An optional public
+- Three page compositions (Editorial, Estudio, Executiva) use a full-width image
+  cover, visual deliverables, supplied timeline steps, highlighted investment and
+  optional contact links. Executiva places investment before scope; Estudio uses
+  a typographic service grid; Editorial uses individual delivery cards.
+- The cover can follow the selected service category, use existing built-in
+  composition images or use an image from the current workspace's library.
+  Built-in images are illustrative, never presented as the supplier's portfolio.
+  Add up to six workspace images with editable captions; no cases, testimonials,
+  performance metrics, terms or timeline steps are invented.
+- Image uploads reuse the existing image library (JPG/PNG/WebP, 8 MB each). Every
+  selected stored image is verified against the workspace when saving.
+  Accent color, system typography and the existing supplier logo remain editable.
+  An optional public
   HTTPS reference reader extracts colors/font hints using the existing safe
   reader. It does not clone a site, import its commercial data or fully interpret
   an arbitrary briefing. No external font or AI/image-generation service is used.
@@ -36,7 +47,8 @@ hosting, D1 storage and optional logo/reference requests still use infrastructur
   Concurrent/stale writes return 409 and retain the unsaved local editor content.
   Leaving the module with unsaved content requires confirmation.
 - Download an editable JSON copy or a standalone HTML proposal. HTML export embeds
-  the selected logo. Browser printing supports saving a PDF. Neither action
+  the logo, cover and project images, bounded to 32 MB of image source data.
+  Browser printing waits for selected images and supports saving a PDF. Neither action
   publishes a link nor inserts a proposal into the existing sales pipeline.
 
 ## Storage and Safety
