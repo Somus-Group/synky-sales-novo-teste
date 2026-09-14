@@ -426,7 +426,7 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
     );
     assert.equal(first.status, 200);
     const v1 = await first.json();
-    assert.equal(calls[0].model, 'gpt-5-nano');
+    assert.equal(calls[0].model, 'gpt-5-mini');
     assert.equal(v1.project.revision, 1);
     assert.equal(v1.versions.length, 1);
     assert.equal(v1.project.messages.length, 2);
