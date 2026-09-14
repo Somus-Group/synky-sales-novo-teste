@@ -6,7 +6,15 @@ export type StudioReview = {
   warnings: string[];
 };
 
-export async function reviewStudioHtml(html: string) {
+export type StudioReviewOptions = {
+  strict?: boolean;
+  hasReference?: boolean;
+};
+
+export async function reviewStudioHtml(
+  html: string,
+  options: StudioReviewOptions = {},
+) {
   const headings: string[] = [];
   const ids = new Set<string>();
   const links: string[] = [];
@@ -14,8 +22,58 @@ export async function reviewStudioHtml(html: string) {
   let titleCount = 0;
   let images = 0;
   let emptySections = 0;
+  let sectionCount = 0;
+  let articleCount = 0;
+  let listCount = 0;
+  let asideCount = 0;
+  let detailsCount = 0;
+  let tableCount = 0;
+  let navCount = 0;
+  let classNames = '';
+  let styleText = '';
   const sections: Array<{ text: string; image: boolean }> = [];
   await new HTMLRewriter()
+    .on('style', {
+      text(chunk) {
+        if (styleText.length < 24000) styleText += chunk.text;
+      },
+    })
+    .on('nav', {
+      element() {
+        navCount++;
+      },
+    })
+    .on('article', {
+      element() {
+        articleCount++;
+      },
+    })
+    .on('aside', {
+      element() {
+        asideCount++;
+      },
+    })
+    .on('details', {
+      element() {
+        detailsCount++;
+      },
+    })
+    .on('table', {
+      element() {
+        tableCount++;
+      },
+    })
+    .on('ul,ol', {
+      element() {
+        listCount++;
+      },
+    })
+    .on('[class]', {
+      element(element) {
+        if (classNames.length < 12000)
+          classNames += ` ${element.getAttribute('class') || ''}`;
+      },
+    })
     .on('[id]', {
       element(element) {
         ids.add(element.getAttribute('id') || '');
@@ -42,6 +100,7 @@ export async function reviewStudioHtml(html: string) {
     })
     .on('section', {
       element(element) {
+        sectionCount++;
         const section = { text: '', image: false };
         sections.push(section);
         element.onEndTag(() => {
@@ -74,5 +133,44 @@ export async function reviewStudioHtml(html: string) {
     );
   if (links.some((link) => !ids.has(link)))
     issues.push('Corrija os links do menu para seções que realmente existem.');
+  if (options.strict) {
+    const visualLanguage = `${classNames} ${styleText}`.toLowerCase();
+    const layoutSignals = [
+      /display\s*:\s*grid/.test(visualLanguage),
+      /display\s*:\s*flex/.test(visualLanguage),
+      /\b(hero|cover|capa)\b/.test(visualLanguage),
+      /\b(panel|painel|summary|signal|metric|stat)\b/.test(visualLanguage),
+      /\b(card|tile|bloco)\b/.test(visualLanguage) && articleCount >= 2,
+      /\b(timeline|steps|trilha|method|metodo)\b/.test(visualLanguage),
+      /\b(split|grid|columns|colunas)\b/.test(visualLanguage),
+      asideCount > 0,
+      detailsCount > 0,
+      tableCount > 0,
+    ].filter(Boolean).length;
+    if (sectionCount < 4 || headings.length < 4)
+      issues.push(
+        'Estruture a proposta em seções completas, com capa, escopo, método, investimento e próximos passos.',
+      );
+    if (layoutSignals < 3)
+      issues.push(
+        'A proposta ficou textual demais. Use pelo menos três composições visuais diferentes, como capa forte, painel de dados, grade de entregáveis, trilha de etapas e bloco de investimento.',
+      );
+    if (styleText.trim().length < 420)
+      issues.push(
+        'Inclua CSS interno suficiente para uma direção visual própria, responsiva e diferente de uma proposta em texto corrido.',
+      );
+    if (options.hasReference && layoutSignals < 4)
+      issues.push(
+        'Aplique melhor a direção visual do link de referência, preservando ritmo, paleta e organização em vez de gerar uma proposta genérica.',
+      );
+    if (navCount > 0 && links.length < 3)
+      issues.push(
+        'O menu precisa apontar para as principais partes da proposta, não apenas para uma seção isolada.',
+      );
+    if (listCount > 6 && articleCount + asideCount + detailsCount < 2)
+      issues.push(
+        'Reduza a aparência de lista corrida transformando parte do escopo em blocos, painéis ou etapas editoriais.',
+      );
+  }
   return { headings: headings.slice(0, 20), imageCount: images, issues };
 }

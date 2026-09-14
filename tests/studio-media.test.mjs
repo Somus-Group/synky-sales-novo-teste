@@ -16,7 +16,7 @@ export default {async fetch(request){
  const p=await request.json();
  try {
   if(p.action==='encode') return Response.json({data:imageDataUrl(Uint8Array.from(atob(p.bytes),c=>c.charCodeAt(0)),p.mime)});
-  if(p.action==='review') return Response.json(await reviewStudioHtml(p.html));
+  if(p.action==='review') return Response.json(await reviewStudioHtml(p.html,{strict:p.strict,hasReference:p.hasReference}));
   if(p.action==='prepare') {
    let scope='';
    const db={prepare:()=>({bind:(id)=>{scope=id;return {all:async()=>({results:p.rows||[]})};}})};
@@ -152,4 +152,36 @@ test('reviews headings, empty sections and internal navigation including nested 
     html: '<section></section><a href="#missing">Teste</a>',
   });
   assert.equal(empty.issues.length, 4);
+});
+
+test('strict review blocks generic text proposals and accepts visual compositions', async () => {
+  const generic = await run({
+    action: 'review',
+    html: '<!doctype html><html><head><style>body{font-family:Arial}</style></head><body><h1>Proposta</h1><section><h2>Escopo</h2><p>Texto da proposta.</p><ul><li>Item</li></ul></section></body></html>',
+    strict: true,
+    hasReference: true,
+  });
+  assert.ok(generic.issues.some((issue) => /textual demais/.test(issue)));
+  assert.ok(generic.issues.some((issue) => /referência/.test(issue)));
+  const visual = await run({
+    action: 'review',
+    strict: true,
+    hasReference: true,
+    html: `<!doctype html><html><head><style>
+      body{font-family:Arial,sans-serif;margin:0}
+      .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:40px;padding:72px}
+      .panel{display:flex;gap:20px}.scope-grid{display:grid;grid-template-columns:1fr 1fr}
+      .card{padding:24px}.timeline{display:grid;grid-template-columns:repeat(3,1fr)}
+      .investment{display:flex;justify-content:space-between}
+      @media(max-width:700px){.hero,.scope-grid,.timeline{grid-template-columns:1fr}}
+    </style></head><body>
+      <nav><a href="#escopo">Escopo</a><a href="#metodo">Método</a><a href="#investimento">Investimento</a></nav>
+      <section class="hero"><div><h1>Proposta comercial</h1><p>Direção clara para o projeto.</p></div><aside class="panel"><strong>3 frentes</strong></aside></section>
+      <section id="escopo"><h2>Escopo</h2><div class="scope-grid"><article class="card">Diagnóstico</article><article class="card">Execução</article></div></section>
+      <section id="metodo"><h2>Método</h2><ol class="timeline"><li>Imersão</li><li>Plano</li><li>Acompanhamento</li></ol></section>
+      <section id="investimento" class="investment"><h2>Investimento</h2><p>A definir conforme escopo final.</p></section>
+      <section><h2>Próximos passos</h2><p>Validar detalhes e iniciar.</p></section>
+    </body></html>`,
+  });
+  assert.deepEqual(visual.issues, []);
 });
