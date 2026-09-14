@@ -67,7 +67,7 @@
 .sales-app .sales-content {
   min-width: 0;
 }
-.sales-app .sales-content:not([data-view='studio']) {
+.sales-app .sales-content:not([data-view='studio']):not([data-view='zero']) {
   padding-block: clamp(20px, 3vw, 32px);
 }
 .sales-app .sales-content > * {
@@ -76,12 +76,12 @@
 .sales-app .sales-content :is(h1, h2, h3):not([style]) {
   text-wrap: balance;
 }
-.sales-app .sales-content:not([data-view='studio']) h1:not([style]) {
+.sales-app .sales-content:not([data-view='studio']):not([data-view='zero']) h1:not([style]) {
   font-size: clamp(26px, 2.7vw, 36px);
   letter-spacing: -0.035em;
   line-height: 1.15;
 }
-.sales-app .sales-content h2 {
+.sales-app .sales-content:not([data-view='zero']) h2 {
   letter-spacing: -0.02em;
 }
 .sales-app .sales-content :is(strong, [class*='tabular-nums']) {
@@ -672,7 +672,7 @@
   }
 }
 @media (max-width: 767px) {
-  .sales-app .sales-content:not([data-view='studio']) h1:not([style]) {
+  .sales-app .sales-content:not([data-view='studio']):not([data-view='zero']) h1:not([style]) {
     font-size: 26px;
   }
   .sales-app .overview-stat {

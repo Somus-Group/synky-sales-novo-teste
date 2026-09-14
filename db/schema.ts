@@ -250,3 +250,13 @@ export const studioAiRequests = sqliteTable('studio_ai_requests', {
   uniqueIndex('idx_studio_ai_request_key').on(table.projectId, table.requestKey),
   index('idx_studio_ai_workspace_created').on(table.workspaceId, table.createdAt),
 ]);
+
+export const zeroProjects = sqliteTable('zero_projects', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
+  title: text('title').notNull(),
+  client: text('client').notNull(),
+  contentJson: text('content_json').notNull(),
+  revision: integer('revision').notNull().default(1),
+  updatedAt: integer('updated_at').notNull(),
+}, table => [index('idx_zero_projects_workspace_updated').on(table.workspaceId, table.updatedAt)]);
