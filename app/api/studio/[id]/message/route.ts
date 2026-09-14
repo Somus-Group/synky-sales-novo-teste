@@ -150,7 +150,15 @@ export async function POST(
           ),
           preferredLogoId: preferredLogo?.id || null,
           currentHtml: media.currentHtml,
-          recentConversation: messages.slice(-16),
+          // Preserve the most recent context without sending an ever-growing
+          // transcript every time a long briefing is refined.
+          recentConversation: messages.slice(-16).map((message) => ({
+            ...message,
+            text:
+              message.text.length > 2500
+                ? `${message.text.slice(0, 2500)}…`
+                : message.text,
+          })),
           request: payload.message,
           selectedElement: payload.selection || null,
         }),

@@ -642,7 +642,13 @@
 .intentSwitch {
   display: flex;
   gap: 1px;
-  margin-right: auto;
+}
+.characterCount {
+  margin-left: auto;
+  color: #8994a4;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .intentSwitch button {
   display: flex;

@@ -1,4 +1,5 @@
 export type StudioMode = 'briefing' | 'free';
+export const maxStudioMessageLength = 24000;
 export type StudioMessage = {
   role: 'user' | 'assistant';
   text: string;
@@ -83,9 +84,9 @@ export function studioInput(value: unknown) {
   if (
     typeof p.message !== 'string' ||
     !p.message.trim() ||
-    p.message.length > 8000
+    p.message.length > maxStudioMessageLength
   )
-    throw new StudioError('Escreva um pedido de até 8.000 caracteres.');
+    throw new StudioError('Escreva um pedido de até 24.000 caracteres.');
   if (!Number.isInteger(p.revision) || (p.revision as number) < 0)
     throw new StudioError('Reabra o projeto para atualizar a versão.');
   let image: { name: string; mime: string; data: string } | undefined;

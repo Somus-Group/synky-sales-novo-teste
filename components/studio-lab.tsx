@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import {
   studioPreviewDocument,
+  maxStudioMessageLength,
   type StudioMode,
   type StudioProject,
   type StudioSummary,
@@ -1522,7 +1523,7 @@ export function StudioLab() {
                 aria-label="Pedido para a proposta"
                 value={prompt}
                 rows={3}
-                maxLength={8000}
+                maxLength={maxStudioMessageLength}
                 disabled={busy || loading}
                 onChange={(event) => setPrompt(event.target.value)}
                 placeholder={
@@ -1569,6 +1570,10 @@ export function StudioLab() {
                     <span>Planejar</span>
                   </button>
                 </div>
+                <span className={styles.characterCount}>
+                  {prompt.length.toLocaleString('pt-BR')} /{' '}
+                  {maxStudioMessageLength.toLocaleString('pt-BR')}
+                </span>
                 <IconButton
                   label="Anexar imagem"
                   disabled={blocked}
@@ -1842,7 +1847,7 @@ export function StudioLab() {
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 disabled={busy}
-                maxLength={8000}
+                maxLength={maxStudioMessageLength}
               />
               <button
                 className={styles.send}

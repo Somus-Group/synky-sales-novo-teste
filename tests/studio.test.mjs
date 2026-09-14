@@ -234,6 +234,20 @@ test('validates references, user messages and complete model documents', () => {
   assert.match(preview, /connect-src 'none'/);
 });
 
+test('accepts a complete long proposal brief while keeping a bounded request size', () => {
+  const message = 'a'.repeat(studio.maxStudioMessageLength);
+  assert.equal(
+    studio.studioInput({ message, revision: 0 }).message.length,
+    studio.maxStudioMessageLength,
+  );
+  assert.throws(() =>
+    studio.studioInput({
+      message: 'a'.repeat(studio.maxStudioMessageLength + 1),
+      revision: 0,
+    }),
+  );
+});
+
 test('both creation modes persist, enforce briefing, accept text and PDF, and isolate workspaces', async () => {
   const f = fixture();
   try {
