@@ -741,6 +741,31 @@
   border: 1px solid rgba(52, 91, 145, 0.08);
   box-shadow: 0 14px 32px rgba(30, 68, 124, 0.08);
 }
+.sales-app .overview-stat {
+  min-height: 192px;
+  display: flex;
+  flex-direction: column;
+}
+.sales-app .overview-stat-footer {
+  margin-top: auto;
+  min-height: 40px;
+}
+.sales-app .overview-stat-sparkline {
+  color: currentColor;
+  opacity: 0.7;
+}
+.sales-app .overview-stat-violet .overview-stat-sparkline { color: #5269dc; }
+.sales-app .overview-stat-green .overview-stat-sparkline { color: #18835c; }
+.sales-app .overview-stat-orange .overview-stat-sparkline { color: #d57a19; }
+.sales-app .overview-stat-rose .overview-stat-sparkline { color: #bb4080; }
+.sales-app .overview-stat-baseline {
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: 0.16;
+}
+.sales-app.theme-dark .overview-stat {
+  min-height: 188px;
+}
 .sales-app .pipeline-root > section:first-of-type > article {
   position: relative;
   overflow: hidden;
