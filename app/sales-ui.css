@@ -1858,3 +1858,171 @@ html:not(.dark) [data-slot='dropdown-menu-content'] {
 .sales-app:not(.theme-dark) .sales-content[data-view='agent'] > div > header:first-child p {
   color: #eef7ff !important;
 }
+
+/* Motion system ----------------------------------------------------------
+   A single rhythm ties navigation, views, cards, charts and overlays together.
+   Only compositor-friendly properties are animated to keep the CRM responsive. */
+@keyframes sales-view-reveal {
+  from { opacity: 0; transform: translateY(14px) scale(.995); filter: blur(3px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes sales-item-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes sales-slide-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes sales-chart-reveal {
+  from { opacity: 0; clip-path: inset(0 100% 0 0 round 12px); transform: translateY(8px); }
+  to { opacity: 1; clip-path: inset(0 0 0 0 round 12px); transform: translateY(0); }
+}
+@keyframes sales-number-pop {
+  0% { opacity: 0; transform: translateY(7px) scale(.94); }
+  70% { opacity: 1; transform: translateY(-1px) scale(1.025); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sales-bar-grow {
+  from { transform: scaleX(0); opacity: .25; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+@keyframes sales-hero-focus {
+  from { background-position: center, 54% 50%; }
+  to { background-position: center, 50% 50%; }
+}
+@keyframes sales-dialog-arrive {
+  from { opacity: 0; transform: translate(-50%, -47%) scale(.965); filter: blur(4px); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
+}
+@keyframes sales-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes sales-progress-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sales-app .sales-content > * {
+    animation: sales-view-reveal 420ms cubic-bezier(.22,1,.36,1) both;
+    transform-origin: 50% 0;
+  }
+
+  .sales-app .sales-content > * > :is(section, header, article, div):nth-child(1) { animation-delay: 35ms; }
+  .sales-app .sales-content > * > :is(section, header, article, div):nth-child(2) { animation-delay: 80ms; }
+  .sales-app .sales-content > * > :is(section, header, article, div):nth-child(3) { animation-delay: 125ms; }
+  .sales-app .sales-content > * > :is(section, header, article, div):nth-child(4) { animation-delay: 170ms; }
+  .sales-app .sales-content > * > :is(section, header, article, div):nth-child(5) { animation-delay: 215ms; }
+  .sales-app .sales-content > * > :is(section, header, article, div):nth-child(n + 6) { animation-delay: 250ms; }
+  .sales-app .sales-content > * > :is(section, header, article, div) {
+    animation-name: sales-item-rise;
+    animation-duration: 470ms;
+    animation-timing-function: cubic-bezier(.22,1,.36,1);
+    animation-fill-mode: both;
+  }
+
+  .sales-app .sales-content :is(section, article) > :is(article, button, [role='button']):nth-child(1) { animation-delay: 90ms; }
+  .sales-app .sales-content :is(section, article) > :is(article, button, [role='button']):nth-child(2) { animation-delay: 135ms; }
+  .sales-app .sales-content :is(section, article) > :is(article, button, [role='button']):nth-child(3) { animation-delay: 180ms; }
+  .sales-app .sales-content :is(section, article) > :is(article, button, [role='button']):nth-child(4) { animation-delay: 225ms; }
+
+  .sales-app .sales-sidebar .nav-item {
+    animation: sales-slide-in 330ms cubic-bezier(.22,1,.36,1) both;
+    animation-delay: calc(var(--nav-index, 0) * 22ms);
+  }
+  .sales-app .sales-sidebar .nav-item:hover .nav-item-icon { transform: translateY(-1px) scale(1.08) rotate(-3deg); }
+  .sales-app .sales-sidebar .nav-item-active .nav-item-icon { transform: scale(1.04); }
+  .sales-app .sales-sidebar .nav-item-icon,
+  .sales-app .sales-sidebar .nav-item-badge {
+    transition: transform 260ms cubic-bezier(.22,1,.36,1), background-color 220ms ease, color 220ms ease, box-shadow 220ms ease;
+  }
+
+  .sales-app :is(button, [role='button'], a) {
+    transition: transform 210ms cubic-bezier(.22,1,.36,1), box-shadow 210ms ease, background-color 210ms ease, border-color 210ms ease, color 210ms ease, opacity 210ms ease;
+  }
+  .sales-app :is(button, [role='button'], a):not(:disabled):active { transform: scale(.975); transition-duration: 90ms; }
+  .sales-app .sales-content [data-slot='button']:not(:disabled):hover { transform: translateY(-1px); }
+
+  .sales-app .sales-content :is(input, textarea, select, [data-slot='select-trigger']) {
+    transition: border-color 220ms ease, box-shadow 220ms ease, background-color 220ms ease, transform 220ms cubic-bezier(.22,1,.36,1);
+  }
+  .sales-app .sales-content :is(input, textarea, select, [data-slot='select-trigger']):focus-within { transform: translateY(-1px); }
+
+  .sales-app .sales-content :is(article, section)[class*='rounded-'] {
+    transition: transform 280ms cubic-bezier(.22,1,.36,1), box-shadow 280ms ease, border-color 280ms ease, background-color 280ms ease;
+  }
+  .sales-app .sales-content article[role='button']:hover,
+  .sales-app .sales-content article[draggable='true']:hover { transform: translateY(-3px) scale(1.006); }
+
+  .sales-app .overview-inspiration,
+  .sales-app .actions-focus-hero,
+  .sales-app .clients-value-hero,
+  .sales-app .sales-content[data-view='agent_setup'] > div > section:first-child,
+  .sales-app .sales-content[data-view='team'] > div > section:first-of-type > article:first-child {
+    animation: sales-item-rise 520ms cubic-bezier(.22,1,.36,1) both, sales-hero-focus 7s ease-out 300ms both;
+  }
+  .sales-app .overview-inspiration button,
+  .sales-app .actions-focus-hero form,
+  .sales-app .clients-value-hero [class*='backdrop-blur'] {
+    animation: sales-item-rise 540ms cubic-bezier(.22,1,.36,1) 180ms both;
+  }
+
+  .sales-app .overview-stat > strong,
+  .sales-app .pipeline-root > section:first-of-type article [class*='text-[25px]'],
+  .sales-app .actions-root > section:nth-of-type(2) article > div:first-child > strong {
+    animation: sales-number-pop 560ms cubic-bezier(.22,1,.36,1) 190ms both;
+    display: inline-block;
+    transform-origin: left bottom;
+  }
+  .sales-app .overview-chart,
+  .sales-app :is(.pipeline-root, .clients-root, .actions-root) svg:not([class*='size-']) {
+    animation: sales-chart-reveal 900ms cubic-bezier(.22,1,.36,1) 180ms both;
+  }
+  .sales-app .overview-funnel-bar,
+  .sales-app .pipeline-root [class*='transition-[width]'],
+  .sales-app .clients-root [class*='h-full'][class*='rounded-full'],
+  .sales-app .team-root [class*='h-full'][class*='rounded-full'] {
+    animation: sales-bar-grow 820ms cubic-bezier(.22,1,.36,1) 220ms both;
+    transform-origin: left center;
+  }
+
+  .sales-app .sales-content :is(tbody, [role='rowgroup']) > * {
+    animation: sales-item-rise 400ms cubic-bezier(.22,1,.36,1) both;
+  }
+  .sales-app .sales-content :is(tbody, [role='rowgroup']) > :nth-child(1) { animation-delay: 90ms; }
+  .sales-app .sales-content :is(tbody, [role='rowgroup']) > :nth-child(2) { animation-delay: 125ms; }
+  .sales-app .sales-content :is(tbody, [role='rowgroup']) > :nth-child(3) { animation-delay: 160ms; }
+  .sales-app .sales-content :is(tbody, [role='rowgroup']) > :nth-child(4) { animation-delay: 195ms; }
+  .sales-app .sales-content :is(tbody, [role='rowgroup']) > :nth-child(n + 5) { animation-delay: 230ms; }
+
+  [data-slot='dialog-overlay'] { animation: sales-overlay-in 220ms ease-out both; }
+  [data-slot='dialog-content'] { animation: sales-dialog-arrive 360ms cubic-bezier(.22,1,.36,1) both; }
+  :is([data-slot='select-content'], [data-slot='popover-content'], [data-slot='dropdown-menu-content']) {
+    transform-origin: top center;
+    animation: sales-view-reveal 260ms cubic-bezier(.22,1,.36,1) both;
+  }
+
+  .sales-app [aria-busy='true'],
+  .sales-app :is(.animate-pulse, [data-loading='true']) {
+    background-image: linear-gradient(105deg, transparent 25%, rgba(255,255,255,.34) 42%, transparent 60%);
+    background-size: 220% 100%;
+    animation: sales-progress-shimmer 1.35s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sales-app *,
+  .sales-app *::before,
+  .sales-app *::after,
+  [data-slot='dialog-overlay'],
+  [data-slot='dialog-content'],
+  [data-slot='select-content'],
+  [data-slot='popover-content'],
+  [data-slot='dropdown-menu-content'] {
+    animation: none !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
