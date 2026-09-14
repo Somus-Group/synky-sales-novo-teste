@@ -753,6 +753,7 @@ export function StudioLab() {
                   <span className={styles.assistantMark}>
                     <Sparkles size={20} />
                   </span>
+                  <p className={styles.welcomeEyebrow}>Estúdio Synky</p>
                   <h2>
                     {project
                       ? 'Vamos criar a primeira versão.'
@@ -785,6 +786,7 @@ export function StudioLab() {
                     {!project && (
                       <button
                         type="button"
+                        className={styles.templateChoice}
                         onClick={() => setTab('context')}
                       >
                         <PanelsTopLeft size={17} />
