@@ -707,3 +707,129 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Reference-led commercial surfaces: the data stays native to Synky, while the
+   visual framing gives each workspace a clear, premium decision-making focus. */
+.sales-app .overview-inspiration,
+.sales-app .actions-focus-hero,
+.sales-app .clients-value-hero {
+  isolation: isolate;
+  background-color: #062b61;
+  background-image:
+    linear-gradient(90deg, rgba(4, 29, 69, 0.97) 0%, rgba(5, 48, 108, 0.9) 44%, rgba(6, 56, 128, 0.48) 100%),
+    url('/dashboard/architecture-hero-v2.png') !important;
+  background-position: center, right center;
+  background-size: cover;
+}
+.sales-app .overview-inspiration::after,
+.sales-app .actions-focus-hero::after,
+.sales-app .clients-value-hero::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: '';
+  background: linear-gradient(115deg, transparent 0%, transparent 55%, rgba(17, 143, 255, 0.18) 100%);
+  pointer-events: none;
+}
+.sales-app .overview-hero {
+  border-color: rgba(9, 105, 218, 0.11);
+  background: linear-gradient(120deg, #fff 0%, #f8fbff 58%, #edf5ff 100%);
+}
+.sales-app .overview-stat,
+.sales-app .pipeline-root > section:first-of-type > article,
+.sales-app .actions-root > section:nth-of-type(2) > article {
+  border: 1px solid rgba(52, 91, 145, 0.08);
+  box-shadow: 0 14px 32px rgba(30, 68, 124, 0.08);
+}
+.sales-app .pipeline-root > section:first-of-type > article {
+  position: relative;
+  overflow: hidden;
+}
+.sales-app .pipeline-root > section:first-of-type > article::after {
+  position: absolute;
+  right: -22px;
+  bottom: -26px;
+  width: 108px;
+  height: 76px;
+  border-radius: 100% 0 0;
+  content: '';
+  background: currentColor;
+  opacity: 0.07;
+}
+.sales-app .pipeline-root > section:last-child > div > section {
+  box-shadow: 0 12px 30px rgba(30, 68, 124, 0.06);
+}
+.sales-app .clients-root > .grid > aside > section,
+.sales-app .clients-root > .grid > section,
+.sales-app .actions-root > section:last-child {
+  box-shadow: 0 16px 38px rgba(25, 62, 111, 0.08);
+}
+.sales-app .clients-value-hero .sales-client-metric {
+  position: relative;
+}
+.sales-app .clients-value-hero .sales-client-metric + .sales-client-metric::before {
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  left: 0;
+  width: 1px;
+  content: '';
+  background: rgba(255, 255, 255, 0.18);
+}
+.sales-app .pipeline-root [draggable='true'],
+.sales-app .actions-root [draggable='true'],
+.sales-app .clients-root [role='button'] {
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .sales-app .clients-root [role='button']:hover,
+  .sales-app .pipeline-root [draggable='true']:hover,
+  .sales-app .actions-root [draggable='true']:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px rgba(31, 70, 126, 0.12);
+  }
+}
+.sales-app.theme-dark .overview-inspiration,
+.sales-app.theme-dark .actions-focus-hero,
+.sales-app.theme-dark .clients-value-hero {
+  background-image:
+    linear-gradient(90deg, rgba(13, 24, 40, 0.98) 0%, rgba(15, 39, 72, 0.91) 50%, rgba(20, 58, 110, 0.62) 100%),
+    url('/dashboard/architecture-hero-v2.png') !important;
+}
+.sales-app .sales-content[data-view='agent_setup'] > div > section:first-child {
+  background-color: #062b61 !important;
+  background-image:
+    linear-gradient(90deg, rgba(4, 27, 64, 0.97) 0%, rgba(6, 53, 121, 0.9) 54%, rgba(11, 111, 232, 0.5) 100%),
+    url('/dashboard/architecture-hero-v2.png') !important;
+  background-position: center, right center;
+  background-size: cover;
+}
+.sales-app.theme-dark .sales-content[data-view='agent_setup'] > div > section:first-child {
+  background-image:
+    linear-gradient(90deg, rgba(13, 24, 40, 0.98) 0%, rgba(15, 39, 72, 0.91) 54%, rgba(20, 58, 110, 0.62) 100%),
+    url('/dashboard/architecture-hero-v2.png') !important;
+}
+@media (max-width: 390px) {
+  .sales-app .clients-value-hero .grid.grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+  .sales-app .clients-value-hero .sales-client-metric {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block: 10px;
+    text-align: left;
+  }
+  .sales-app .clients-value-hero .sales-client-metric + .sales-client-metric::before {
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
+    width: auto;
+    height: 1px;
+  }
+  .sales-app .clients-value-hero .sales-client-metric span {
+    order: -1;
+    margin-top: 0;
+  }
+}

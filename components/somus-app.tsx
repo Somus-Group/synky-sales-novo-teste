@@ -519,7 +519,7 @@ function Overview({ name, opportunities, proposals, pipelineValue, onPipeline, o
       <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full bg-[#EAF2FF] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#0757C8]"><span className="grid size-5 place-items-center rounded-full bg-[#0B6FE8] text-white"><LayoutDashboard className="size-3" /></span>Painel comercial</div>
-          <h1 className="mt-4 text-[30px] font-semibold leading-tight tracking-[-0.04em] text-[#11244A] sm:text-[36px]">Boa tarde, <span className="text-[#0B6FE8]">{name}</span></h1>
+          <h1 className="mt-4 max-w-3xl text-[30px] font-semibold leading-tight tracking-[-0.04em] text-[#11244A] sm:text-[36px]">Boa tarde, <span className="text-[#0B6FE8]">{name}</span>. Vamos construir <span className="text-[#0B6FE8]">mais resultados</span> hoje?</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#60708B]">Tudo o que precisa acompanhar do seu comercial, em um só lugar.</p>
         </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -577,7 +577,7 @@ function Pipeline({ opportunities, labels, companies, activeCompanyId, companyNa
   const weights: Record<Stage, number> = { 'Novo contato': 0.15, Diagnóstico: 0.35, 'Proposta enviada': 0.65, Negociação: 0.85 };
   const weightedForecast = filtered.reduce((sum, item) => sum + item.value * weights[item.stage], 0);
 
-  return <>
+  return <div className="pipeline-root">
     <PageTitle kicker={`CRM inteligente · ${companyName}`} title={<span className="inline-flex items-center gap-2">{labels.title}<LabelEditButton label="Editar nome do pipeline" onClick={() => onEditLabel('title', 'Nome do pipeline')} /></span>} description={labels.description} actions={<><div className="flex w-full min-w-0 items-center gap-2 sm:w-auto"><div className="min-w-0 flex-1 sm:w-[220px]"><span className="mb-1 block pl-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#6E87A3]">Empresa</span><div className="flex items-center gap-2"><Building2 className="size-4 shrink-0 text-[#0B6FE8]" /><AppSelect value={activeCompanyId} onValueChange={onSelectCompany} ariaLabel="Empresa exibida no pipeline" className="min-w-0 flex-1" options={companies.map((company) => ({ value: company.id, label: company.name }))} /></div></div><Button onClick={onCompanies} variant="outline" className="mt-4 shrink-0 rounded-xl border-[#0B6FE8]/20 bg-white px-3 text-[#0B6FE8] hover:bg-[#F2F7FF]" aria-label="Gerenciar empresas"><Pencil className="size-3.5" /><span className="hidden sm:inline">Gerenciar</span></Button></div><Button onClick={() => onNew()} className="flex-1 rounded-xl bg-[#0B6FE8] px-4 text-white shadow-[0_8px_18px_rgba(11,111,232,0.18)] hover:bg-[#0757C8] sm:flex-none"><Plus /> {labels.newOpportunity}</Button><LabelEditButton label="Editar nome do botão principal" onClick={() => onEditLabel('newOpportunity', 'Nome do botão principal')} /></>} />
     <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <PipelineMetric color="violet" label={labels.metrics.pipeline} value={pipelineValue} format={money.format} detail={`${filtered.length} oportunidades`} onEdit={() => onEditLabel('metrics.pipeline', 'Nome do indicador')} />
@@ -607,7 +607,7 @@ function Pipeline({ opportunities, labels, companies, activeCompanyId, companyNa
         </article>)}<button onClick={() => onNew(stage)} className="flex w-full items-center justify-center gap-1.5 rounded-[16px] border border-dashed border-black/10 py-3 text-[10px] font-medium text-[#8E8E93] hover:border-black/20 hover:bg-white hover:text-black"><Plus className="size-3.5" />Adicionar em {labels.stages[stage]}</button></div>
       </section>;
     })}</div></div>
-  </>;
+  </div>;
 }
 
 function LabelEditButton({ label, onClick }: { label: string; onClick: () => void }) {
@@ -767,10 +767,10 @@ function Actions({ tasks, onNew, onQuickAdd, onEdit, onMove }: { tasks: ActionTa
     if (saved) setQuickTitle('');
   }
 
-  return <div className="min-h-[calc(100vh-148px)]">
+  return <div className="actions-root min-h-[calc(100vh-148px)]">
     <PageTitle kicker="Execução organizada" title="Ações" description="Transforme próximos passos em tarefas claras. Acompanhe por lista ou mova pelo Kanban." actions={<Button onClick={() => onNew()} className="rounded-xl bg-[#0969DA] px-4 text-white shadow-[0_10px_24px_rgba(9,105,218,0.22)] hover:bg-[#075bbd]"><Plus /> Nova ação</Button>} />
 
-    <section className="relative mb-5 overflow-hidden rounded-[30px] bg-[linear-gradient(118deg,#073c9d_0%,#0875ec_58%,#2b9cfb_100%)] p-5 text-white shadow-[0_18px_55px_rgba(9,105,218,0.24)] md:p-7">
+    <section className="actions-focus-hero relative mb-5 overflow-hidden rounded-[30px] bg-[linear-gradient(118deg,#073c9d_0%,#0875ec_58%,#2b9cfb_100%)] p-5 text-white shadow-[0_18px_55px_rgba(9,105,218,0.24)] md:p-7">
       <div className="absolute -right-24 -top-28 size-72 rounded-full border border-white/20" /><div className="absolute right-8 top-[-90px] size-64 rounded-full border-[16px] border-white/[0.08]" /><div className="absolute -bottom-32 right-[22%] size-72 rounded-full bg-[#9cddff]/25 blur-3xl" />
       <div className="relative grid gap-5 lg:grid-cols-[0.72fr_1.28fr] lg:items-end"><div><span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.12] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/85"><CheckCircle2 className="size-3" />Foco do dia</span><strong className="mt-5 block text-[clamp(28px,4vw,48px)] font-semibold leading-none tracking-[-0.05em]">{todayCount || openTasks.length} {todayCount === 1 ? 'ação importante' : 'ações importantes'}</strong><p className="mt-3 text-[10px] leading-5 text-white/80">Cada ação concluída mantém o comercial em movimento.</p></div>
         <form onSubmit={submitQuick} className="flex flex-col gap-2 rounded-[20px] border border-white/20 bg-white/[0.15] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur sm:flex-row"><div className="relative min-w-0 flex-1"><Plus className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/65" /><Input value={quickTitle} onChange={(event) => setQuickTitle(event.target.value)} placeholder="Escreva uma ação e pressione Enter" aria-label="Adicionar ação rápida" className="h-12 rounded-[15px] border-white/15 bg-[#063c8e]/30 pl-10 text-white shadow-none placeholder:text-white/60 focus-visible:ring-white/25" /></div><Button disabled={quickSaving || !quickTitle.trim()} type="submit" className="h-12 rounded-[15px] bg-white px-5 text-[#075bbd] hover:bg-[#eff7ff]">{quickSaving ? 'Adicionando...' : 'Adicionar para hoje'}</Button></form></div>
@@ -828,10 +828,10 @@ function Clients({ clients, onNew, onEdit }: { clients: Client[]; onNew: () => v
   const topClients = [...clients].sort((a, b) => b.contractValue - a.contractValue).slice(0, 3);
   const statusSummary = (['Ativo', 'Lead', 'Inativo', 'Arquivado'] as Client['status'][]).map((item) => ({ label: item, count: clients.filter((client) => client.status === item).length }));
 
-  return <div className="min-h-[calc(100vh-148px)]">
+  return <div className="clients-root min-h-[calc(100vh-148px)]">
     <PageTitle kicker="Relacionamento" title="Clientes" description="Uma visão completa da carteira, dos contratos e de cada relacionamento comercial." actions={<Button onClick={onNew} className="rounded-xl bg-[#0969DA] px-4 text-white shadow-[0_10px_24px_rgba(9,105,218,0.22)] hover:bg-[#075bbd]"><Plus /> Novo cliente</Button>} />
 
-    <section className="relative mb-5 overflow-hidden rounded-[30px] bg-[linear-gradient(115deg,#0874ed_0%,#0759bd_48%,#062d71_100%)] p-6 text-white shadow-[0_18px_55px_rgba(9,87,190,0.22)] md:p-8">
+    <section className="clients-value-hero relative mb-5 overflow-hidden rounded-[30px] bg-[linear-gradient(115deg,#0874ed_0%,#0759bd_48%,#062d71_100%)] p-6 text-white shadow-[0_18px_55px_rgba(9,87,190,0.22)] md:p-8">
       <div className="absolute -right-20 -top-28 size-80 rounded-full border border-white/15" />
       <div className="absolute right-10 top-[-86px] size-72 rounded-full border-[18px] border-white/[0.07]" />
       <div className="absolute -bottom-32 right-[18%] size-72 rounded-full bg-[#53b8ff]/20 blur-3xl" />
