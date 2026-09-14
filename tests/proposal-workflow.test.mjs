@@ -122,7 +122,7 @@ test('layout: exige ambas aprovações e salva exatamente o texto aprovado', asy
   assert.deepEqual(JSON.parse(values[10]), { ...copy, budget_pending: true });
 });
 test('one page: preserva todo o texto aprovado nos temas anteriores e na nova coleção', () => {
-  const collection = load('lib/proposal-collection.ts');
+  const collection = load('lib/proposal-collection.ts', { './proposal-editions': load('lib/proposal-editions.ts') });
   const collectionComponents = load('components/proposal-collection.tsx', {
     './proposal-collection.module.css': {},
   });
@@ -146,11 +146,11 @@ test('one page: preserva todo o texto aprovado nos temas anteriores e na nova co
   }
 });
 
-test('coleção: oito propostas completas, duas por área, com download e prévia coerentes', () => {
-  const collection = load('lib/proposal-collection.ts');
-  assert.equal(collection.collectionTemplates.length, 8);
+test('coleção: quarenta propostas completas, dez por área, com download e prévia coerentes', () => {
+  const collection = load('lib/proposal-collection.ts', { './proposal-editions': load('lib/proposal-editions.ts') });
+  assert.equal(collection.collectionTemplates.length, 40);
   for (const niche of ['Consultoria', 'Arquitetura', 'Marketing', 'Design']) {
-    assert.equal(collection.collectionTemplates.filter(item => item.niche === niche).length, 2);
+    assert.equal(collection.collectionTemplates.filter(item => item.niche === niche).length, 10);
   }
   for (const template of collection.collectionTemplates) {
     const example = collection.createCollectionExample(template.value);
@@ -164,4 +164,62 @@ test('coleção: oito propostas completas, duas por área, com download e prévi
     assert.equal(collection.getCollectionDesign(template.id), collection.getCollectionDesign(template.value));
   }
   assert.equal(collection.createCollectionExample('não existe'), undefined);
+});
+
+const imports = load('lib/imported-template.ts');
+const imported = { id: '11111111-1111-4111-8111-111111111111', name: 'Modelo do cliente', niche: 'Design', template: 'Design · Beyond / Brand design', content: copy };
+test('importação: limita conteúdo e remove propriedades não autorizadas', () => {
+  const clean = imports.normalizeImportedTemplate({ ...imported, content: { ...copy, hero_image_url: 'javascript:alert(1)', budget_pending: false } });
+  assert.equal(clean.content.hero_image_url, undefined);
+  assert.equal(clean.content.budget_pending, true);
+  assert.equal(imports.normalizeImportedTemplate({ ...imported, niche: 'Inválida' }), null);
+  assert.equal(imports.normalizeImportedTemplate({ ...imported, content: { ...copy, slides: [] } }), null);
+  assert.equal(imports.normalizeImportedTemplate({ ...imported, content: { ...copy, slides: [{ ...copy.slides[0], body: 'x'.repeat(18001) }] } }), null);
+});
+test('importação: rejeita upload inválido, IA ausente e mantém erros recuperáveis', async () => {
+  const originalFetch = globalThis.fetch;
+  let signedIn = true;
+  const env = {};
+  const mocks = {
+    'cloudflare:workers': { env },
+    '@/app/chatgpt-auth': { getChatGPTUser: async () => signedIn ? { userId: 'test' } : null },
+    '@/db/workspace': { getWorkspaceForUser: async () => 'workspace-a' },
+    '@/lib/imported-template': imports,
+    '@/lib/proposal-collection': { collectionTemplates: [{ niche: 'Design', value: imported.template }] },
+  };
+  const { POST } = load('app/api/templates/import/route.ts', mocks);
+  const pdf = () => new Request('http://test/api/templates/import', { method: 'POST', body: '%PDF-1.4\nexample' });
+  try {
+    signedIn = false; assert.equal((await POST(pdf())).status, 401);
+    signedIn = true; assert.equal((await POST(pdf())).status, 503);
+    env.OPENAI_API_KEY = 'test-only';
+    assert.equal((await POST(new Request('http://test', { method: 'POST', body: 'not a PDF' }))).status, 400);
+    assert.equal((await POST(new Request('http://test', { method: 'POST', headers: { 'content-length': String(9 * 1024 * 1024) }, body: '%PDF-' }))).status, 413);
+    globalThis.fetch = async (_url, options) => {
+      const sent = JSON.parse(options.body);
+      assert.equal(sent.store, false); assert.match(sent.input[0].content[0].file_data, /^data:application\/pdf;base64,/);
+      return Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: JSON.stringify({ ...copy, readable: true, warning: 'Revise a tabela', name: imported.name, niche: 'Design' }) }] }] });
+    };
+    const success = await POST(pdf()); assert.equal(success.status, 200);
+    assert.deepEqual((await success.json()).template.content.slides, copy.slides);
+    globalThis.fetch = async () => Response.json({ status: 'incomplete' }); assert.equal((await POST(pdf())).status, 422);
+    globalThis.fetch = async () => new Response('', { status: 429 }); assert.equal((await POST(pdf())).status, 502);
+  } finally { globalThis.fetch = originalFetch; }
+});
+test('templates salvos: isolamento de empresa em leitura e atualização', async () => {
+  let signedIn = true; let owner = 'workspace-b'; const queries = [];
+  const db = { prepare(sql) { return { bind(...args) { queries.push({ sql, args }); return { first: async () => ({ workspace: owner }), all: async () => ({ results: [] }), run: async () => ({}) }; } }; } };
+  const { GET, POST } = load('app/api/templates/route.ts', {
+    '@/db': { getD1: () => db }, '@/app/chatgpt-auth': { getChatGPTUser: async () => signedIn ? { userId: 'test' } : null },
+    '@/db/workspace': { getWorkspaceForUser: async () => 'workspace-a' }, '@/lib/imported-template': imports,
+    '@/lib/proposal-collection': { getCollectionDesign: () => ({}) },
+  });
+  signedIn = false; assert.equal((await GET()).status, 401); assert.equal((await POST(request(imported))).status, 401);
+  signedIn = true; assert.equal((await GET()).status, 200);
+  assert.match(queries[0].sql, /WHERE workspace_id = \?/); assert.deepEqual(queries[0].args, ['workspace-a']);
+  assert.equal((await POST(request(imported))).status, 404);
+  assert.ok(!queries.some(q => q.sql.startsWith('INSERT')));
+  owner = 'workspace-a'; assert.equal((await POST(request(imported))).status, 200);
+  const insert = queries.find(q => q.sql.startsWith('INSERT'));
+  assert.equal(insert.args[1], 'workspace-a'); assert.match(insert.sql, /WHERE imported_templates.workspace_id = excluded.workspace_id/);
 });

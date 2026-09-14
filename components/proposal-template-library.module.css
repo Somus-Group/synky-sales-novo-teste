@@ -1,9 +1,9 @@
 .library { color: var(--foreground); }
-.intro { display: flex; gap: 32px; align-items: center; justify-content: space-between; padding: 12px 0 30px; }
+.intro { display: flex; gap: 32px; align-items: center; justify-content: space-between; padding: 4px 0 18px; }
 .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; color: var(--muted-foreground); }
 .intro h2 { font-size: clamp(24px, 2.6vw, 36px); max-width: 650px; margin: 14px 0 10px; line-height: 1.2; letter-spacing: -.035em; }
 .intro p { max-width: 650px; font-size: 15px; line-height: 1.7; color: var(--muted-foreground); }
-.count { min-width: 110px; font-size: 56px; font-weight: 500; line-height: 1; letter-spacing: -.05em; text-align: right; }
+.count { min-width: 110px; font-size: 36px; font-weight: 500; line-height: 1; letter-spacing: -.05em; text-align: right; }
 .count small { display: block; font-size: 12px; font-weight: 400; letter-spacing: 0; margin-top: 10px; color: var(--muted-foreground); }
 .filterbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0; margin-bottom: 12px; border-top: 1px solid var(--border); }
 .filterbar > span { font-size: 12px; white-space: nowrap; color: var(--muted-foreground); }

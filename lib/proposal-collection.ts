@@ -1,7 +1,10 @@
 import type { ArtworkProposal } from '@/components/proposal-artwork';
 import type { ProposalTemplateDefinition } from './proposal-templates';
+import { newEditions, type CollectionDesign } from './proposal-editions';
+export type { CollectionDesign } from './proposal-editions';
 
-export const collectionDesigns = {
+export const collectionDesigns: Record<string, CollectionDesign> = {
+  ...newEditions,
   'consultoria-direcao': {
     name: 'Direção estratégica', niche: 'Consultoria', theme: 'noir', layout: 'executive',
     colors: ['#142A3C', '#A6C4D1', '#F5F8FA'], brand: 'NORTE / CONSULTORIA',
@@ -84,7 +87,6 @@ export const collectionDesigns = {
   },
 } as const;
 
-export type CollectionDesign = typeof collectionDesigns[keyof typeof collectionDesigns];
 export function getCollectionDesign(value?: string): CollectionDesign | undefined {
   return Object.entries(collectionDesigns).find(([id, item]) => value === id || value === `${item.niche} · ${item.name}`)?.[1];
 }
