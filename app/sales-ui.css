@@ -719,7 +719,8 @@
     linear-gradient(90deg, rgba(4, 29, 69, 0.97) 0%, rgba(5, 48, 108, 0.9) 44%, rgba(6, 56, 128, 0.48) 100%),
     url('/dashboard/architecture-hero-v2.png') !important;
   background-position: center, right center;
-  background-size: cover;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover;
 }
 .sales-app .overview-inspiration::after,
 .sales-app .actions-focus-hero::after,
