@@ -121,11 +121,17 @@ test('layout: exige ambas aprovações e salva exatamente o texto aprovado', asy
   assert.deepEqual(JSON.parse(values[9]), brief);
   assert.deepEqual(JSON.parse(values[10]), { ...copy, budget_pending: true });
 });
-test('one page: nenhuma seção, parágrafo ou item aprovado desaparece nos três temas', () => {
+test('one page: preserva todo o texto aprovado nos temas anteriores e na nova coleção', () => {
+  const collection = load('lib/proposal-collection.ts');
+  const collectionComponents = load('components/proposal-collection.tsx', {
+    './proposal-collection.module.css': {},
+  });
   const { ProposalOnePage } = load('components/proposal-onepage.tsx', {
     '@/components/proposal-artwork': { resolveProposalTemplate: template => template },
+    './proposal-collection': collectionComponents,
+    '@/lib/proposal-collection': collection,
   });
-  for (const template of ['editorial', 'noir', 'prisma']) {
+  for (const template of ['editorial', 'noir', 'prisma', ...collection.collectionTemplates.map(item => item.value)]) {
     const html = renderToStaticMarkup(React.createElement(ProposalOnePage, { proposal: {
       code: 'TEST-001', client: 'Cliente teste', project: copy.title, template,
       content: { ...copy, budget_pending: true },
@@ -138,4 +144,24 @@ test('one page: nenhuma seção, parágrafo ou item aprovado desaparece nos trê
     assert.ok(html.includes('A confirmar'));
     assert.ok(!html.includes('R$'));
   }
+});
+
+test('coleção: oito propostas completas, duas por área, com download e prévia coerentes', () => {
+  const collection = load('lib/proposal-collection.ts');
+  assert.equal(collection.collectionTemplates.length, 8);
+  for (const niche of ['Consultoria', 'Arquitetura', 'Marketing', 'Design']) {
+    assert.equal(collection.collectionTemplates.filter(item => item.niche === niche).length, 2);
+  }
+  for (const template of collection.collectionTemplates) {
+    const example = collection.createCollectionExample(template.value);
+    const markdown = collection.collectionMarkdown(template.value);
+    assert.equal(example.content.slides.length, 6);
+    assert.ok(example.value > 0);
+    for (const section of example.content.slides) {
+      assert.ok(markdown.includes(section.title));
+      for (const bullet of section.bullets) assert.ok(markdown.includes(bullet));
+    }
+    assert.equal(collection.getCollectionDesign(template.id), collection.getCollectionDesign(template.value));
+  }
+  assert.equal(collection.createCollectionExample('não existe'), undefined);
 });

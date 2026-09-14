@@ -1,3 +1,5 @@
+import { collectionTemplates } from './proposal-collection';
+
 export type ProposalTemplateTheme = 'editorial' | 'noir' | 'prisma';
 export type ProposalNiche = 'Consultoria' | 'Arquitetura' | 'Marketing' | 'Design';
 
@@ -16,6 +18,7 @@ export type ProposalTemplateDefinition = {
 export const proposalNiches: ProposalNiche[] = ['Consultoria', 'Arquitetura', 'Marketing', 'Design'];
 
 export const proposalTemplates: ProposalTemplateDefinition[] = [
+  ...collectionTemplates,
   { id: 'strategy-board', value: 'Consultoria · Strategy Board', name: 'Strategy Board', niche: 'Consultoria', description: 'Diagnóstico executivo e tese estratégica.', theme: 'noir', swatches: ['#101113', '#D7FF38', '#F0EEE8'], focus: 'clareza executiva, diagnóstico e decisão', structure: 'tese central, cenário, diagnóstico, prioridades, plano estratégico, governança, cronograma, investimento e decisão' },
   { id: 'transformation-roadmap', value: 'Consultoria · Transformation Roadmap', name: 'Transformation Roadmap', niche: 'Consultoria', description: 'Mudança organizacional em etapas claras.', theme: 'prisma', swatches: ['#3434D8', '#FF6B4A', '#E9FF70'], focus: 'transformação, marcos e evolução mensurável', structure: 'ambição, estado atual, lacunas, visão futura, frentes de transformação, roadmap, indicadores, investimento e mobilização' },
   { id: 'executive-advisory', value: 'Consultoria · Executive Advisory', name: 'Executive Advisory', niche: 'Consultoria', description: 'Assessoria premium para alta liderança.', theme: 'editorial', swatches: ['#2F241E', '#B86538', '#E9DED0'], focus: 'confiança, senioridade e aconselhamento próximo', structure: 'contexto executivo, questão crítica, ponto de vista, agenda de trabalho, rituais, entregáveis, confidencialidade, investimento e início' },
@@ -43,5 +46,5 @@ export const proposalTemplates: ProposalTemplateDefinition[] = [
 
 export function getProposalTemplate(value?: string) {
   const normalized = (value || '').toLowerCase();
-  return proposalTemplates.find((template) => template.id === normalized || template.value.toLowerCase() === normalized) || proposalTemplates[5];
+  return proposalTemplates.find((template) => template.id === normalized || template.value.toLowerCase() === normalized) || proposalTemplates.find((template) => template.id === 'atelier-editorial')!;
 }

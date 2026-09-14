@@ -1,6 +1,8 @@
 'use client';
 
 import { Check, Loader2 } from 'lucide-react';
+import { CollectionCover } from './proposal-collection';
+import { createCollectionExample, getCollectionDesign } from '@/lib/proposal-collection';
 import { getProposalTemplate, proposalTemplates, type ProposalTemplateTheme } from '@/lib/proposal-templates';
 
 export type ProposalTemplateId = ProposalTemplateTheme;
@@ -40,6 +42,8 @@ export function resolveProposalTemplate(template?: string): ProposalTemplateId {
 }
 
 export function ProposalArtwork({ index, proposal, accepted = false, accepting = false, onAccept }: { index: number; proposal: ArtworkProposal; accepted?: boolean; accepting?: boolean; onAccept?: () => void }) {
+  const design = getCollectionDesign(proposal.template);
+  if (design && index === 0) return <CollectionCover compact design={design} proposal={proposal} />;
   const template = resolveProposalTemplate(proposal.template);
   const slide = template === 'noir'
     ? <NoirSlide index={index} proposal={proposal} accepted={accepted} accepting={accepting} onAccept={onAccept} />
@@ -50,6 +54,9 @@ export function ProposalArtwork({ index, proposal, accepted = false, accepting =
 }
 
 export function ProposalThumbnail({ template, index = 0 }: { template?: string; index?: number }) {
+  const design = getCollectionDesign(template);
+  const example = createCollectionExample(template || '');
+  if (design && example) return <CollectionCover compact design={design} proposal={example} />;
   const resolved = resolveProposalTemplate(template);
   const swatches = getProposalTemplate(template).swatches;
   if (resolved === 'noir') return <div className="relative h-full w-full overflow-hidden" style={{ backgroundColor: swatches[0] }}><span className="absolute left-[9%] top-[14%] h-[8%] w-[22%]" style={{ backgroundColor: swatches[1] }} /><span className="absolute bottom-[18%] left-[9%] h-[11%] w-[72%] bg-white" /><span className="absolute bottom-[8%] left-[9%] h-[5%] w-[35%] bg-white/30" /><i className="absolute -right-[18%] top-[10%] size-[68%] rounded-full border" style={{ borderColor: swatches[1] }} /></div>;

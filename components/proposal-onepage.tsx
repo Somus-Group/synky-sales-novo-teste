@@ -1,6 +1,8 @@
 'use client';
 
 import { Fragment, type ReactNode } from 'react';
+import { CollectionProposal } from './proposal-collection';
+import { getCollectionDesign } from '@/lib/proposal-collection';
 import { ArrowDown, Check, Loader2 } from 'lucide-react';
 import { resolveProposalTemplate, type ArtworkProposal, type ProposalTemplateId, type ProposalSlideContent } from '@/components/proposal-artwork';
 
@@ -19,6 +21,8 @@ const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL
 export function ProposalOnePage({ proposal, accepted = false, accepting = false, onAccept, preview = false, actions, idPrefix = 'proposal' }: OnePageProps) {
   const theme = resolveProposalTemplate(proposal.template);
   const slides = proposal.content?.slides?.length ? proposal.content.slides : createFallbackProposalSections(proposal);
+  const design = getCollectionDesign(proposal.template);
+  if (design) return <CollectionProposal {...{ design, proposal, slides, accepted, accepting, onAccept, actions, idPrefix }} />;
   const brand = proposal.content?.brand_name || 'SOMUS';
   const logoUrl = proposal.content?.logo_url;
   const primaryColor = proposal.content?.primary_color;
