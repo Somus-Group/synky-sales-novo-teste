@@ -1,4 +1,4 @@
-import { StudioError, referenceUrl, type StudioMessage } from '@/lib/studio';
+import { StudioError, referenceUrl, type StudioMessage } from "@/lib/studio";
 
 export type StudioDesign = {
   summary: string;
@@ -19,45 +19,49 @@ export type StudioDesign = {
   missing: string[];
 };
 
-const strings = { type: 'array', items: { type: 'string' } };
+const strings = { type: "array", items: { type: "string", maxLength: 2000 } };
+const requirementId = { type: "string", pattern: "^r[\\w-]{1,30}$" };
 const object = (properties: Record<string, unknown>) => ({
-  type: 'object',
+  type: "object",
   additionalProperties: false,
   required: Object.keys(properties),
   properties,
 });
 export const studioDesignSchema = object({
-  summary: { type: 'string' },
-  client: { type: 'string' },
+  summary: { type: "string" },
+  client: { type: "string" },
   requirements: {
-    type: 'array',
+    type: "array",
+    maxItems: 60,
     items: object({
-      id: { type: 'string' },
-      content: { type: 'string' },
-      evidence: { type: 'string' },
+      id: requirementId,
+      content: { type: "string", minLength: 1, maxLength: 2400 },
+      evidence: { type: "string" },
     }),
   },
   sections: {
-    type: 'array',
+    type: "array",
+    minItems: 1,
+    maxItems: 14,
     items: object({
-      id: { type: 'string' },
-      title: { type: 'string' },
-      composition: { type: 'string' },
-      requirements: strings,
+      id: { type: "string", pattern: "^[a-z][\\w-]{0,60}$" },
+      title: { type: "string" },
+      composition: { type: "string" },
+      requirements: { type: "array", items: requirementId, maxItems: 60 },
     }),
   },
   visual: object({
-    direction: { type: 'string' },
-    palette: strings,
-    typography: { type: 'string' },
-    referenceTraits: strings,
+    direction: { type: "string" },
+    palette: { ...strings, maxItems: 12 },
+    typography: { type: "string" },
+    referenceTraits: { ...strings, maxItems: 12 },
   }),
-  missing: strings,
+  missing: { ...strings, maxItems: 12 },
 });
 export const studioAuditSchema = object({
-  issues: strings,
-  covered: strings,
-  referenceAssessment: { type: 'string' },
+  issues: { ...strings, maxItems: 10 },
+  covered: { type: "array", items: requirementId, maxItems: 60 },
+  referenceAssessment: { type: "string" },
 });
 
 export const studioDesignInstructions = `Prepare a especificação de uma proposta-site comercial em português do Brasil. Seu trabalho é preservar os fatos e definir um design específico antes da construção.
@@ -75,11 +79,11 @@ Inspecione se as composições são distintas e funcionais, se as classes possue
 issues contém somente falhas concretas e correções acionáveis, até 10. Não inclua preferências subjetivas, elogios ou informações que realmente não foram fornecidas. referenceAssessment resume brevemente quais características da referência foram aproveitadas, ou fica vazio sem referência.`;
 
 export function parseStudioDesign(value: string): StudioDesign {
-  const fail = () =>
+  const fail = (reason = "Formato inválido na organização do conteúdo.") =>
     new StudioError(
-      'Não foi possível organizar todos os requisitos da proposta. Tente novamente.',
+      "Não foi possível organizar todos os requisitos da proposta. " + reason,
       502,
-      'design_incomplete',
+      "design_incomplete",
     );
   let p: StudioDesign;
   try {
@@ -90,21 +94,21 @@ export function parseStudioDesign(value: string): StudioDesign {
   const list = (items: unknown, max: number): items is string[] =>
     Array.isArray(items) &&
     items.length <= max &&
-    items.every((item) => typeof item === 'string' && item.length <= 2000);
+    items.every((item) => typeof item === "string" && item.length <= 2000);
   if (
     !p ||
-    typeof p.summary !== 'string' ||
-    typeof p.client !== 'string' ||
+    typeof p.summary !== "string" ||
+    typeof p.client !== "string" ||
     !Array.isArray(p.requirements) ||
     p.requirements.length > 60 ||
     p.requirements.some(
       (r) =>
         !r ||
         !/^r[\w-]{1,30}$/.test(r.id) ||
-        typeof r.content !== 'string' ||
+        typeof r.content !== "string" ||
         !r.content.trim() ||
         r.content.length > 2400 ||
-        typeof r.evidence !== 'string',
+        typeof r.evidence !== "string",
     ) ||
     !Array.isArray(p.sections) ||
     !p.sections.length ||
@@ -113,13 +117,13 @@ export function parseStudioDesign(value: string): StudioDesign {
       (s) =>
         !s ||
         !/^[a-z][\w-]{0,60}$/.test(s.id) ||
-        typeof s.title !== 'string' ||
-        typeof s.composition !== 'string' ||
+        typeof s.title !== "string" ||
+        typeof s.composition !== "string" ||
         !list(s.requirements, 60),
     ) ||
     !p.visual ||
-    typeof p.visual.direction !== 'string' ||
-    typeof p.visual.typography !== 'string' ||
+    typeof p.visual.direction !== "string" ||
+    typeof p.visual.typography !== "string" ||
     !list(p.visual.palette, 12) ||
     !list(p.visual.referenceTraits, 12) ||
     !list(p.missing, 12)
@@ -134,7 +138,9 @@ export function parseStudioDesign(value: string): StudioDesign {
       (r) => !p.sections.some((s) => s.requirements.includes(r.id)),
     )
   )
-    throw fail();
+    throw fail(
+      "Há IDs duplicados, desconhecidos ou requisitos sem uma seção correspondente.",
+    );
   return p;
 }
 
@@ -143,18 +149,18 @@ export function parseStudioAudit(value: string, design?: StudioDesign) {
   try {
     p = JSON.parse(value);
   } catch {
-    throw new StudioError('A revisão da proposta não foi concluída.', 502);
+    throw new StudioError("A revisão da proposta não foi concluída.", 502);
   }
   if (
     !p ||
     !Array.isArray(p.issues) ||
     !Array.isArray(p.covered) ||
     p.issues.length > 10 ||
-    p.issues.some((x) => typeof x !== 'string' || x.length > 2000) ||
-    p.covered.some((x) => typeof x !== 'string') ||
-    typeof p.referenceAssessment !== 'string'
+    p.issues.some((x) => typeof x !== "string" || x.length > 2000) ||
+    p.covered.some((x) => typeof x !== "string") ||
+    typeof p.referenceAssessment !== "string"
   )
-    throw new StudioError('A revisão da proposta não foi concluída.', 502);
+    throw new StudioError("A revisão da proposta não foi concluída.", 502);
   const covered = [...new Set(p.covered)].filter((id) =>
     design?.requirements.some((r) => r.id === id),
   );
@@ -173,23 +179,23 @@ export function parseStudioAudit(value: string, design?: StudioDesign) {
 }
 
 // A URL in the current message wins over a saved reference. Ignore contact links.
-export function studioMessageReference(message: string, saved = '') {
+export function studioMessageReference(message: string, saved = "") {
   const matches = [...message.matchAll(/https?:\/\/[^\s<>"\u201c\u201d]+/gi)];
   const candidates = matches
     .map((match) => {
-      const raw = match[0].replace(/[.,;!?)\]}]+$/, '');
+      const raw = match[0].replace(/[.,;!?)\]}]+$/, "");
       const prefix = message.slice(Math.max(0, match.index! - 90), match.index);
       if (
         /\b(?:contato|e-?mail|whatsapp|instagram|site (?:do cliente|da empresa))\s*:\s*$/i.test(
           prefix,
         )
       )
-        return '';
+        return "";
       const explicit =
         /refer[eê]ncia|modelo|inspira|siga|seguir|base|link|visual|igual/i.test(
           prefix,
         );
-      if (!explicit && matches.length > 1) return '';
+      if (!explicit && matches.length > 1) return "";
       return referenceUrl(raw);
     })
     .filter(Boolean);
@@ -198,7 +204,7 @@ export function studioMessageReference(message: string, saved = '') {
 
 export function studioConversation(messages: StudioMessage[]) {
   const recent = messages.slice(-10);
-  const first = messages.find((m) => m.role === 'user');
+  const first = messages.find((m) => m.role === "user");
   return (first && !recent.includes(first) ? [first, ...recent] : recent).map(
     ({ role, text, intent }) => ({ role, text, intent }),
   );

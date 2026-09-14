@@ -135,7 +135,9 @@ function fixture() {
           pipeline.requests.push(body);
           const result =
             name === 'studio_design'
-              ? pipeline.design
+              ? typeof pipeline.design === 'function'
+                ? pipeline.design(body)
+                : pipeline.design
               : typeof pipeline.audit === 'function'
                 ? pipeline.audit(body)
                 : pipeline.audit;
@@ -546,9 +548,12 @@ test('an empty creation is repaired and a failed repair never replaces the saved
 
 test('streaming reports actual stages and only completes after the saved version exists', async () => {
   const f = fixture();
+  let releaseGeneration;
+  const generationGate = new Promise((resolve) => { releaseGeneration = resolve; });
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () =>
-    Response.json({
+  globalThis.fetch = async () => {
+    await generationGate;
+    return Response.json({
       status: 'completed',
       output_text: JSON.stringify({
         title: 'Teste',
@@ -557,11 +562,18 @@ test('streaming reports actual stages and only completes after the saved version
         reference_status: 'not_requested',
       }),
     });
+  };
   try {
     const { project } = await (await f.create()).json();
     const outgoing = request({ message: 'Crie a proposta.', revision: 0 });
     outgoing.headers.set('Accept', 'text/event-stream');
     const response = await f.messages.POST(outgoing, context(project.id));
+    const reader = response.body.getReader();
+    const first = await reader.read();
+    assert.match(new TextDecoder().decode(first.value), /"type":"connected"/);
+    assert.equal((await f.database.studioProject(project.id, 'one')).revision, 0);
+    reader.releaseLock();
+    releaseGeneration();
     const stages = [];
     const result = await studioStream.readStudioStream(response, (stage) =>
       stages.push(stage),
@@ -578,6 +590,37 @@ test('streaming reports actual stages and only completes after the saved version
       (await f.database.studioProject(project.id, 'one')).lockToken,
       '',
     );
+  } finally {
+    releaseGeneration();
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('repairs an incomplete design mapping before generating without dropping requirements', async () => {
+  const f = fixture();
+  const valid = structuredClone(f.pipeline.design);
+  valid.requirements = [{ id: 'r01', content: 'Contrato de 6 meses', evidence: 'briefing' }];
+  valid.sections[0].requirements = ['r01'];
+  const incomplete = structuredClone(valid);
+  incomplete.sections[0].requirements = [];
+  let attempts = 0;
+  f.pipeline.design = (body) => {
+    attempts++;
+    if (attempts === 1) return incomplete;
+    assert.match(JSON.stringify(body.input), /requisitos sem uma seção/);
+    return valid;
+  };
+  f.pipeline.audit.covered = ['r01'];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({ status: 'completed', output_text: JSON.stringify({ title: 'Teste', message: 'Criada', html, reference_status: 'not_requested' }) });
+  try {
+    const { project } = await (await f.create({ templateId: 'none' })).json();
+    const result = await f.messages.POST(request({ message: 'Crie a proposta para 6 meses.', revision: 0 }), context(project.id));
+    assert.equal(result.status, 200, JSON.stringify(await result.clone().json()));
+    assert.equal(attempts, 2);
+    assert.equal((await result.json()).project.revision, 1);
+    assert.equal(studioDesign.studioDesignSchema.properties.sections.items.properties.id.pattern, '^[a-z][\\w-]{0,60}$');
   } finally {
     globalThis.fetch = originalFetch;
     f.sqlite.close();
