@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const workspaces = sqliteTable(
   'workspaces',
@@ -232,3 +232,21 @@ export const studioVersions = sqliteTable('studio_versions', {
   summary: text('summary').notNull(),
   createdAt: integer('created_at').notNull(),
 }, table => [uniqueIndex('idx_studio_versions_project_revision').on(table.projectId, table.revision)]);
+
+export const studioAiRequests = sqliteTable('studio_ai_requests', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id').notNull().references(() => studioProjects.id),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
+  requestKey: text('request_key').notNull(),
+  model: text('model').notNull(),
+  status: text('status').notNull().default('started'),
+  reservedUsd: real('reserved_usd').notNull(),
+  costUsd: real('cost_usd'),
+  inputTokens: integer('input_tokens').notNull().default(0),
+  cachedTokens: integer('cached_tokens').notNull().default(0),
+  outputTokens: integer('output_tokens').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+}, table => [
+  uniqueIndex('idx_studio_ai_request_key').on(table.projectId, table.requestKey),
+  index('idx_studio_ai_workspace_created').on(table.workspaceId, table.createdAt),
+]);

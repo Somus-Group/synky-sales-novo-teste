@@ -20,20 +20,23 @@ Agente de propostas, Configurar agente e Propostas continuam disponíveis.
   explicitamente. Uma referência visual tem prioridade sobre o template.
 - Links HTTPS enviados na conversa são lidos e salvos como referência junto com
   a versão concluída. Links identificados como contato não substituem o modelo.
-- O briefing de até 40.000 caracteres é enviado inteiro. A mensagem original,
-  as dez mensagens recentes e o último plano preservam o contexto de pedidos
-  longos colados diretamente no chat.
-- A geração tem três etapas: especificação de requisitos e direção visual,
-  construção e revisão independente de conteúdo. Se a revisão detectar omissões,
-  dados inventados ou falhas de apresentação, há uma tentativa de correção antes
-  de salvar. Falhas mantêm a versão anterior e explicam os pontos encontrados.
-- A revisão distingue requisitos fornecidos de informações ausentes. Data de
-  emissão, contatos e responsáveis não informados ficam em **Informações a definir**,
-  sem bloquear a versão ou provocar outra geração. Falhas de conteúdo precisam
-  apontar um requisito ou uma citação da fonte; falhas visuais precisam citar
-  trechos existentes. Correções de requisitos nunca acrescentam exigências do revisor.
-- A aba Revisão apresenta a direção visual e os requisitos conferidos. A conversa
-  recebe o progresso real do servidor por streaming, sem porcentagens estimadas.
+- O briefing de até 40.000 caracteres é preservado. O documento atual, a mensagem
+  original e as quatro mensagens recentes mantêm o contexto das edições. Textos
+  idênticos ao briefing não são reenviados em duplicidade. Pedidos que ultrapassam
+  o orçamento estimado são recusados antes da chamada, sem truncar fatos silenciosamente.
+- Cada envio faz no máximo uma chamada de IA. Não há especificação separada,
+  auditoria paga, repetição automática ou escalada silenciosa para modelo caro.
+- A criação produz o visual personalizado uma vez. Edições usam um mapa de
+  elementos e retornam apenas mudanças de texto, estilo ou blocos. O servidor
+  aplica essas mudanças preservando o restante da marcação. Preços em negrito e
+  células de tabelas também aparecem no mapa. Alterações conflitantes são recusadas.
+- Verificações de estrutura, navegação e imagens são locais. Alertas de composição
+  ficam na aba Revisão; não representam uma auditoria independente da fidelidade
+  comercial. Documento vazio, referência declaradamente ignorada ou imagem
+  inexistente preservam a versão anterior sem nova chamada. Logos ausentes na
+  criação são inseridas localmente a partir do catálogo real.
+- A aba Revisão e cada resposta mostram o consumo estimado. O progresso continua
+  vindo do servidor por streaming, sem porcentagens inventadas.
 - A leitura de links seleciona as regras CSS das classes encontradas, mantém
   regras responsivas completas e extrai cores, fontes e títulos. Não renderiza
   uma captura da referência nem promete reprodução visual idêntica.
@@ -59,12 +62,38 @@ Agente de propostas, Configurar agente e Propostas continuam disponíveis.
 O servidor precisa de `OPENAI_API_KEY`. A chave nunca deve ser enviada no chat do
 estúdio, incluída no código, exposta no navegador ou adicionada ao Git.
 O módulo usa a Responses API, com `store: false`, no mesmo padrão do agente existente.
-O designer usa `STUDIO_DESIGN_AI_MODEL`, depois `STUDIO_AI_MODEL`, ou `gpt-5.5`.
-A especificação e a revisão usam `STUDIO_INITIAL_AI_MODEL` (padrão `gpt-5-mini`).
-Edições pontuais usam `STUDIO_DETAIL_AI_MODEL` (padrão `gpt-5-mini`). Os modelos
-devem aceitar Responses, JSON Schema, imagens e PDFs. A revisão acrescenta
-chamadas à API; a geração pode exigir uma correção adicional. Nenhuma assinatura do
+O padrão econômico usa `STUDIO_ECONOMY_AI_MODEL` ou `gpt-5-mini`. O modo Avançado,
+selecionado explicitamente para um envio, usa `STUDIO_DESIGN_AI_MODEL` ou `gpt-5.5`.
+Conversas e planejamento usam o modelo econômico mesmo nesse modo. A interface
+volta para Econômico após cada envio. As antigas variáveis INITIAL, DETAIL e
+STUDIO_AI_MODEL não selecionam mais modelos neste módulo. Modelos sem tarifa
+cadastrada são recusados, evitando estimativas incorretas. Nenhuma assinatura do
 ChatGPT ou da Lovable é usada como crédito de API.
+
+Orçamento estimado por envio: US$ 0,05 no Econômico e US$ 0,60 no Avançado.
+O limite diário padrão é US$ 1 por workspace, configurável no servidor por
+`STUDIO_DAILY_BUDGET_USD`; a janela reinicia às 00:00 UTC. Reservas atômicas incluem
+pedidos em outros projetos do mesmo workspace. São controles de aplicação, não
+garantia do faturamento exato da OpenAI: PDFs, imagens e tarifas podem variar.
+Configure também os controles de gastos da conta da API. Requisições duplicadas
+com o mesmo identificador não chamam o modelo novamente.
+
+`studio_ai_requests` registra tokens de entrada, saída (incluindo raciocínio),
+cache, modelo, custo estimado e status mesmo quando a saída é inválida/truncada.
+Falhas de rede sem confirmação mantêm uma reserva conservadora no limite diário;
+a interface mostra consumo não confirmado. O histórico anterior à ativação não
+é inferido nem contabilizado como custo zero.
+
+As referências lidas são reutilizadas no R2 por até 24 horas, isoladas por projeto
+e workspace. "Releia a referência" força atualização. Edições pontuais não
+reenviam CSS da referência nem imagens anteriores. O PDF é enviado quando ainda
+não há extração salva; a própria chamada devolve seus fatos em `source_summary`,
+reutilizado depois. Essa extração é feita por IA, não equivale ao texto original
+verificado; o PDF original continua disponível. Prefixos estáveis e
+`prompt_cache_key` favorecem o cache da API sem presumir que houve acerto de cache.
+
+Edição visual e substituições inequívocas como `Troque "Escopo confirmado" por
+"Escopo aprovado"` não chamam a API. Substituições ambíguas usam a edição por IA.
 
 No desenvolvimento com Cloudflare/Vite, configure os segredos no arquivo local
 ignorado `.dev.vars` e reinicie o servidor. Na hospedagem, use as variáveis secretas
@@ -79,8 +108,9 @@ Lovable. Briefing e PDF são enviados à API para atender à solicitação.
 
 ## Banco e validação
 
-As tabelas `studio_projects` e `studio_versions` são isoladas das propostas existentes.
-A migração é `drizzle/0009_real_thunderbolt.sql`. Na implantação, use o fluxo de
+As tabelas `studio_projects`, `studio_versions` e `studio_ai_requests` são isoladas
+das propostas existentes. A migração adicional de consumo é
+`drizzle/0012_large_redwing.sql`. Na implantação, use o fluxo de
 migrações do projeto. Na base local já preparada, aplique essa migração nova com
 Wrangler D1 local no mesmo diretório de persistência do servidor.
 
@@ -102,6 +132,7 @@ sem autorização do usuário. O teste opcional de referência pública não usa
 só roda quando `STUDIO_LIVE_REFERENCE_URL` é definido.
 
 Referências oficiais:
+
 - https://developers.openai.com/api/docs/guides/structured-outputs
 - https://developers.openai.com/api/docs/guides/file-inputs
 - https://developers.openai.com/api/docs/guides/tools-web-search

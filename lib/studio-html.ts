@@ -65,3 +65,37 @@ export async function sanitizeStudioHtml(html: string) {
     )
     .text();
 }
+
+export async function ensureStudioLogo(html: string, id: string) {
+  if (!/^[\w-]+$/.test(id)) return html;
+  let present = false;
+  let hasHeader = false;
+  await new HTMLRewriter()
+    .on('img', {
+      element(el) {
+        if (el.getAttribute('src') === `studio-asset:${id}`) present = true;
+      },
+    })
+    .on('header', {
+      element() {
+        hasHeader = true;
+      },
+    })
+    .transform(new Response(html))
+    .text();
+  if (present) return html;
+  let inserted = false;
+  return new HTMLRewriter()
+    .on(hasHeader ? 'header' : 'body', {
+      element(el) {
+        if (inserted) return;
+        inserted = true;
+        el.prepend(
+          `<img src="studio-asset:${id}" alt="Logo do fornecedor" style="display:block;width:170px;max-width:100%;height:auto;object-fit:contain;margin:16px 0">`,
+          { html: true },
+        );
+      },
+    })
+    .transform(new Response(html))
+    .text();
+}

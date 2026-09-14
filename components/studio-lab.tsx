@@ -63,6 +63,7 @@ import {
   studioStages,
   type StudioStage,
 } from '@/lib/studio-stream';
+import { studioSpendLimits } from '@/lib/studio-economy';
 import {
   StudioCanvas,
   type StudioSelection,
@@ -131,6 +132,7 @@ export function StudioLab() {
   const [pending, setPending] = useState('');
   const [stage, setStage] = useState<StudioStage>('reading');
   const [intent, setIntent] = useState<'edit' | 'plan'>('edit');
+  const [quality, setQuality] = useState<'economy' | 'premium'>('economy');
   const [mode, setMode] = useState<StudioMode>('free');
   const [draft, setDraft] = useState<ContextDraft>(emptyContext);
   const [briefFile, setBriefFile] = useState<File | null>(null);
@@ -438,11 +440,13 @@ export function StudioLab() {
     setTab('chat');
     setHistorical(null);
     const image = attachment;
+    let activeProjectId = project?.id;
     setAttachment(null);
     request.current = new AbortController();
     try {
       const active =
         project || (await createProject(text, request.current.signal));
+      activeProjectId = active.id;
       accept(
         await readStudioStream<ProjectResponse>(
           await fetch(`/api/studio/${active.id}/message`, {
@@ -456,6 +460,8 @@ export function StudioLab() {
               message: text,
               revision: active.revision,
               intent: nextIntent,
+              quality,
+              requestId: crypto.randomUUID(),
               selection: selection
                 ? JSON.stringify({
                     tag: selection.tag,
@@ -473,6 +479,14 @@ export function StudioLab() {
     } catch (cause) {
       setPrompt(text);
       setAttachment(image);
+      // Refresh measured spending after failed/truncated calls as well.
+      if (activeProjectId) {
+        try {
+          accept(await api<ProjectResponse>(`/api/studio/${activeProjectId}`));
+        } catch {
+          /* Keep the last known proposal if the connection is unavailable. */
+        }
+      }
       setError(
         cause instanceof Error && cause.name === 'AbortError'
           ? 'Pedido interrompido. Reabra o projeto para conferir a última versão salva.'
@@ -483,6 +497,7 @@ export function StudioLab() {
       setBusy(false);
       gate.current = false;
       request.current = null;
+      setQuality('economy');
     }
   }
   async function viewVersion(revision: number) {
@@ -916,6 +931,22 @@ export function StudioLab() {
                       {message.attachment.name}
                     </span>
                   )}
+                  {message.usage && (
+                    <small
+                      className={styles.usageReceipt}
+                      title={
+                        message.usage.model === 'none'
+                          ? 'Alteração aplicada sem IA'
+                          : `${message.usage.model} · ${message.usage.inputTokens} tokens de entrada · ${message.usage.cachedTokens} em cache · ${message.usage.outputTokens} de saída`
+                      }
+                    >
+                      {message.usage.model === 'none'
+                        ? 'Sem consumo de IA'
+                        : message.usage.estimatedUsd === null
+                          ? 'Consumo pendente de confirmação'
+                          : `IA: US$ ${message.usage.estimatedUsd.toFixed(4).replace('.', ',')} estimados`}
+                    </small>
+                  )}
                   {!!message.revision && (
                     <button
                       className={styles.versionChip}
@@ -1000,7 +1031,8 @@ export function StudioLab() {
                         {studioStages
                           .filter(
                             (item) =>
-                              item.id !== 'repairing' || stage === 'repairing',
+                              item.id !== 'repairing' &&
+                              item.id !== 'designing',
                           )
                           .map((item) => (
                             <li
@@ -1282,6 +1314,25 @@ export function StudioLab() {
           )}
           {tab === 'review' && (
             <div className={styles.reviewPanel}>
+              {project?.aiUsage && (
+                <section className={styles.usageSummary}>
+                  <h3>Consumo de IA</h3>
+                  <strong>
+                    US${' '}
+                    {project.aiUsage.estimatedUsd.toFixed(4).replace('.', ',')}
+                  </strong>
+                  <p>
+                    {project.aiUsage.calls} chamadas · valor estimado desde a
+                    ativação do controle
+                  </p>
+                  {!!project.aiUsage.unconfirmed && (
+                    <p>
+                      {project.aiUsage.unconfirmed} chamadas com consumo ainda
+                      não confirmado.
+                    </p>
+                  )}
+                </section>
+              )}
               <div className={styles.sectionHeading}>
                 <h2>Revisão da proposta</h2>
                 <span>
@@ -1642,6 +1693,26 @@ export function StudioLab() {
               }}
             />
             <div className={styles.composer}>
+              <div className={styles.costControls}>
+                <label>
+                  <span>Processamento</span>
+                  <select
+                    aria-label="Processamento da IA"
+                    value={quality}
+                    disabled={blocked}
+                    onChange={(event) =>
+                      setQuality(event.target.value as 'economy' | 'premium')
+                    }
+                  >
+                    <option value="economy">Econômico</option>
+                    <option value="premium">Avançado</option>
+                  </select>
+                </label>
+                <span title="Orçamento estimado por envio. O valor faturado depende do consumo informado pela API; imagens e PDFs podem variar.">
+                  Orçamento: US${' '}
+                  {studioSpendLimits[quality].toFixed(2).replace('.', ',')}
+                </span>
+              </div>
               {(attachment || draft.referenceUrl || selection) && (
                 <div className={styles.composerAttachments}>
                   {attachment && (

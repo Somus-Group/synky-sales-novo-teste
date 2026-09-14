@@ -111,6 +111,13 @@ export async function PATCH(request: Request, context: Context) {
           text: summary,
           at: Date.now(),
           revision: project.revision + 1,
+          usage: {
+            model: 'none',
+            inputTokens: 0,
+            cachedTokens: 0,
+            outputTokens: 0,
+            estimatedUsd: 0,
+          },
         });
         await saveStudioVersion(
           project,
@@ -146,6 +153,13 @@ export async function PATCH(request: Request, context: Context) {
       text: summary,
       at: Date.now(),
       revision: project.revision + 1,
+      usage: {
+        model: 'none',
+        inputTokens: 0,
+        cachedTokens: 0,
+        outputTokens: 0,
+        estimatedUsd: 0,
+      },
     });
     await saveStudioVersion(
       project,

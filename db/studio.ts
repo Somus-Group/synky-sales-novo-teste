@@ -1,4 +1,5 @@
 import { getD1 } from '@/db';
+import { studioProjectUsage } from '@/db/studio-usage';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
 import { getWorkspaceForUser } from '@/db/workspace';
 import {
@@ -34,6 +35,7 @@ export async function studioProject(id: string, workspaceId: string) {
     .bind(id, workspaceId)
     .first<ProjectRow>();
   if (!row) throw new StudioError('Projeto não encontrado.', 404);
+  row.aiUsage = await studioProjectUsage(id, workspaceId);
   return row;
 }
 

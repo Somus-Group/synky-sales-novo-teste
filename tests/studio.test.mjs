@@ -39,6 +39,8 @@ const studio = load('lib/studio.ts');
 const studioTemplates = load('lib/studio-templates.ts');
 const studioDesign = load('lib/studio-design.ts', { '@/lib/studio': studio });
 const studioStream = load('lib/studio-stream.ts');
+const studioEconomy = load('lib/studio-economy.ts', { '@/lib/studio': studio });
+const studioPatches = load('lib/studio-patches.ts', { '@/lib/studio': studio });
 const html =
   '<!doctype html><html><head><style>body{color:#123}</style></head><body><h1>Proposta teste</h1><p>Escopo confirmado</p></body></html>';
 const request = (payload, method = 'POST') =>
@@ -122,7 +124,12 @@ function fixture() {
     OPENAI_API_KEY: 'test-key-never-sent',
     FILES: {
       put: async (key, bytes) => {
-        files.set(key, bytes);
+        files.set(
+          key,
+          typeof bytes === 'string'
+            ? new TextEncoder().encode(bytes).buffer
+            : bytes,
+        );
       },
       get: async (key) =>
         files.has(key) ? { arrayBuffer: async () => files.get(key) } : null,
@@ -159,6 +166,8 @@ function fixture() {
     '@/lib/studio': studio,
     '@/lib/studio-design': studioDesign,
     '@/lib/studio-stream': studioStream,
+    '@/lib/studio-economy': studioEconomy,
+    '@/lib/studio-patches': studioPatches,
     '@/lib/studio-templates': studioTemplates,
     '@/lib/studio-media': {
       prepareStudioMedia: async (
@@ -204,10 +213,15 @@ function fixture() {
     '@/db/workspace': { getWorkspaceForUser: async (user) => user.userId },
     '@/lib/studio-html': {
       sanitizeStudioHtml: async (value) => value,
+      ensureStudioLogo: async (value, id) =>
+        value.includes('studio-asset:' + id)
+          ? value
+          : value.replace('<body>', `<body><img src="studio-asset:${id}">`),
       editStudioHtml: async (value, edit) =>
         value.replace('Proposta teste', edit.text),
     },
   };
+  modules['@/db/studio-usage'] = load('db/studio-usage.ts', modules);
   const database = load('db/studio.ts', modules);
   modules['@/db/studio'] = database;
   const collection = load('app/api/studio/route.ts', modules);
@@ -455,36 +469,24 @@ test('full briefing and inline reference reach all stages, and the reference is 
   }
 });
 
-test('independent content audit repairs an omitted commercial condition before saving a single version', async () => {
+test('one economical call receives all commercial conditions and records measured usage', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
   const calls = [];
   const condition = 'R$ 4.800 por mês. Verba de mídia não inclusa.';
-  f.pipeline.design.requirements = [
-    { id: 'r01', content: condition, evidence: condition },
-  ];
-  f.pipeline.design.sections[0].requirements = ['r01'];
-  f.pipeline.audit = (body) => {
-    const candidate = JSON.parse(
-      body.input[0].content.at(-1).text,
-    ).previousAttempt;
-    return {
-      issues: [],
-      covered: candidate.includes(condition) ? ['r01'] : [],
-      referenceAssessment: '',
-    };
-  };
   globalThis.fetch = async (_url, options) => {
     calls.push(JSON.parse(options.body));
     return Response.json({
       status: 'completed',
+      usage: {
+        input_tokens: 2000,
+        output_tokens: 500,
+        input_tokens_details: { cached_tokens: 1000 },
+      },
       output_text: JSON.stringify({
         title: 'Teste',
         message: 'Proposta criada.',
-        html:
-          calls.length === 1
-            ? html
-            : html.replace('</body>', `<p>${condition}</p></body>`),
+        html: html.replace('</body>', '<p>' + condition + '</p></body>'),
         reference_status: 'not_requested',
       }),
     });
@@ -495,20 +497,23 @@ test('independent content audit repairs an omitted commercial condition before s
       request({ message: 'Crie a proposta completa.', revision: 0 }),
       context(project.id),
     );
-    assert.equal(
-      response.status,
-      200,
-      JSON.stringify(await response.clone().json()),
-    );
+    assert.equal(response.status, 200);
     const result = await response.json();
-    assert.equal(calls.length, 2);
-    assert.match(calls[1].input[0].content.at(-1).text, /r01/);
+    assert.equal(calls.length, 1);
+    assert.equal(f.pipeline.requests.length, 0);
+    assert.equal(calls[0].model, 'gpt-5-mini');
+    assert.equal(
+      JSON.parse(calls[0].input[0].content[0].text).briefing,
+      condition,
+    );
     assert.ok(result.project.html.includes(condition));
     assert.equal(result.versions.length, 1);
-    assert.deepEqual(result.project.messages.at(-1).review.covered, ['r01']);
+    assert.equal(result.project.aiUsage.calls, 1);
+    assert.equal(result.project.aiUsage.estimatedUsd, 0.001275);
+    assert.equal(result.project.messages.at(-1).usage.cachedTokens, 1000);
     assert.equal(
-      result.project.messages.at(-1).review.design.requirements[0].evidence,
-      condition,
+      f.sqlite.prepare('SELECT status FROM studio_ai_requests').get().status,
+      'completed',
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -516,7 +521,7 @@ test('independent content audit repairs an omitted commercial condition before s
   }
 });
 
-test('an empty creation is repaired and a failed repair never replaces the saved proposal', async () => {
+test('an empty creation never triggers a paid retry and preserves the saved proposal', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
   let count = 0;
@@ -538,9 +543,9 @@ test('an empty creation is repaired and a failed repair never replaces the saved
       request({ message: 'Crie a proposta completa.', revision: 0 }),
       context(project.id),
     );
-    assert.equal(response.status, 502);
+    assert.equal(response.status, 422);
     assert.equal((await response.json()).code, 'proposal_empty');
-    assert.equal(count, 2);
+    assert.equal(count, 1);
     const row = await f.database.studioProject(project.id, 'one');
     assert.equal(row.revision, 0);
     assert.equal(row.messagesJson, '[]');
@@ -588,13 +593,7 @@ test('streaming reports actual stages and only completes after the saved version
     const result = await studioStream.readStudioStream(response, (stage) =>
       stages.push(stage),
     );
-    assert.deepEqual(stages, [
-      'reading',
-      'designing',
-      'generating',
-      'reviewing',
-      'saving',
-    ]);
+    assert.deepEqual(stages, ['reading', 'generating', 'reviewing', 'saving']);
     assert.equal(result.project.revision, 1);
     assert.equal(
       (await f.database.studioProject(project.id, 'one')).lockToken,
@@ -607,56 +606,78 @@ test('streaming reports actual stages and only completes after the saved version
   }
 });
 
-test('repairs an incomplete design mapping before generating without dropping requirements', async () => {
-  const f = fixture();
-  const valid = structuredClone(f.pipeline.design);
-  valid.requirements = [
-    { id: 'r01', content: 'Contrato de 6 meses', evidence: 'briefing' },
-  ];
-  valid.sections[0].requirements = ['r01'];
-  const incomplete = structuredClone(valid);
-  incomplete.sections[0].requirements = [];
-  let attempts = 0;
-  f.pipeline.design = (body) => {
-    attempts++;
-    if (attempts === 1) return incomplete;
-    assert.match(JSON.stringify(body.input), /requisitos sem uma seção/);
-    return valid;
-  };
-  f.pipeline.audit.covered = ['r01'];
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () =>
-    Response.json({
-      status: 'completed',
-      output_text: JSON.stringify({
+test('patches preserve original markup and reject conflicting, destructive or unsafe edits', () => {
+  const source =
+    '<html><head><style>body{color:red}</style></head><body><section id="scope"><h1>Ateliê &amp; Cia</h1><p>R$ 4.800</p><p><b>6</b> meses</p><img src="studio-asset:logo"></section></body></html>';
+  const map = studioPatches.studioDocumentMap(source);
+  const price = map.outline.find((n) => n.text === 'R$ 4.800');
+  const apply = (changes) =>
+    studioPatches.applyStudioPatches(
+      map,
+      JSON.stringify({
         title: 'Teste',
-        message: 'Criada',
-        html,
-        reference_status: 'not_requested',
+        message: 'Atualizada',
+        changes,
+        missing_information: [],
       }),
-    });
-  try {
-    const { project } = await (await f.create({ templateId: 'none' })).json();
-    const result = await f.messages.POST(
-      request({ message: 'Crie a proposta para 6 meses.', revision: 0 }),
-      context(project.id),
     );
-    assert.equal(
-      result.status,
-      200,
-      JSON.stringify(await result.clone().json()),
-    );
-    assert.equal(attempts, 2);
-    assert.equal((await result.json()).project.revision, 1);
-    assert.equal(
-      studioDesign.studioDesignSchema.properties.sections.items.properties.id
-        .pattern,
-      '^[a-z][\\w-]{0,60}$',
-    );
-  } finally {
-    globalThis.fetch = originalFetch;
-    f.sqlite.close();
-  }
+  const changed = apply([
+    { index: price.index, operation: 'text', value: 'R$ 5.000 <à vista>' },
+  ]);
+  assert.equal(
+    changed.html,
+    source.replace('R$ 4.800', 'R$ 5.000 &lt;à vista&gt;'),
+  );
+  assert.equal(apply([]).html, '');
+  assert.throws(() =>
+    apply([
+      {
+        index: price.index,
+        operation: 'replace',
+        value: '<script>alert(1)</script>',
+      },
+    ]),
+  );
+  assert.throws(() =>
+    apply([
+      {
+        index: price.index,
+        operation: 'replace',
+        value: '<img src="https://example.com/tracker">',
+      },
+    ]),
+  );
+  assert.throws(() =>
+    apply([
+      {
+        index: price.index,
+        operation: 'style',
+        value: 'background:url(https://example.com)',
+      },
+    ]),
+  );
+  assert.throws(() =>
+    apply([
+      { index: 0, operation: 'remove', value: '' },
+      { index: price.index, operation: 'text', value: '0' },
+    ]),
+  );
+  assert.throws(() => apply([{ index: 900, operation: 'text', value: '0' }]));
+  assert.throws(() =>
+    apply([
+      { index: price.index, operation: 'text', value: '0' },
+      { index: price.index, operation: 'text', value: '1' },
+    ]),
+  );
+  const nested = map.outline.find((n) => n.tag === 'p' && n.text === 'meses');
+  assert.throws(() =>
+    apply([{ index: nested.index, operation: 'text', value: '1 mês' }]),
+  );
+  assert.match(
+    apply([{ index: price.index, operation: 'style', value: 'color:#123456' }])
+      .html,
+    /color:#123456/,
+  );
 });
 
 test('audit separates absent information from supplied requirements and rejects invented evidence', () => {
@@ -812,9 +833,9 @@ test('missing client contacts and dates do not trigger another paid generation o
     assert.equal(
       f.pipeline.requests.filter((r) => r.text.format.name === 'studio_audit')
         .length,
-      1,
+      0,
     );
-    assert.equal(result.project.messages.at(-1).review.missing.length, 3);
+    assert.equal(result.project.messages.at(-1).review.missing.length, 0);
     assert.equal(
       (await f.database.studioProject(project.id, 'one')).lockToken,
       '',
@@ -932,7 +953,7 @@ test('disconnected AI never fabricates a result or loses the saved briefing', as
   }
 });
 
-test('explicit templates keep their visual and receive content analysis and an independent audit', async () => {
+test('explicit templates keep their visual with one content call and no paid audit', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
   let sent;
@@ -973,7 +994,7 @@ test('explicit templates keep their visual and receive content analysis and an i
     assert.equal(sent.text.format.name, 'studio_template');
     assert.deepEqual(
       f.pipeline.requests.map((r) => r.text.format.name),
-      ['studio_design', 'studio_audit'],
+      [],
     );
     const result = await response.json();
     assert.match(result.project.html, /Crescimento com foco em resultado/);
@@ -1011,7 +1032,7 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
     );
     assert.equal(first.status, 200);
     const v1 = await first.json();
-    assert.equal(calls[0].model, 'gpt-5.5');
+    assert.equal(calls[0].model, 'gpt-5-mini');
     assert.equal(v1.project.revision, 1);
     assert.equal(v1.versions.length, 1);
     assert.equal(v1.project.messages.length, 2);
@@ -1019,6 +1040,8 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
       ...generated,
       message: 'Cor ajustada.',
       html: html.replace('#123', '#0b6fe8'),
+      changes: [{ index: 0, operation: 'style', value: 'color:#0b6fe8' }],
+      missing_information: [],
     };
     assert.equal(
       (
@@ -1030,7 +1053,8 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
       200,
     );
     const modelInput = JSON.parse(calls[1].input[0].content[0].text);
-    assert.equal(modelInput.currentHtml, html);
+    assert.equal(modelInput.currentHtml, undefined);
+    assert.ok(modelInput.documentMap.some((n) => n.text === 'Proposta teste'));
     assert.equal(modelInput.recentConversation.length, 2);
     assert.equal(
       (
@@ -1077,7 +1101,7 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
           context(project.id),
         )
       ).status,
-      502,
+      422,
     );
     const stored = await f.database.studioProject(project.id, 'one');
     assert.equal(stored.html, html);
@@ -1100,7 +1124,7 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
   }
 });
 
-test('missing logo triggers one repair; a complete version stores review results and a second failure preserves history', async () => {
+test('missing logo is inserted locally without image inference or another paid generation', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
   const logo = {
@@ -1121,21 +1145,14 @@ test('missing logo triggers one repair; a complete version stores review results
     unresolved: [],
   });
   const calls = [];
-  let fixed = true;
   globalThis.fetch = async (_url, options) => {
     calls.push(JSON.parse(options.body));
     return Response.json({
       status: 'completed',
       output_text: JSON.stringify({
         title: 'Teste',
-        message: 'Proposta revisada.',
-        html:
-          fixed && calls.length === 2
-            ? html.replace(
-                '<body>',
-                '<body><img src="studio-asset:reference-1">',
-              )
-            : html,
+        message: 'Criada',
+        html,
         reference_status: 'not_requested',
         missing_information: ['Honorários mensais'],
       }),
@@ -1148,30 +1165,20 @@ test('missing logo triggers one repair; a complete version stores review results
       context(project.id),
     );
     assert.equal(response.status, 200);
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 1);
     const input = JSON.parse(calls[0].input[0].content[0].text);
     assert.equal(input.preferredLogoId, logo.id);
     assert.equal(input.mediaCatalog[0].dataUrl, undefined);
-    assert.ok(
-      calls[0].input[0].content.some((item) => item.image_url === logo.dataUrl),
+    assert.equal(
+      calls[0].input[0].content.filter((item) => item.type === 'input_image')
+        .length,
+      0,
     );
-    assert.match(calls[1].input[0].content.at(-1).text, /Inclua a logo real/);
     const result = await response.json();
     assert.equal(result.project.messages.at(-1).review.logo, true);
     assert.deepEqual(result.project.messages.at(-1).review.missing, [
       'Honorários mensais',
     ]);
-    fixed = false;
-    const failed = await f.messages.POST(
-      request({ message: 'Melhore a proposta.', revision: 1 }),
-      context(project.id),
-    );
-    assert.equal(failed.status, 502);
-    assert.equal(calls.length, 4);
-    const row = await f.database.studioProject(project.id, 'one');
-    assert.equal(row.revision, 1);
-    assert.equal(row.html, result.project.html);
-    assert.equal(row.lockToken, '');
   } finally {
     globalThis.fetch = originalFetch;
     f.sqlite.close();
@@ -1322,8 +1329,8 @@ test('blocked reference or model refusal preserves the page and releases the pro
       request({ message: 'Use o modelo', revision: 0 }),
       context(project.id),
     );
-    assert.equal(ignored.status, 502);
-    assert.equal((await ignored.json()).code, 'proposal_review_failed');
+    assert.equal(ignored.status, 422);
+    assert.equal((await ignored.json()).code, 'proposal_reference_unused');
     row = await f.database.studioProject(project.id, 'one');
     assert.equal(row.revision, 0);
     assert.equal(row.messagesJson, '[]');
@@ -1367,6 +1374,7 @@ test('conversation accepts a safe image reference without storing its data', asy
       {
         type: 'input_image',
         image_url: image.data,
+        detail: 'auto',
       },
     );
     const result = await response.json();
@@ -1481,7 +1489,7 @@ test('planning preserves the page even if the model returns HTML, and applying t
     assert.equal(plan.project.revision, 0);
     assert.equal(plan.versions.length, 0);
     assert.equal(plan.project.messages.at(-1).intent, 'plan');
-    assert.match(sent.instructions, /MODO PLANEJAR/);
+    assert.match(sent.instructions, /Não altere a proposta/);
     const applied = await f.messages.POST(
       request({
         message: 'Aplique o plano.',
@@ -1495,7 +1503,7 @@ test('planning preserves the page even if the model returns HTML, and applying t
     assert.equal((await applied.json()).project.revision, 1);
     assert.equal(
       JSON.parse(sent.input[0].content[0].text).selectedElement,
-      'h1: Título',
+      undefined,
     );
     assert.throws(() =>
       studio.studioInput({ message: 'x', revision: 1, intent: 'invalid' }),
@@ -1623,4 +1631,256 @@ test('actual Worker HTML parser removes active content and keeps proposal stylin
   } finally {
     await mf.dispose();
   }
+});
+
+test('quoted unique replacements work without an API key and inline prices stay editable', async () => {
+  const f = fixture();
+  try {
+    const { project } = await (await f.create()).json();
+    f.sqlite
+      .prepare('UPDATE studio_projects SET html = ?, revision = 1 WHERE id = ?')
+      .run(html, project.id);
+    delete f.env.OPENAI_API_KEY;
+    const response = await f.messages.POST(
+      request({
+        message: 'Troque "Escopo confirmado" por "Escopo aprovado"',
+        revision: 1,
+      }),
+      context(project.id),
+    );
+    assert.equal(
+      response.status,
+      200,
+      JSON.stringify(await response.clone().json()),
+    );
+    const result = await response.json();
+    assert.equal(
+      result.project.html,
+      html.replace('Escopo confirmado', 'Escopo aprovado'),
+    );
+    assert.equal(result.project.aiUsage.calls, 0);
+    assert.equal(result.project.messages.at(-1).usage.estimatedUsd, 0);
+    const map = studioPatches.studioDocumentMap(
+      '<html><body><p>Preço: <strong>R$ 4.800</strong></p></body></html>',
+    );
+    const price = map.outline.find((n) => n.text === 'R$ 4.800');
+    assert.ok(price);
+    assert.equal(map.outline[0].tag, 'p');
+    const changed = studioPatches.applyStudioPatches(
+      map,
+      JSON.stringify({
+        title: 'Teste',
+        message: 'Atualizada',
+        missing_information: [],
+        changes: [{ index: price.index, operation: 'text', value: 'R$ 5.000' }],
+      }),
+    );
+    assert.match(changed.html, /<strong>R\$ 5.000<\/strong>/);
+  } finally {
+    f.sqlite.close();
+  }
+});
+
+test('incomplete responses record their usage and replayed requests cannot spend again', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    return Response.json({
+      status: 'incomplete',
+      usage: { input_tokens: 1000, output_tokens: 500 },
+    });
+  };
+  try {
+    const { project } = await (await f.create()).json();
+    const payload = {
+      message: 'Crie a proposta.',
+      revision: 0,
+      requestId: 'fixed-request-0123456789',
+    };
+    const failed = await f.messages.POST(request(payload), context(project.id));
+    assert.equal(failed.status, 422);
+    const row = await f.database.studioProject(project.id, 'one');
+    assert.equal(row.revision, 0);
+    assert.equal(row.aiUsage.estimatedUsd, 0.00125);
+    assert.equal(row.aiUsage.unconfirmed, 0);
+    const replay = await f.messages.POST(request(payload), context(project.id));
+    assert.equal(replay.status, 409);
+    assert.equal((await replay.json()).code, 'ai_duplicate_request');
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('daily reservations cover unknown failures and are isolated by workspace', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  f.env.STUDIO_DAILY_BUDGET_USD = '0.05';
+  globalThis.fetch = async () => {
+    calls++;
+    throw new Error('Connection lost');
+  };
+  try {
+    const { project } = await (await f.create()).json();
+    assert.equal(
+      (
+        await f.messages.POST(
+          request({ message: 'Crie a proposta.', revision: 0 }),
+          context(project.id),
+        )
+      ).status,
+      500,
+    );
+    const { project: other } = await (await f.create()).json();
+    const blocked = await f.messages.POST(
+      request({ message: 'Crie outra proposta.', revision: 0 }),
+      context(other.id),
+    );
+    assert.equal(blocked.status, 429);
+    assert.equal((await blocked.json()).code, 'ai_daily_budget');
+    assert.equal(calls, 1);
+    assert.equal(
+      (await f.database.studioProject(project.id, 'one')).aiUsage.unconfirmed,
+      1,
+    );
+    f.setUser({ userId: 'two', email: 'two@example.com' });
+    const { project: separate } = await (await f.create()).json();
+    await f.messages.POST(
+      request({ message: 'Crie a proposta.', revision: 0 }),
+      context(separate.id),
+    );
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('reference and PDF facts are cached; later edits do not resend PDFs, reference CSS or images', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  let references = 0;
+  const url = 'https://example.com/model';
+  globalThis.fetch = async (target, options) => {
+    if (target === url) {
+      references++;
+      return new Response('Identidade visual do fornecedor.');
+    }
+    const call = JSON.parse(options.body);
+    calls.push(call);
+    const patch = call.text.format.name === 'studio_patch';
+    return Response.json({
+      status: 'completed',
+      usage: { input_tokens: 1000, output_tokens: 500 },
+      output_text: JSON.stringify({
+        title: 'Teste',
+        message: 'Atualizada',
+        html,
+        reference_status: 'used',
+        missing_information: [],
+        source_summary: patch
+          ? ''
+          : 'Contrato: 6 meses. Investimento: R$ 4.800. Mídia não inclusa.',
+        changes: [{ index: 1, operation: 'text', value: 'Escopo atualizado' }],
+      }),
+    });
+  };
+  try {
+    const { project } = await (
+      await f.create({
+        referenceUrl: url,
+        file: new File(['%PDF-1.7 fixture'], 'brief.pdf', {
+          type: 'application/pdf',
+        }),
+      })
+    ).json();
+    const first = await f.messages.POST(
+      request({ message: 'Crie a proposta.', revision: 0 }),
+      context(project.id),
+    );
+    assert.equal(first.status, 200, JSON.stringify(await first.clone().json()));
+    assert.ok(calls[0].input[0].content.some((c) => c.type === 'input_file'));
+    const second = await f.messages.POST(
+      request({ message: 'Atualize o texto do escopo.', revision: 1 }),
+      context(project.id),
+    );
+    assert.equal(
+      second.status,
+      200,
+      JSON.stringify(await second.clone().json()),
+    );
+    const edit = calls[1].input[0].content;
+    assert.equal(edit.length, 1);
+    const data = JSON.parse(edit[0].text);
+    assert.match(data.briefingAttachment, /Mídia não inclusa/);
+    assert.equal(data.currentHtml, undefined);
+    assert.equal(data.referenceDocument, undefined);
+    const redraw = await f.messages.POST(
+      request({ message: 'Refaça a proposta.', revision: 2 }),
+      context(project.id),
+    );
+    assert.equal(
+      redraw.status,
+      200,
+      JSON.stringify(await redraw.clone().json()),
+    );
+    assert.equal(references, 1);
+    assert.equal(calls.length, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('budget checks fail before billing and premium processing requires explicit selection', () => {
+  assert.equal(
+    studioEconomy.studioModel('create', 'economy', {
+      STUDIO_DESIGN_AI_MODEL: 'gpt-5.5',
+    }),
+    'gpt-5-mini',
+  );
+  assert.equal(studioEconomy.studioModel('create', 'premium', {}), 'gpt-5.5');
+  assert.equal(studioEconomy.studioModel('chat', 'premium', {}), 'gpt-5-mini');
+  assert.throws(() =>
+    studioEconomy.studioModel('create', 'economy', {
+      STUDIO_ECONOMY_AI_MODEL: 'unpriced',
+    }),
+  );
+  assert.throws(() =>
+    studioEconomy.studioOutputBudget(
+      'gpt-5-mini',
+      'create',
+      'economy',
+      'x'.repeat(250000),
+      0,
+      false,
+    ),
+  );
+  assert.ok(
+    studioEconomy.studioOutputBudget(
+      'gpt-5-mini',
+      'patch',
+      'economy',
+      'texto',
+      0,
+      false,
+    ) <= 4000,
+  );
+  assert.equal(
+    studioEconomy.studioTask('Troque a cor do layout', true, 'edit', false),
+    'patch',
+  );
+  assert.equal(
+    studioEconomy.studioTask('Refaça a proposta', true, 'edit', false),
+    'create',
+  );
+  assert.equal(
+    studioEconomy.studioTask('Qual o preço?', true, 'edit', false),
+    'chat',
+  );
 });

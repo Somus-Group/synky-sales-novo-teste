@@ -6,7 +6,12 @@ export type StudioMessage = {
   revision?: number;
   at: number;
   sources?: string[];
-  reference?: { url: string; title: string; method: 'html' | 'react-source' };
+  reference?: {
+    url: string;
+    inputUrl?: string;
+    title: string;
+    method: 'html' | 'react-source';
+  };
   review?: {
     headings: string[];
     imageCount: number;
@@ -19,6 +24,14 @@ export type StudioMessage = {
   };
   attachment?: { name: string; mime: string };
   intent?: 'edit' | 'plan';
+  usage?: StudioAiUsage;
+};
+export type StudioAiUsage = {
+  model: string;
+  inputTokens: number;
+  cachedTokens: number;
+  outputTokens: number;
+  estimatedUsd: number | null;
 };
 export type StudioProject = {
   id: string;
@@ -34,6 +47,7 @@ export type StudioProject = {
   createdAt: number;
   updatedAt: number;
   busy: boolean;
+  aiUsage?: { calls: number; estimatedUsd: number; unconfirmed: number };
 };
 export type StudioSummary = Pick<
   StudioProject,
@@ -119,6 +133,16 @@ export function studioInput(value: unknown) {
   if (p.intent !== undefined && p.intent !== 'edit' && p.intent !== 'plan')
     throw new StudioError('Escolha criar ou planejar.');
   if (
+    p.quality !== undefined &&
+    !['economy', 'premium'].includes(String(p.quality))
+  )
+    throw new StudioError('Escolha o processamento econômico ou avançado.');
+  if (
+    p.requestId !== undefined &&
+    (typeof p.requestId !== 'string' || !/^[\w-]{16,80}$/.test(p.requestId))
+  )
+    throw new StudioError('Reabra o projeto para enviar o pedido.');
+  if (
     p.selection !== undefined &&
     (typeof p.selection !== 'string' || p.selection.length > 3000)
   )
@@ -129,6 +153,10 @@ export function studioInput(value: unknown) {
     image,
     intent: p.intent === 'plan' ? ('plan' as const) : ('edit' as const),
     selection: typeof p.selection === 'string' ? p.selection : '',
+    quality:
+      p.quality === 'premium' ? ('premium' as const) : ('economy' as const),
+    requestId:
+      typeof p.requestId === 'string' ? p.requestId : crypto.randomUUID(),
   };
 }
 
