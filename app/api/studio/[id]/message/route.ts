@@ -191,6 +191,7 @@ async function runMessage(
         email?: string;
         phone?: string;
       }>();
+    console.info('Studio input ready', 'profile', Date.now() - started);
     const reference = studioMessageReference(
       payload.message,
       project.referenceUrl,
@@ -198,6 +199,7 @@ async function runMessage(
     const referenceDocument = reference
       ? await readStudioReference(reference, signal)
       : null;
+    console.info('Studio input ready', 'reference', Date.now() - started);
     const isInitialCreation = payload.intent === 'edit' && !project.html;
     // A supplied reference needs the full designer pass; the local template
     // cannot faithfully apply its visual language on its own.
@@ -223,6 +225,7 @@ async function runMessage(
       referenceDocument?.media || [],
       project.html,
     );
+    console.info('Studio input ready', 'media', Date.now() - started);
     if (payload.image && payload.image.data.length < 470000)
       media.assets.unshift({
         id: 'attachment',
