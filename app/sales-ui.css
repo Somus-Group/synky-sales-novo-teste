@@ -822,6 +822,14 @@
     linear-gradient(90deg, rgba(13, 24, 40, 0.98) 0%, rgba(15, 39, 72, 0.91) 50%, rgba(20, 58, 110, 0.62) 100%),
     url('/dashboard/architecture-hero-v2.png') !important;
 }
+/* The overview copy needs a calm dark surface; the architectural image is kept
+   for the action and client heroes where it has more room to breathe. */
+.sales-app.theme-dark .overview-inspiration {
+  background-image: linear-gradient(118deg, #111c2c 0%, #15283f 58%, #10263f 100%) !important;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.sales-app.theme-dark .overview-inspiration::after { display: none; }
 .sales-app .sales-content[data-view='agent_setup'] > div > section:first-child {
   background-color: #062b61 !important;
   background-image:
