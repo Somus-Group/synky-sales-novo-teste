@@ -475,7 +475,7 @@ export function SomusApp({ userName, userEmail }: { userName: string; userEmail:
 
         <main data-view={view} className={view === 'studio' ? 'sales-content w-full' : 'sales-content mx-auto max-w-[1440px] px-4 py-6 sm:px-5 md:px-8 md:py-10'}>
           {view === 'studio' && <StudioLab />}
-          {view === 'overview' && <Overview name={userName} opportunities={opportunities} proposals={proposals} pipelineValue={pipelineValue} onPipeline={() => setView('pipeline')} onProposal={openAgent} onProposals={() => setView('proposals')} onOpenProposal={(proposal) => { setActiveProposal(proposal); setView('editor'); }} />}
+          {view === 'overview' && <Overview opportunities={opportunities} proposals={proposals} pipelineValue={pipelineValue} onPipeline={() => setView('pipeline')} onProposal={openAgent} onProposals={() => setView('proposals')} onOpenProposal={(proposal) => { setActiveProposal(proposal); setView('editor'); }} />}
           {view === 'agent' && <AgentStudio profile={agentProfile} initialTemplate={agentInitialTemplate} onSetup={() => setView('agent_setup')} onGenerated={(proposal) => { setProposals((items) => [proposal, ...items]); setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
           {view === 'agent_setup' && <AgentSetup initialProfile={agentProfile} onSaved={(profile) => { setAgentProfile(profile); notify('Agente configurado para o seu negócio'); setView('agent'); }} onNotify={notify} />}
           {view === 'pipeline' && <Pipeline opportunities={opportunities} labels={pipelineLabels} companies={companies} activeCompanyId={activeCompanyId} companyName={companies.find((company) => company.id === activeCompanyId)?.name || 'Empresa principal'} onSelectCompany={setActiveCompanyId} onNew={openNewOpportunity} onEdit={openOpportunity} onMove={moveOpportunity} onEditLabel={(key, label) => setPipelineLabelEdit({ key, label })} onCompanies={() => setCompanyDialog(true)} />}
@@ -508,7 +508,7 @@ function PageTitle({ kicker, title, description, actions }: { kicker?: string; t
   return <div className="mb-7 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0">{resolvedKicker && <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6e6e73] sm:text-[11px]">{resolvedKicker}</p>}<h1 className="text-[30px] font-semibold leading-tight tracking-[-0.04em] md:text-[38px]">{title}</h1><p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#6e6e73] sm:text-sm">{resolvedDescription}</p></div>{actions && <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto">{actions}</div>}</div>;
 }
 
-function Overview({ name, opportunities, proposals, pipelineValue, onPipeline, onProposal, onProposals, onOpenProposal }: { name: string; opportunities: Opportunity[]; proposals: Proposal[]; pipelineValue: number; onPipeline: () => void; onProposal: () => void; onProposals: () => void; onOpenProposal: (proposal: Proposal) => void }) {
+function Overview({ opportunities, proposals, pipelineValue, onPipeline, onProposal, onProposals, onOpenProposal }: { opportunities: Opportunity[]; proposals: Proposal[]; pipelineValue: number; onPipeline: () => void; onProposal: () => void; onProposals: () => void; onOpenProposal: (proposal: Proposal) => void }) {
   const monthly = [{ month: 'Abr', value: 182 }, { month: 'Mai', value: 236 }, { month: 'Jun', value: 218 }, { month: 'Jul', value: 328 }, { month: 'Ago', value: 392 }, { month: 'Set', value: Math.round(pipelineValue / 1000) }];
   const currentPipelineK = monthly[monthly.length - 1].value;
   const julyPipelineK = monthly.find((item) => item.month === 'Jul')?.value ?? 0;
@@ -519,7 +519,8 @@ function Overview({ name, opportunities, proposals, pipelineValue, onPipeline, o
       <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full bg-[#EAF2FF] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#0757C8]"><span className="grid size-5 place-items-center rounded-full bg-[#0B6FE8] text-white"><LayoutDashboard className="size-3" /></span>Painel comercial</div>
-          <h1 className="mt-4 max-w-3xl text-[30px] font-semibold leading-tight tracking-[-0.04em] text-[#11244A] sm:text-[36px]">Boa tarde, <span className="text-[#0B6FE8]">{name}</span>. Vamos construir <span className="text-[#0B6FE8]">mais resultados</span> hoje?</h1>
+          <p className="overview-greeting mt-0 text-sm font-medium text-[#60708B]">Boa tarde,</p>
+          <h1 className="mt-2 max-w-3xl text-[30px] font-semibold leading-tight tracking-[-0.04em] text-[#11244A] sm:text-[36px]">Vamos construir <span className="text-[#0B6FE8]">mais resultados</span> hoje?</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#60708B]">Tudo o que precisa acompanhar do seu comercial, em um só lugar.</p>
         </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
