@@ -24,15 +24,15 @@ export function CollectionCover({ design, proposal, compact = false }: {
 }) {
   const cover = proposal.content?.slides?.[0];
   const title = cover?.title || proposal.project;
-  const photo = proposal.content?.hero_image_url || proposal.content?.portfolio_images?.[0]?.url || '/proposal/editorial-cover.png';
-  const architectural = design.niche === 'Arquitetura';
+  const photo = proposal.content?.hero_image_url || proposal.content?.portfolio_images?.[0]?.url || design.image || '/proposal/editorial-cover.png';
+  const architectural = design.niche === 'Arquitetura' || !!design.image;
   const Heading = compact ? 'h3' : 'h1';
   return <section className={`${styles.cover} ${compact ? styles.compact : ''}`} data-layout={design.layout} style={designStyle(design, proposal)}>
     <header className={styles.coverHeader}>
       <span>{proposal.content?.logo_url && <img src={proposal.content.logo_url} alt="" />}{proposal.content?.brand_name || design.brand}</span>
       <span>{proposal.code}</span>
     </header>
-    {architectural && <img className={styles.coverPhoto} src={photo} alt={compact ? '' : 'Referência visual de arquitetura e interiores'} />}
+    {architectural && <img className={styles.coverPhoto} src={photo} loading={compact ? 'lazy' : 'eager'} alt={compact ? '' : 'Imagem conceitual da proposta'} />}
     <div className={styles.coverMain}>
       <p className={styles.kicker}>{cover?.eyebrow || 'Proposta comercial'}</p>
       <Heading className={styles.coverTitle} style={{ color: 'inherit' }}>{title}</Heading>

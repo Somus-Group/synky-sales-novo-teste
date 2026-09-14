@@ -197,6 +197,13 @@ export const proposalReferences = sqliteTable(
   (table) => [index('idx_proposal_references_workspace').on(table.workspaceId)],
 );
 
+export const importedTemplates = sqliteTable('imported_templates', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
+  name: text('name').notNull(), niche: text('niche').notNull(), template: text('template').notNull(),
+  contentJson: text('content_json').notNull(), updatedAt: integer('updated_at').notNull(),
+}, table => [index('idx_imported_templates_workspace_updated').on(table.workspaceId, table.updatedAt)]);
+
 export const studioProjects = sqliteTable('studio_projects', {
   id: text('id').primaryKey(),
   workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
