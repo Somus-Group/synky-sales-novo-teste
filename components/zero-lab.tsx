@@ -13,6 +13,7 @@ import {
   Monitor,
   Palette,
   Plus,
+  PenLine,
   Printer,
   Save,
   SlidersHorizontal,
@@ -65,11 +66,13 @@ function Icon({
   children,
   onClick,
   disabled = false,
+  pressed,
 }: {
   label: string;
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
+  pressed?: boolean;
 }) {
   return (
     <Button
@@ -80,9 +83,49 @@ function Icon({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={pressed}
     >
       {children}
     </Button>
+  );
+}
+function DesignChoices({
+  draft,
+  onChange,
+}: {
+  draft: ZeroDraft;
+  onChange: (design: ZeroDraft['design']) => void;
+}) {
+  return (
+    <div className={styles.designChoices} role="group" aria-label="Composição">
+      {(
+        [
+          { key: 'editorial', label: 'Editorial' },
+          { key: 'contrast', label: 'Estúdio' },
+          { key: 'compact', label: 'Executiva' },
+        ] as const
+      ).map((design) => (
+        <button
+          key={design.key}
+          type="button"
+          aria-pressed={draft.design === design.key}
+          onClick={() => onChange(design.key)}
+        >
+          <span className={styles.designThumb} data-design={design.key}>
+            <img src={zeroCover(draft)} alt="" />
+            <span>{draft.supplier || 'Sua empresa'}</span>
+            {draft.design === design.key && (
+              <Check
+                className={styles.selectedDesign}
+                size={18}
+                aria-hidden="true"
+              />
+            )}
+          </span>
+          <span>{design.label}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 async function json<T>(url: string, options?: RequestInit): Promise<T> {
@@ -205,7 +248,21 @@ export function ZeroLab({
     touched.current = true;
     setDraft((d) => ({ ...d, ...next }));
     setNotice('');
-    setComposition(null);
+    if (
+      Object.keys(next).some(
+        (key) =>
+          ![
+            'design',
+            'accent',
+            'serif',
+            'cover',
+            'logo',
+            'gallery',
+            'referenceUrl',
+          ].includes(key),
+      )
+    )
+      setComposition(null);
   }
   function commercialSnapshot(value: ZeroDraft) {
     return JSON.stringify({
@@ -582,7 +639,9 @@ export function ZeroLab({
     <div className={styles.zero}>
       <header className={styles.toolbar}>
         <div className={styles.identity}>
-          <Zap size={22} />
+          <span className={styles.identityMark}>
+            <Zap size={22} />
+          </span>
           <div>
             <h1>
               Proposta Zero <small>Teste</small>
@@ -594,7 +653,9 @@ export function ZeroLab({
           </div>
         </div>
         <div className={styles.actions}>
-          <span className={styles.zeroCost}>R$ 0 em IA</span>
+          <span className={styles.zeroCost}>
+            <Check size={14} /> R$ 0 em IA
+          </span>
           <Icon label="Novo rascunho" onClick={newDraft} disabled={busy}>
             <Plus />
           </Icon>
@@ -696,42 +757,67 @@ export function ZeroLab({
               disabled={busy}
             >
               <div className={styles.sectionTitle}>
-                <h2>Qual é a proposta?</h2>
-                <Icon
-                  label="Importar pedido TXT ou MD"
-                  onClick={() => briefFile.current?.click()}
-                >
-                  <Upload />
-                </Icon>
+                <h2>Sua próxima proposta</h2>
+                <PenLine size={20} aria-hidden="true" />
               </div>
-              <textarea
-                aria-label="Pedido da proposta"
-                rows={11}
-                maxLength={24000}
-                placeholder="Proposta para Clínica Aurora. Gestão de tráfego por R$ 2.500 por mês e criação de site por R$ 4.000, pagamento único. Contrato de 6 meses. Objetivo: aumentar os agendamentos. Validade de 15 dias. Não inclui verba de anúncios."
-                value={draft.briefing}
-                onChange={(e) => {
-                  change({ briefing: e.target.value });
-                  setComposition(null);
-                  setNeedsCompose(true);
-                }}
-              />
-              <div className={styles.composeAction}>
-                <span>
-                  {draft.briefing.length.toLocaleString('pt-BR')} / 24.000
-                </span>
-                <Button onClick={compose} disabled={!draft.briefing.trim()}>
-                  <ArrowUp size={16} />{' '}
-                  {draft.services.length
-                    ? 'Atualizar proposta'
-                    : 'Montar proposta'}
-                </Button>
+              <div className={styles.promptBox}>
+                <textarea
+                  aria-label="Pedido da proposta"
+                  rows={8}
+                  maxLength={24000}
+                  placeholder="Proposta para Clínica Aurora. Gestão de tráfego por R$ 2.500 por mês e um site por R$ 4.000, pagamento único. Contrato de 6 meses. Objetivo: aumentar os agendamentos."
+                  value={draft.briefing}
+                  onChange={(e) => {
+                    change({ briefing: e.target.value });
+                    setComposition(null);
+                    setNeedsCompose(true);
+                  }}
+                />
+                <div className={styles.composeAction}>
+                  <Icon
+                    label="Importar pedido TXT ou MD"
+                    onClick={() => briefFile.current?.click()}
+                  >
+                    <Upload size={18} />
+                  </Icon>
+                  <span title="Caracteres do pedido">
+                    {draft.briefing.length.toLocaleString('pt-BR')} / 24.000
+                  </span>
+                  <Button
+                    className={styles.composeButton}
+                    onClick={compose}
+                    disabled={!draft.briefing.trim()}
+                  >
+                    {draft.services.length
+                      ? 'Atualizar proposta'
+                      : 'Montar proposta'}
+                    <ArrowUp size={16} />
+                  </Button>
+                </div>
               </div>
               {needsCompose && (
                 <p className={styles.pendingBrief} role="status">
                   Pedido alterado. A prévia ainda não foi atualizada.
                 </p>
               )}
+              <section className={styles.quickDesign}>
+                <div className={styles.sectionTitle}>
+                  <h3>Composição</h3>
+                  <Icon
+                    label="Personalizar visual"
+                    onClick={() => {
+                      setDetails(true);
+                      setTab('design');
+                    }}
+                  >
+                    <Palette size={17} />
+                  </Icon>
+                </div>
+                <DesignChoices
+                  draft={draft}
+                  onChange={(design) => change({ design })}
+                />
+              </section>
               {(draft.client || draft.services.length > 0) && (
                 <section
                   className={styles.composedSummary}
@@ -1223,33 +1309,10 @@ export function ZeroLab({
                         ))}
                       </select>
                     </Field>
-                    <div
-                      className={styles.designChoices}
-                      aria-label="Composição"
-                    >
-                      {(
-                        [
-                          { key: 'editorial', label: 'Editorial' },
-                          { key: 'contrast', label: 'Estúdio' },
-                          { key: 'compact', label: 'Executiva' },
-                        ] as const
-                      ).map((d) => (
-                        <button
-                          key={d.key}
-                          aria-pressed={draft.design === d.key}
-                          onClick={() => change({ design: d.key })}
-                        >
-                          <span
-                            className={styles.designThumb}
-                            data-design={d.key}
-                          >
-                            <img src={zeroCover(draft)} alt="" />
-                            <span>{draft.supplier || 'Sua empresa'}</span>
-                          </span>
-                          <span>{d.label}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <DesignChoices
+                      draft={draft}
+                      onChange={(design) => change({ design })}
+                    />
                     <div className={styles.sectionTitle}>
                       <h2>Imagem de capa</h2>
                       <Icon
@@ -1452,31 +1515,38 @@ export function ZeroLab({
               </fieldset>
             </>
           )}
-          <footer className={styles.editorFooter}>
-            <span>
-              <strong>{zeroMoney(totals.monthly)}</strong>/mês
-            </span>
-            <span>
-              <strong>{zeroMoney(totals.once)}</strong> único
-            </span>
-            {totals.pending && <small>Há valores a definir</small>}
-          </footer>
+          {draft.services.length > 0 && (
+            <footer className={styles.editorFooter}>
+              <span>
+                <strong>{zeroMoney(totals.monthly)}</strong>/mês
+              </span>
+              <span>
+                <strong>{zeroMoney(totals.once)}</strong> único
+              </span>
+              {totals.pending && <small>Há valores a definir</small>}
+            </footer>
+          )}
         </section>
         <section className={styles.preview} data-pane={pane}>
           <div className={styles.previewToolbar}>
+            <span className={styles.previewLabel}>Prévia da proposta</span>
             <div className={styles.devices}>
               <Icon
                 label="Prévia para computador"
                 onClick={() => setMobile(false)}
+                pressed={!mobile}
               >
                 <Monitor />
               </Icon>
-              <Icon label="Prévia para celular" onClick={() => setMobile(true)}>
+              <Icon
+                label="Prévia para celular"
+                onClick={() => setMobile(true)}
+                pressed={mobile}
+              >
                 <Smartphone />
               </Icon>
             </div>
-            <span>Prévia privada · Sem IA</span>
-            <div>
+            <div className={styles.previewActions}>
               <Icon
                 label="Importar cópia editável"
                 onClick={() => file.current?.click()}

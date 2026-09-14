@@ -80,6 +80,25 @@ test('new composer opens with one visible text input and optional details, no fo
   assert.equal(nodes.filter((n) => n.tagName === 'select').length, 0);
   assert.match(markup, /Montar proposta/);
   assert.match(markup, /Ajustar detalhes/);
+  const compositions = nodes.find((n) =>
+    n.attrs.some((a) => a.name === 'aria-label' && a.value === 'Composição'),
+  );
+  const choices = compositions.childNodes.filter((n) => n.tagName === 'button');
+  assert.equal(choices.length, 3);
+  assert.equal(
+    choices.filter((n) =>
+      n.attrs.some((a) => a.name === 'aria-pressed' && a.value === 'true'),
+    ).length,
+    1,
+  );
+  const desktop = nodes.find((n) =>
+    n.attrs.some(
+      (a) => a.name === 'aria-label' && a.value === 'Prévia para computador',
+    ),
+  );
+  assert.ok(
+    desktop.attrs.some((a) => a.name === 'aria-pressed' && a.value === 'true'),
+  );
   assert.doesNotMatch(markup, /Dados da proposta|Condições de pagamento/);
 });
 
