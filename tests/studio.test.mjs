@@ -151,6 +151,7 @@ function fixture() {
     '@/db': { getD1: () => d1 },
     '@/lib/studio': studio,
     '@/lib/studio-design': studioDesign,
+    '@/lib/studio-stream': studioStream,
     '@/lib/studio-templates': studioTemplates,
     '@/lib/studio-media': {
       prepareStudioMedia: async (
@@ -559,7 +560,7 @@ test('streaming reports actual stages and only completes after the saved version
   try {
     const { project } = await (await f.create()).json();
     const outgoing = request({ message: 'Crie a proposta.', revision: 0 });
-    outgoing.headers.set('Accept', 'application/x-ndjson');
+    outgoing.headers.set('Accept', 'text/event-stream');
     const response = await f.messages.POST(outgoing, context(project.id));
     const stages = [];
     const result = await studioStream.readStudioStream(response, (stage) =>

@@ -72,7 +72,7 @@ export async function lockStudioProject(row: ProjectRow, revision: number) {
     )
     .bind(
       token,
-      Date.now() + 300000,
+      Date.now() + 480000,
       row.id,
       row.workspaceId,
       revision,

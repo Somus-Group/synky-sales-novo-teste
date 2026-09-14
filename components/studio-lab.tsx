@@ -450,7 +450,7 @@ export function StudioLab() {
             signal: request.current.signal,
             headers: {
               'Content-Type': 'application/json',
-              Accept: 'application/x-ndjson',
+              Accept: 'text/event-stream',
             },
             body: JSON.stringify({
               message: text,

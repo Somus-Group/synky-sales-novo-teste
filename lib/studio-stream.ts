@@ -12,7 +12,13 @@ export async function readStudioStream<T>(
   response: Response,
   progress: (stage: StudioStage) => void,
 ): Promise<T> {
-  if (!response.headers.get('content-type')?.includes('application/x-ndjson')) {
+  const eventStream = response.headers
+    .get('content-type')
+    ?.includes('text/event-stream');
+  if (
+    !eventStream &&
+    !response.headers.get('content-type')?.includes('application/x-ndjson')
+  ) {
     const result = (await response.json()) as T & { error?: string };
     if (!response.ok)
       throw new Error(result.error || 'Não foi possível concluir.');
@@ -37,7 +43,10 @@ export async function readStudioStream<T>(
       }
       for (const line of lines) {
         if (!line.trim()) continue;
-        const event = JSON.parse(line);
+        if (eventStream && !line.startsWith('data:')) continue;
+        const event = JSON.parse(
+          eventStream ? line.slice(5).trimStart() : line,
+        );
         if (event.type === 'error')
           throw new Error(event.error || 'Não foi possível concluir.');
         if (event.type === 'complete') return event.result as T;
