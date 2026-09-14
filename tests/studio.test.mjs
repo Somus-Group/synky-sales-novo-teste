@@ -6,6 +6,11 @@ import { DatabaseSync } from 'node:sqlite';
 import ts from 'typescript';
 import { Miniflare } from 'miniflare';
 
+// Every model/reference call in this suite must have an explicit local fixture.
+globalThis.fetch = async () => {
+  throw new Error('External network is disabled in studio unit tests.');
+};
+
 const require = createRequire(import.meta.url);
 function source(path) {
   return readFileSync(new URL('../' + path, import.meta.url), 'utf8');
@@ -549,7 +554,9 @@ test('an empty creation is repaired and a failed repair never replaces the saved
 test('streaming reports actual stages and only completes after the saved version exists', async () => {
   const f = fixture();
   let releaseGeneration;
-  const generationGate = new Promise((resolve) => { releaseGeneration = resolve; });
+  const generationGate = new Promise((resolve) => {
+    releaseGeneration = resolve;
+  });
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => {
     await generationGate;
@@ -571,7 +578,10 @@ test('streaming reports actual stages and only completes after the saved version
     const reader = response.body.getReader();
     const first = await reader.read();
     assert.match(new TextDecoder().decode(first.value), /"type":"connected"/);
-    assert.equal((await f.database.studioProject(project.id, 'one')).revision, 0);
+    assert.equal(
+      (await f.database.studioProject(project.id, 'one')).revision,
+      0,
+    );
     reader.releaseLock();
     releaseGeneration();
     const stages = [];
@@ -600,7 +610,9 @@ test('streaming reports actual stages and only completes after the saved version
 test('repairs an incomplete design mapping before generating without dropping requirements', async () => {
   const f = fixture();
   const valid = structuredClone(f.pipeline.design);
-  valid.requirements = [{ id: 'r01', content: 'Contrato de 6 meses', evidence: 'briefing' }];
+  valid.requirements = [
+    { id: 'r01', content: 'Contrato de 6 meses', evidence: 'briefing' },
+  ];
   valid.sections[0].requirements = ['r01'];
   const incomplete = structuredClone(valid);
   incomplete.sections[0].requirements = [];
@@ -613,14 +625,200 @@ test('repairs an incomplete design mapping before generating without dropping re
   };
   f.pipeline.audit.covered = ['r01'];
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => Response.json({ status: 'completed', output_text: JSON.stringify({ title: 'Teste', message: 'Criada', html, reference_status: 'not_requested' }) });
+  globalThis.fetch = async () =>
+    Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Teste',
+        message: 'Criada',
+        html,
+        reference_status: 'not_requested',
+      }),
+    });
   try {
     const { project } = await (await f.create({ templateId: 'none' })).json();
-    const result = await f.messages.POST(request({ message: 'Crie a proposta para 6 meses.', revision: 0 }), context(project.id));
-    assert.equal(result.status, 200, JSON.stringify(await result.clone().json()));
+    const result = await f.messages.POST(
+      request({ message: 'Crie a proposta para 6 meses.', revision: 0 }),
+      context(project.id),
+    );
+    assert.equal(
+      result.status,
+      200,
+      JSON.stringify(await result.clone().json()),
+    );
     assert.equal(attempts, 2);
     assert.equal((await result.json()).project.revision, 1);
-    assert.equal(studioDesign.studioDesignSchema.properties.sections.items.properties.id.pattern, '^[a-z][\\w-]{0,60}$');
+    assert.equal(
+      studioDesign.studioDesignSchema.properties.sections.items.properties.id
+        .pattern,
+      '^[a-z][\\w-]{0,60}$',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('audit separates absent information from supplied requirements and rejects invented evidence', () => {
+  const design = {
+    requirements: [
+      {
+        id: 'r01',
+        content: 'Validade de 15 dias',
+        evidence: 'Validade de 15 dias',
+      },
+      {
+        id: 'r02',
+        content: 'Honorários de R$ 4.800 por mês',
+        evidence: 'Honorários de R$ 4.800 por mês',
+      },
+    ],
+  };
+  const finding = (kind, extra = {}) => ({
+    kind,
+    requirementId: '',
+    sourceQuote: '',
+    proposalQuote: '',
+    correction: '',
+    ...extra,
+  });
+  const evidence = {
+    facts: [
+      'Validade de 15 dias. Honorários de R$ 4.800 por mês. Criação de site não inclusa.',
+    ],
+    proposal:
+      '<style>.scope{display:grid}</style><p>Validade de 15 dias. Retorno garantido em 30 dias.</p>',
+    reference: '.scope{display:flex}',
+  };
+  const issues = [
+    finding('missing_information', {
+      correction: 'Data de emissão não informada.',
+    }),
+    finding('missing_information', {
+      correction: 'Contato do cliente não informado.',
+    }),
+    finding('requirement', {
+      requirementId: 'r01',
+      sourceQuote: 'Validade de 15 dias',
+      correction: 'Adicionar data de emissão e responsável operacional.',
+    }),
+    finding('requirement', {
+      sourceQuote: 'Contato do cliente obrigatório',
+      correction: 'Adicionar telefone.',
+    }),
+    finding('requirement', {
+      sourceQuote: 'Criação de site não inclusa.',
+      correction: 'Adicionar também assinatura e data.',
+    }),
+    finding('unsupported_content', {
+      proposalQuote: 'Retorno garantido em 30 dias.',
+      correction: 'Inventar outro resultado.',
+    }),
+    finding('unsupported_content', {
+      proposalQuote: 'Validade de 15 dias',
+      correction: 'Remover a validade.',
+    }),
+    finding('layout', {
+      proposalQuote: 'Conteúdo que não existe na página',
+      correction: 'Adicionar contatos.',
+    }),
+    finding('reference_visual', {
+      sourceQuote: '.scope{display:flex}',
+      proposalQuote: '.scope{display:grid}',
+      correction: 'Preservar a organização flex da referência.',
+    }),
+    finding('reference_visual', {
+      sourceQuote: 'referência inventada',
+      proposalQuote: '.scope{display:grid}',
+      correction: 'Usar outra marca.',
+    }),
+  ];
+  const parsed = studioDesign.parseStudioAudit(
+    JSON.stringify({
+      issues,
+      covered: ['r01'],
+      referenceAssessment: 'Contraste preservado',
+    }),
+    design,
+    evidence,
+  );
+  assert.deepEqual(parsed.missing, [
+    'Data de emissão não informada.',
+    'Contato do cliente não informado.',
+  ]);
+  assert.equal(parsed.issues.length, 4);
+  assert.match(parsed.issues.join(' '), /r02|4\.800/);
+  assert.match(parsed.issues.join(' '), /Criação de site não inclusa/);
+  assert.match(
+    parsed.issues.join(' '),
+    /Remova esta afirmação sem fonte: Retorno garantido/,
+  );
+  assert.match(parsed.issues.join(' '), /organização flex/);
+  assert.doesNotMatch(
+    parsed.issues.join(' '),
+    /data de emissão|responsável|telefone|assinatura|outro resultado|outra marca/,
+  );
+  assert.throws(
+    () =>
+      studioDesign.parseStudioAudit(
+        JSON.stringify({
+          issues: ['Adicionar contato'],
+          covered: [],
+          referenceAssessment: '',
+        }),
+        design,
+      ),
+    /revisão/,
+  );
+});
+
+test('missing client contacts and dates do not trigger another paid generation or block saving', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  let generated = 0;
+  f.pipeline.audit.issues = [
+    'Data de emissão',
+    'Contato do cliente',
+    'Responsável operacional',
+  ].map((field) => ({
+    kind: 'missing_information',
+    requirementId: '',
+    sourceQuote: '',
+    proposalQuote: '',
+    correction: field + ' não informado.',
+  }));
+  globalThis.fetch = async () => {
+    generated++;
+    return Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Teste',
+        message: 'Criada',
+        html,
+        reference_status: 'not_requested',
+      }),
+    });
+  };
+  try {
+    const { project } = await (await f.create({ templateId: 'none' })).json();
+    const response = await f.messages.POST(
+      request({ message: 'Crie a proposta.', revision: 0 }),
+      context(project.id),
+    );
+    const result = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(result));
+    assert.equal(result.project.revision, 1);
+    assert.equal(generated, 1);
+    assert.equal(
+      f.pipeline.requests.filter((r) => r.text.format.name === 'studio_audit')
+        .length,
+      1,
+    );
+    assert.equal(result.project.messages.at(-1).review.missing.length, 3);
+    assert.equal(
+      (await f.database.studioProject(project.id, 'one')).lockToken,
+      '',
+    );
   } finally {
     globalThis.fetch = originalFetch;
     f.sqlite.close();

@@ -27,6 +27,11 @@ Agente de propostas, Configurar agente e Propostas continuam disponíveis.
   construção e revisão independente de conteúdo. Se a revisão detectar omissões,
   dados inventados ou falhas de apresentação, há uma tentativa de correção antes
   de salvar. Falhas mantêm a versão anterior e explicam os pontos encontrados.
+- A revisão distingue requisitos fornecidos de informações ausentes. Data de
+  emissão, contatos e responsáveis não informados ficam em **Informações a definir**,
+  sem bloquear a versão ou provocar outra geração. Falhas de conteúdo precisam
+  apontar um requisito ou uma citação da fonte; falhas visuais precisam citar
+  trechos existentes. Correções de requisitos nunca acrescentam exigências do revisor.
 - A aba Revisão apresenta a direção visual e os requisitos conferidos. A conversa
   recebe o progresso real do servidor por streaming, sem porcentagens estimadas.
 - A leitura de links seleciona as regras CSS das classes encontradas, mantém
@@ -68,7 +73,8 @@ do ambiente. Nunca versione `.dev.vars`.
 Sem a chave, rascunhos, briefing e referências podem ser salvos. A interface informa
 que a IA está desconectada e a API retorna `503 ai_not_configured`, sem simular uma
 geração. Se a referência pública não puder ser consultada, a resposta informa isso.
-O link orienta a estrutura e o conteúdo; não é uma importação idêntica do código da
+O link orienta o visual e a estrutura; os fatos comerciais vêm do briefing e do pedido.
+Não é uma importação idêntica do código da
 Lovable. Briefing e PDF são enviados à API para atender à solicitação.
 
 ## Banco e validação
@@ -89,6 +95,11 @@ servidor; cores e estilos aceitam apenas valores limitados.
 
 Validação: `node --test tests/studio.test.mjs tests/studio-media.test.mjs tests/studio-reference.test.mjs tests/proposal-workflow.test.mjs`,
 `npx tsc --noEmit` e `npm run build`.
+
+`tests/studio.test.mjs` bloqueia chamadas de rede sem respostas simuladas explícitas.
+Essa suíte não utiliza a chave da API. Não executar geração real ou testes pagos
+sem autorização do usuário. O teste opcional de referência pública não usa IA e
+só roda quando `STUDIO_LIVE_REFERENCE_URL` é definido.
 
 Referências oficiais:
 - https://developers.openai.com/api/docs/guides/structured-outputs

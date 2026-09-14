@@ -185,3 +185,19 @@ test('strict review blocks generic text proposals and accepts visual composition
   });
   assert.deepEqual(visual.issues, []);
 });
+
+test('review evidence decodes page text without treating styles or scripts as commercial copy', async () => {
+  const result = await run({
+    action: 'review',
+    html: '<html><head><style>.price{color:red}</style></head><body><h1>Proposta</h1><p>Honorários de <strong>R$&nbsp;4.800</strong> por mês.</p><style>.hidden{display:none}</style><script>Invented private quote</script><p>Validade de 15 dias.</p></body></html>',
+  });
+  assert.match(
+    result.documentText.replace(/\s+/g, ' '),
+    /Honorários de R\$ 4\.800 por mês/,
+  );
+  assert.match(result.documentText, /Validade de 15 dias/);
+  assert.doesNotMatch(
+    result.documentText,
+    /color:red|display:none|Invented private/,
+  );
+});

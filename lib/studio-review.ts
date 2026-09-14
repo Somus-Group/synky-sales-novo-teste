@@ -1,4 +1,5 @@
 import { selectStudioReferenceStyles } from '@/lib/studio-reference-styles';
+import { decodeHTML } from 'entities';
 
 export type StudioReview = {
   headings: string[];
@@ -37,8 +38,29 @@ export async function reviewStudioHtml(
   let navCount = 0;
   let classNames = '';
   let styleText = '';
+  let documentText = '';
+  let excluded = 0;
   const sections: Array<{ text: string; image: boolean }> = [];
   await new HTMLRewriter()
+    .on('style,script,noscript,template,svg', {
+      element(element) {
+        excluded++;
+        element.onEndTag(() => {
+          excluded--;
+        });
+      },
+    })
+    .on('h1,h2,h3,p,li,td,th,section,article', {
+      element() {
+        documentText += ' ';
+      },
+    })
+    .on('body', {
+      text(chunk) {
+        if (!excluded && documentText.length < 200000)
+          documentText += chunk.text;
+      },
+    })
     .on('style', {
       text(chunk) {
         if (styleText.length < 24000) styleText += chunk.text;
@@ -198,5 +220,10 @@ export async function reviewStudioHtml(
         'Reduza a aparência de lista corrida transformando parte do escopo em blocos, painéis ou etapas editoriais.',
       );
   }
-  return { headings: headings.slice(0, 20), imageCount: images, issues };
+  return {
+    headings: headings.slice(0, 20),
+    imageCount: images,
+    issues,
+    documentText: decodeHTML(documentText),
+  };
 }

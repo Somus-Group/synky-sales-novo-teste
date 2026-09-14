@@ -89,13 +89,11 @@ export async function readStudioReference(
     AbortSignal.timeout(25000),
   ]);
   const checked = new Set<string>();
-  const started = Date.now();
   let downloaded = 0;
   async function publicHost(host: string) {
     if (checked.has(host)) return;
     let addresses: string[] = [];
     for (const type of ['A', 'AAAA']) {
-      console.info('Studio reference read', 'dns', type, Date.now() - started);
       const dns = await fetch(
         `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(host)}&type=${type}`,
         {
@@ -133,7 +131,6 @@ export async function readStudioReference(
     let current = referenceUrl(address);
     for (let redirect = 0; redirect <= 4; redirect++) {
       await publicHost(new URL(current).hostname);
-      console.info('Studio reference read', kind, 'request', Date.now() - started);
       const response = await fetch(current, {
         redirect: 'manual',
         signal,
@@ -217,7 +214,6 @@ export async function readStudioReference(
         Math.min(limit, 5_000_000 - downloaded),
       );
       downloaded += new TextEncoder().encode(text).length;
-      console.info('Studio reference read', kind, 'complete', Date.now() - started);
       return { url: current, text };
     }
     throw unavailable(
