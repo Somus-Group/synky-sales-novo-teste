@@ -127,6 +127,113 @@
   flex: 0 0 auto;
   border-bottom: 1px solid #dde3e0;
 }
+.entryMode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #dde3e0;
+  flex-shrink: 0;
+}
+.entryMode button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 7px;
+  min-height: 40px;
+  min-width: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #626d66;
+  font: inherit;
+}
+.entryMode button[aria-pressed='true'] {
+  background: #eaf1fa;
+  color: #145db5;
+  font-weight: 600;
+}
+.entryMode svg {
+  flex-shrink: 0;
+}
+.zero .composer > textarea {
+  min-height: 240px;
+  max-height: 440px;
+  padding: 14px;
+}
+.composeAction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.composeAction > span {
+  color: #68746c;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.pendingBrief {
+  color: #66521d;
+  font-size: 0.8125rem;
+}
+.composedSummary {
+  border-top: 1px solid #dde3e0;
+  padding-top: 18px;
+}
+.composedSummary ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+.composedSummary li {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #edf1ef;
+  overflow-wrap: anywhere;
+}
+.composedSummary li span {
+  flex: 1 1 130px;
+}
+.composedSummary li strong {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.composedSummary p {
+  color: #68746c;
+  font-size: 0.75rem;
+}
+.composeReview {
+  border-left: 3px solid #d0a327;
+  padding-left: 12px;
+  color: #66521d;
+  font-size: 0.8125rem;
+}
+.composeReview ul {
+  padding-left: 18px;
+  margin: 8px 0;
+}
+.composeReview li {
+  margin-bottom: 7px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.composeReview summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.zero .mobilePreview {
+  display: none;
+}
+@media (max-width: 800px) {
+  .zero .mobilePreview {
+    display: inline-flex;
+  }
+}
 .tabs button {
   min-width: 0;
   min-height: 48px;

@@ -4,6 +4,10 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import ts from 'typescript';
 import { parse } from 'parse5';
+import * as React from 'react';
+import * as jsxRuntime from 'react/jsx-runtime';
+import { renderToStaticMarkup } from 'react-dom/server';
+import * as icons from 'lucide-react';
 
 globalThis.fetch = async () => {
   throw new Error('Network disabled: Proposta Zero must never call an AI API.');
@@ -16,6 +20,7 @@ function load(path, mocks = {}) {
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
       target: ts.ScriptTarget.ES2022,
+      jsx: ts.JsxEmit.ReactJSX,
     },
   }).outputText;
   new Function('require', 'module', 'exports', js)(
@@ -30,6 +35,215 @@ function load(path, mocks = {}) {
 }
 const zero = load('lib/zero-proposal.ts', {
   './zero-proposal-styles': load('lib/zero-proposal-styles.ts'),
+});
+const { composeZeroBrief } = load('lib/zero-compose.ts', {
+  './zero-proposal': zero,
+});
+
+test('new composer opens with one visible text input and optional details, no form wall', () => {
+  const { ZeroLab } = load('components/zero-lab.tsx', {
+    react: React,
+    'react/jsx-runtime': jsxRuntime,
+    'lucide-react': icons,
+    '@/components/ui/button': {
+      Button: ({ children, variant, size, ...props }) =>
+        React.createElement('button', props, children),
+    },
+    '@/components/ui/input': {
+      Input: (props) => React.createElement('input', props),
+    },
+    '@/lib/zero-proposal': zero,
+    '@/lib/zero-compose': { composeZeroBrief },
+    './zero-lab.module.css': {
+      default: new Proxy({}, { get: (_, key) => String(key) }),
+    },
+  });
+  const markup = renderToStaticMarkup(
+    React.createElement(ZeroLab, {
+      profile: { businessName: 'Synky', email: '', phone: '' },
+      onDirtyChange: () => {},
+    }),
+  );
+  const nodes = [];
+  const visit = (node) => {
+    if (node.tagName) nodes.push(node);
+    for (const child of node.childNodes || []) visit(child);
+  };
+  visit(parse(markup));
+  assert.equal(nodes.filter((n) => n.tagName === 'textarea').length, 1);
+  assert.equal(
+    nodes.filter(
+      (n) => n.tagName === 'input' && !n.attrs.some((a) => a.name === 'hidden'),
+    ).length,
+    0,
+  );
+  assert.equal(nodes.filter((n) => n.tagName === 'select').length, 0);
+  assert.match(markup, /Montar proposta/);
+  assert.match(markup, /Ajustar detalhes/);
+  assert.doesNotMatch(markup, /Dados da proposta|Condições de pagamento/);
+});
+
+test('one natural request becomes a client-specific visual proposal without network', () => {
+  const text =
+    'Proposta para Clínica Aurora. Gestão de tráfego por R$ 2.500 por mês e criação de site por R$ 4.000, pagamento único. Contrato de 6 meses. Objetivo: aumentar os agendamentos. Validade de 15 dias. Não inclui verba de anúncios.';
+  const result = composeZeroBrief(text, zero.emptyZeroDraft('Synky'));
+  assert.equal(result.draft.client, 'Clínica Aurora');
+  assert.equal(result.draft.objective, 'aumentar os agendamentos');
+  assert.equal(result.draft.months, 6);
+  assert.equal(result.draft.validity, '15 dias');
+  assert.equal(result.draft.briefing, text);
+  assert.equal(result.draft.services.length, 2);
+  assert.deepEqual(
+    result.draft.services.map((s) => [
+      s.title,
+      s.unitCents,
+      s.billing,
+      s.quantity,
+    ]),
+    [
+      ['Gestão de tráfego', 250000, 'monthly', 1],
+      ['Criação de site', 400000, 'once', 1],
+    ],
+  );
+  assert.deepEqual(result.unresolved, []);
+  assert.deepEqual(result.warnings, []);
+  assert.equal(zero.zeroTotals(result.draft).contract, 1900000);
+  assert.match(zero.renderZeroProposal(result.draft), /Clínica Aurora/);
+  assert.match(zero.renderZeroProposal(result.draft), /campaign-cover\.png/);
+  assert.match(result.draft.exclusions, /verba de anúncios/);
+  assert.doesNotMatch(
+    result.draft.services.map((s) => s.description).join(' '),
+    /Configuração de anúncios|Relatório de desempenho/,
+  );
+});
+
+test('natural inline client, decimal prices and custom services do not need catalog or labels', () => {
+  const result = composeZeroBrief(
+    'Eu quero uma proposta para a Loja Sol, fotografia de produtos por R$ 1.234,56, pagamento único e 12 posts por 2,5 mil por mês. Inclui revisão com a cliente.',
+    zero.emptyZeroDraft('Synky'),
+  );
+  assert.equal(result.draft.client, 'Loja Sol');
+  assert.deepEqual(
+    result.draft.services.map((s) => [s.unitCents, s.quantity]),
+    [
+      [123456, 1],
+      [250000, 1],
+    ],
+  );
+  assert.equal(
+    result.draft.services[0].description,
+    'fotografia de produtos por R$ 1.234,56, pagamento único',
+  );
+  assert.match(
+    result.draft.services[1].description,
+    /Inclui revisão com a cliente/,
+  );
+  assert.deepEqual(result.unresolved, []);
+});
+
+test('packages stay together; shared totals, exclusions and vague instructions are not billed', () => {
+  const result = composeZeroBrief(
+    'Cliente: Aurora\nTráfego e conteúdo por R$ 3.000 por mês\nNão quero consultoria por R$ 5.000\nSem site\nInvestimento total R$ 9.000\nDeixe igual à referência https://example.com/proposta. Mantenha um tom bem direto.',
+    zero.emptyZeroDraft('Synky'),
+  );
+  assert.equal(result.draft.services.length, 1);
+  assert.equal(result.draft.services[0].unitCents, 300000);
+  assert.match(result.draft.exclusions, /consultoria/);
+  assert.ok(result.unresolved.some((t) => /total/.test(t)));
+  assert.ok(result.unresolved.some((t) => /https:/.test(t)));
+  assert.ok(result.unresolved.some((t) => /tom bem direto/.test(t)));
+});
+
+test('ambiguous, malformed and missing prices remain pending, never guessed', () => {
+  for (const text of [
+    'Site a partir de R$ 2.000',
+    'Site de R$ 2.000 a R$ 4.000',
+    '12 posts por R$ 100 cada',
+    'Site em 3x R$ 1.000',
+    'Site por R$ 2.500,555',
+    'Site por R$ 2.50',
+    'Site por R$ 999.999.999',
+    'Serviço: Análise técnica',
+    'Site por R$ 200 por mês e pagamento único',
+  ]) {
+    const { draft } = composeZeroBrief(text, zero.emptyZeroDraft('Synky'));
+    assert.ok(draft.services.length > 0, text);
+    assert.ok(
+      draft.services.every((s) => s.unitCents === null),
+      text,
+    );
+  }
+  assert.equal(
+    composeZeroBrief('Site por R$ 0, pagamento único', zero.emptyZeroDraft())
+      .draft.services[0].unitCents,
+    0,
+  );
+});
+
+test('rebuilding keeps identity and imagery, reuses service IDs, and removes stale commercial terms', () => {
+  const base = {
+    ...zero.emptyZeroDraft('Synky'),
+    client: 'Antigo',
+    months: 12,
+    discountPercent: 20,
+    email: 'contato@example.com',
+    phone: '123',
+    logo: '/api/assets/logo12345',
+    cover: '/proposal/architecture-cover.png',
+    gallery: [{ url: '/api/assets/photo12345', caption: 'Projeto real' }],
+    terms: 'Condição antiga',
+    services: [
+      {
+        id: 'same-id',
+        title: 'Site',
+        description: 'Antigo',
+        quantity: 2,
+        unitCents: 99,
+        billing: 'monthly',
+      },
+    ],
+  };
+  const { draft } = composeZeroBrief(
+    'Proposta para Novo. Site por 2000 reais, pagamento único.',
+    base,
+  );
+  assert.equal(draft.client, 'Novo');
+  assert.equal(draft.months, 0);
+  assert.equal(draft.terms, '');
+  assert.equal(draft.discountPercent, 0);
+  for (const key of [
+    'supplier',
+    'email',
+    'phone',
+    'logo',
+    'cover',
+    'gallery',
+    'design',
+  ])
+    assert.deepEqual(draft[key], base[key]);
+  assert.equal(draft.services[0].id, 'same-id');
+  assert.equal(draft.services[0].unitCents, 200000);
+  assert.equal(base.client, 'Antigo');
+});
+
+test('composer bounds input, retains unsupported and conflicting text, and keeps output escaped', () => {
+  assert.throws(() => composeZeroBrief(' ', zero.emptyZeroDraft()));
+  assert.throws(() =>
+    composeZeroBrief('x'.repeat(24001), zero.emptyZeroDraft()),
+  );
+  const text =
+    'Cliente: Ana\nCliente: Bia\nContrato de 999 meses\nServiço: ' +
+    'x'.repeat(161);
+  const result = composeZeroBrief(text, zero.emptyZeroDraft('Synky'));
+  assert.equal(result.draft.client, 'Ana');
+  assert.equal(result.draft.months, 0);
+  assert.equal(result.draft.briefing, text);
+  assert.equal(result.unresolved.length, 3);
+  const unsafe = composeZeroBrief(
+    'Cliente: <script>alert(1)</script>\nSite por R$ 400',
+    zero.emptyZeroDraft('Synky'),
+  );
+  assert.doesNotMatch(zero.renderZeroProposal(unsafe.draft), /<script>/);
 });
 const limited = load('lib/imported-template.ts');
 const studio = load('lib/studio.ts');

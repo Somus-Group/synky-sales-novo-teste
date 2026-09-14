@@ -14,14 +14,28 @@ hosting, D1 storage and optional logo/reference requests still use infrastructur
 
 ## Prototype Workflow
 
-- Start empty or use the clearly fictional example. The example is never saved
-  automatically and creates no client or published proposal.
-- Type content directly or import a TXT/MD briefing (24,000 characters).
-  Identifying fields uses explicit line labels, not language-model inference.
-  Applying identified fields is an explicit action; oversized fields produce a
-  warning instead of truncation. Unrecognized text stays in the original briefing.
-  The private briefing itself is not included in the client-facing export.
-- Select suggested scope entries or add a custom service. All scope text is
+- The default **Escrever** view has one natural request textarea and one
+  **Montar proposta** action. It accepts inline client names, custom priced
+  services, BRL amounts, explicit monthly/one-off billing, duration, objectives,
+  validity and exclusions. TXT/MD import uses the same entry point (24,000
+  characters). Example: `Proposta para Aurora. Site por R$ 4.000, pagamento
+unico. Validade de 15 dias.`
+- Composition is a bounded local rules parser, not general-purpose AI. It does
+  not interpret arbitrary commands, follow reference links or silently fall back
+  to a model. Unrecognized clauses appear as unapplied excerpts. Ambiguous prices,
+  installment amounts and unit rates remain pending; unspecified frequency is
+  flagged for review. A shared package price is not assigned to multiple services.
+  Only supplied scope text is used, without adding catalog promises automatically.
+- The complete request remains in the private briefing, not in the client-facing
+  export. Changing it does not regenerate automatically. The UI flags the old
+  preview and prevents saving, printing or exporting it as the updated proposal
+  until the request is applied. Rebuilding replaces commercial data from the full
+  request, preserving sender identity, visual choices and images. Replacing saved
+  or manually edited content requires confirmation.
+- **Ajustar detalhes** retains all optional direct editing controls and the older
+  explicit-label briefing importer. Existing drafts without a briefing open here.
+  The clearly fictional example also remains here and is never saved automatically.
+  Select suggested scope entries or add a custom service. All scope text is
   editable. No price is assumed. Unknown prices remain visibly pending rather
   than being presented as free services. Review catalog suggestions before export.
 - Quantities, discounts, one-off fees, monthly fees and duration recalculate

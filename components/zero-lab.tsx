@@ -15,6 +15,7 @@ import {
   Plus,
   Printer,
   Save,
+  SlidersHorizontal,
   Smartphone,
   Trash2,
   Upload,
@@ -40,6 +41,7 @@ import {
   type ZeroService,
   type ZeroSummary,
 } from '@/lib/zero-proposal';
+import { composeZeroBrief, type ZeroComposition } from '@/lib/zero-compose';
 import type { AgentProfile } from './somus-app';
 import styles from './zero-lab.module.css';
 
@@ -119,6 +121,9 @@ export function ZeroLab({
   const [saved, setSaved] = useState('');
   const [id, setId] = useState(() => crypto.randomUUID());
   const [revision, setRevision] = useState(0);
+  const [details, setDetails] = useState(false);
+  const [composition, setComposition] = useState<ZeroComposition | null>(null);
+  const [needsCompose, setNeedsCompose] = useState(false);
   const [tab, setTab] = useState<'brief' | 'scope' | 'terms' | 'design'>(
     'brief',
   );
@@ -146,10 +151,14 @@ export function ZeroLab({
   const imageFile = useRef<HTMLInputElement>(null);
   const gate = useRef(false);
   const touched = useRef(false);
+  const composedCommercial = useRef('');
   const draftText = JSON.stringify(draft);
   const dirty = touched.current && draftText !== saved;
   const totals = zeroTotals(draft);
-  const missing = zeroReadiness(draft);
+  const missing = [
+    ...zeroReadiness(draft),
+    ...(needsCompose ? ['Pedido ainda não aplicado'] : []),
+  ];
   const html = useMemo(
     () => renderZeroProposal(draft, origin),
     [draft, origin],
@@ -196,9 +205,52 @@ export function ZeroLab({
     touched.current = true;
     setDraft((d) => ({ ...d, ...next }));
     setNotice('');
+    setComposition(null);
+  }
+  function commercialSnapshot(value: ZeroDraft) {
+    return JSON.stringify({
+      client: value.client,
+      title: value.title,
+      objective: value.objective,
+      services: value.services,
+      months: value.months,
+      validity: value.validity,
+      timeline: value.timeline,
+      terms: value.terms,
+      exclusions: value.exclusions,
+      discountPercent: value.discountPercent,
+    });
+  }
+  function compose() {
+    if (busy || !draft.briefing.trim()) return;
+    if (
+      (draft.services.length || draft.client || draft.objective) &&
+      commercialSnapshot(draft) !== composedCommercial.current &&
+      !window.confirm(
+        'Remontar o conteúdo a partir deste pedido? Os dados e valores atuais serão substituídos. Sua identidade visual e suas imagens serão mantidas.',
+      )
+    )
+      return;
+    try {
+      const result = composeZeroBrief(draft.briefing, draft);
+      change(result.draft);
+      composedCommercial.current = commercialSnapshot(result.draft);
+      setComposition(result);
+      setNeedsCompose(false);
+      setSuggested(null);
+      setError('');
+      setNotice(
+        'Proposta montada. Confira o conteúdo e os valores antes de enviar.',
+      );
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Não foi possível montar a proposta.',
+      );
+    }
   }
   function editService(serviceId: string, next: Partial<ZeroService>) {
     touched.current = true;
+    setComposition(null);
     setDraft((d) => ({
       ...d,
       services: d.services.map((s) =>
@@ -255,8 +307,16 @@ export function ZeroLab({
     setError('');
     setNotice('');
     setTab('brief');
+    setDetails(false);
+    setComposition(null);
+    setNeedsCompose(false);
+    composedCommercial.current = '';
   }
   async function save() {
+    if (needsCompose) {
+      setError('Monte a proposta com o pedido atualizado antes de salvar.');
+      return;
+    }
     if (gate.current) return;
     gate.current = true;
     setBusy(true);
@@ -305,6 +365,10 @@ export function ZeroLab({
       setRevision(project.revision);
       touched.current = true;
       setLibrary(false);
+      setDetails(!project.draft.briefing);
+      setComposition(null);
+      setNeedsCompose(false);
+      composedCommercial.current = '';
       setSuggested(null);
       setReference(null);
       setNotice('Rascunho aberto.');
@@ -316,11 +380,18 @@ export function ZeroLab({
     }
   }
   function duplicate() {
+    if (needsCompose) {
+      setError('Monte a proposta com o pedido atualizado antes de duplicar.');
+      return;
+    }
     setId(crypto.randomUUID());
     setRevision(0);
     change({ title: draft.title.slice(0, 152) + ' (cópia)', client: '' });
     setSaved('');
     setNotice('Cópia aberta. Revise cliente, escopo e valores.');
+    setComposition(null);
+    composedCommercial.current = '';
+    setDetails(true);
     setTab('brief');
   }
   async function importDraft(selected?: File) {
@@ -335,6 +406,10 @@ export function ZeroLab({
       setSaved('');
       setSuggested(null);
       setReference(null);
+      setComposition(null);
+      setNeedsCompose(false);
+      composedCommercial.current = '';
+      setDetails(!next.briefing);
       setNotice('Cópia editável importada.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Arquivo inválido.');
@@ -495,6 +570,8 @@ export function ZeroLab({
       })),
     } satisfies ZeroDraft;
     change(next);
+    setNeedsCompose(false);
+    composedCommercial.current = '';
     setId(crypto.randomUUID());
     setRevision(0);
     setSaved('');
@@ -601,636 +678,780 @@ export function ZeroLab({
       )}
       <div className={styles.workspace}>
         <section className={styles.editor} data-pane={pane}>
-          <nav className={styles.tabs} aria-label="Dados da proposta">
-            {(
-              [
-                { key: 'brief', label: 'Briefing' },
-                { key: 'scope', label: 'Serviços' },
-                { key: 'terms', label: 'Condições' },
-                { key: 'design', label: 'Visual' },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                aria-pressed={tab === t.key}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
-          <fieldset className={styles.fields} disabled={busy}>
-            {tab === 'brief' && (
-              <>
-                <div className={styles.sectionTitle}>
-                  <h2>Dados da proposta</h2>
-                  <Button variant="ghost" size="sm" onClick={demo}>
-                    <LayoutTemplate /> Exemplo
-                  </Button>
-                </div>
-                <Field label="Cliente">
-                  <Input
-                    maxLength={240}
-                    value={draft.client}
-                    onChange={(e) => change({ client: e.target.value })}
-                  />
-                </Field>
-                <Field label="Título">
-                  <Input
-                    maxLength={160}
-                    value={draft.title}
-                    onChange={(e) => change({ title: e.target.value })}
-                  />
-                </Field>
-                <Field label="Objetivo">
-                  <textarea
-                    maxLength={8000}
-                    rows={4}
-                    value={draft.objective}
-                    onChange={(e) => change({ objective: e.target.value })}
-                  />
-                </Field>
-                <div className={styles.sectionTitle}>
-                  <h2>Briefing original</h2>
-                  <Icon
-                    label="Importar briefing TXT ou MD"
-                    onClick={() => briefFile.current?.click()}
-                  >
-                    <Upload />
-                  </Icon>
-                </div>
-                <textarea
-                  aria-label="Briefing original"
-                  maxLength={24000}
-                  rows={7}
-                  placeholder={
-                    'Cliente:\nProjeto:\nObjetivo:\nPrazo:\nCondições:'
-                  }
-                  value={draft.briefing}
-                  onChange={(e) => {
-                    change({ briefing: e.target.value });
-                    setSuggested(null);
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!draft.briefing.trim()}
-                  onClick={() => setSuggested(readZeroBrief(draft.briefing))}
+          <div
+            className={styles.entryMode}
+            role="group"
+            aria-label="Modo de edição"
+          >
+            <button onClick={() => setDetails(false)} aria-pressed={!details}>
+              <FileText size={16} /> Escrever
+            </button>
+            <button onClick={() => setDetails(true)} aria-pressed={details}>
+              <SlidersHorizontal size={16} /> Ajustar detalhes
+            </button>
+          </div>
+          {!details && (
+            <fieldset
+              className={`${styles.fields} ${styles.composer}`}
+              disabled={busy}
+            >
+              <div className={styles.sectionTitle}>
+                <h2>Qual é a proposta?</h2>
+                <Icon
+                  label="Importar pedido TXT ou MD"
+                  onClick={() => briefFile.current?.click()}
                 >
-                  <FileText /> Identificar campos
+                  <Upload />
+                </Icon>
+              </div>
+              <textarea
+                aria-label="Pedido da proposta"
+                rows={11}
+                maxLength={24000}
+                placeholder="Proposta para Clínica Aurora. Gestão de tráfego por R$ 2.500 por mês e criação de site por R$ 4.000, pagamento único. Contrato de 6 meses. Objetivo: aumentar os agendamentos. Validade de 15 dias. Não inclui verba de anúncios."
+                value={draft.briefing}
+                onChange={(e) => {
+                  change({ briefing: e.target.value });
+                  setComposition(null);
+                  setNeedsCompose(true);
+                }}
+              />
+              <div className={styles.composeAction}>
+                <span>
+                  {draft.briefing.length.toLocaleString('pt-BR')} / 24.000
+                </span>
+                <Button onClick={compose} disabled={!draft.briefing.trim()}>
+                  <ArrowUp size={16} />{' '}
+                  {draft.services.length
+                    ? 'Atualizar proposta'
+                    : 'Montar proposta'}
                 </Button>
-                {suggested?.warnings.map((warning) => (
-                  <p key={warning} role="status">
-                    {warning}
-                  </p>
-                ))}
-                {suggested && (
-                  <div className={styles.suggestions}>
-                    <h3>Campos identificados</h3>
-                    {Object.keys(suggested.fields).length ? (
-                      <>
-                        <dl>
-                          {Object.entries(suggested.fields).map(
-                            ([key, value]) => (
-                              <div key={key}>
-                                <dt>
-                                  {
-                                    {
-                                      client: 'Cliente',
-                                      title: 'Título',
-                                      objective: 'Objetivo',
-                                      timeline: 'Prazo',
-                                      terms: 'Condições',
-                                      exclusions: 'Exclusões',
-                                      validity: 'Validade',
-                                    }[key]
-                                  }
-                                </dt>
-                                <dd>{value}</dd>
-                              </div>
-                            ),
-                          )}
-                        </dl>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            change(suggested.fields);
-                            setNotice(
-                              'Campos aplicados. Confira os dados e os valores antes de exportar.',
-                            );
-                          }}
-                        >
-                          <Check /> Aplicar campos
-                        </Button>
-                      </>
-                    ) : (
-                      <p>
-                        Nenhum campo rotulado encontrado. O briefing original
-                        permanece intacto.
-                      </p>
-                    )}
-                    {!!suggested.suggestions.length && (
-                      <>
-                        <h3>Serviços relacionados</h3>
-                        <div className={styles.catalog}>
-                          {suggested.suggestions.map((key) => (
-                            <Button
-                              key={key}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addService(key)}
-                              disabled={draft.services.length >= 24}
-                            >
-                              <Plus />
-                              {zeroCatalog.find((s) => s.key === key)?.title}
-                            </Button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-            {tab === 'scope' && (
-              <>
-                <div className={styles.sectionTitle}>
-                  <h2>Serviços e valores</h2>
-                  <span>{draft.services.length}/24</span>
-                </div>
-                <details
-                  className={styles.catalogDetails}
-                  open={!draft.services.length}
+              </div>
+              {needsCompose && (
+                <p className={styles.pendingBrief} role="status">
+                  Pedido alterado. A prévia ainda não foi atualizada.
+                </p>
+              )}
+              {(draft.client || draft.services.length > 0) && (
+                <section
+                  className={styles.composedSummary}
+                  aria-label="Resumo da proposta"
                 >
-                  <summary>Catálogo de escopos</summary>
-                  <div className={styles.catalog}>
-                    {zeroCatalog.map((item) => (
-                      <button
-                        key={item.key}
-                        onClick={() => addService(item.key)}
-                        disabled={draft.services.length >= 24}
-                      >
-                        <Plus size={16} />
-                        {item.title}
-                      </button>
+                  <h3>{draft.client || 'Cliente a definir'}</h3>
+                  <ul>
+                    {draft.services.map((service) => (
+                      <li key={service.id}>
+                        <span>{service.title}</span>
+                        <strong>
+                          {service.unitCents === null
+                            ? 'A definir'
+                            : zeroMoney(service.unitCents * service.quantity)}
+                          {service.billing === 'monthly' ? ' / mês' : ''}
+                        </strong>
+                      </li>
                     ))}
-                  </div>
-                </details>
-                {draft.services.map((s, i) => (
-                  <article key={s.id} className={styles.service}>
-                    <div className={styles.serviceHead}>
-                      <strong>{String(i + 1).padStart(2, '0')}</strong>
-                      <div>
-                        <Icon
-                          label="Mover serviço para cima"
-                          onClick={() => move(i, -1)}
-                          disabled={i === 0}
-                        >
-                          <ArrowUp />
-                        </Icon>
-                        <Icon
-                          label="Mover serviço para baixo"
-                          onClick={() => move(i, 1)}
-                          disabled={i === draft.services.length - 1}
-                        >
-                          <ArrowDown />
-                        </Icon>
-                        <Icon
-                          label="Remover serviço"
-                          onClick={() =>
-                            change({
-                              services: draft.services.filter(
-                                (item) => item.id !== s.id,
-                              ),
-                            })
-                          }
-                        >
-                          <Trash2 />
-                        </Icon>
-                      </div>
+                  </ul>
+                  {(draft.months > 0 || draft.validity) && (
+                    <p>
+                      {draft.months > 0 ? `${draft.months} meses` : ''}
+                      {draft.months > 0 && draft.validity ? ' · ' : ''}
+                      {draft.validity ? `Validade: ${draft.validity}` : ''}
+                    </p>
+                  )}
+                </section>
+              )}
+              {composition && (
+                <div className={styles.composeReview} aria-live="polite">
+                  {composition.warnings.length > 0 && (
+                    <>
+                      <h3>Para conferir</h3>
+                      <ul>
+                        {composition.warnings.map((warning) => (
+                          <li key={warning}>{warning}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {composition.unresolved.length > 0 && (
+                    <details open>
+                      <summary>
+                        {composition.unresolved.length} trecho(s) ainda não
+                        aplicado(s)
+                      </summary>
+                      <ul>
+                        {composition.unresolved.map((part, index) => (
+                          <li key={index}>{part}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+              )}
+              <Button
+                className={styles.mobilePreview}
+                variant="outline"
+                onClick={() => setPane('preview')}
+                disabled={!draft.services.length}
+              >
+                <Monitor size={16} /> Ver proposta
+              </Button>
+            </fieldset>
+          )}
+          {details && (
+            <>
+              <nav className={styles.tabs} aria-label="Dados da proposta">
+                {(
+                  [
+                    { key: 'brief', label: 'Briefing' },
+                    { key: 'scope', label: 'Serviços' },
+                    { key: 'terms', label: 'Condições' },
+                    { key: 'design', label: 'Visual' },
+                  ] as const
+                ).map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setTab(t.key)}
+                    aria-pressed={tab === t.key}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </nav>
+              <fieldset className={styles.fields} disabled={busy}>
+                {tab === 'brief' && (
+                  <>
+                    <div className={styles.sectionTitle}>
+                      <h2>Dados da proposta</h2>
+                      <Button variant="ghost" size="sm" onClick={demo}>
+                        <LayoutTemplate /> Exemplo
+                      </Button>
                     </div>
-                    <Field label="Serviço">
+                    <Field label="Cliente">
+                      <Input
+                        maxLength={240}
+                        value={draft.client}
+                        onChange={(e) => change({ client: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Título">
                       <Input
                         maxLength={160}
-                        value={s.title}
-                        onChange={(e) =>
-                          editService(s.id, { title: e.target.value })
-                        }
+                        value={draft.title}
+                        onChange={(e) => change({ title: e.target.value })}
                       />
                     </Field>
-                    <Field label="Entregáveis">
+                    <Field label="Objetivo">
                       <textarea
-                        maxLength={4000}
+                        maxLength={8000}
                         rows={4}
-                        value={s.description}
-                        onChange={(e) =>
-                          editService(s.id, { description: e.target.value })
-                        }
+                        value={draft.objective}
+                        onChange={(e) => change({ objective: e.target.value })}
                       />
                     </Field>
+                    <div className={styles.sectionTitle}>
+                      <h2>Briefing original</h2>
+                      <Icon
+                        label="Importar briefing TXT ou MD"
+                        onClick={() => briefFile.current?.click()}
+                      >
+                        <Upload />
+                      </Icon>
+                    </div>
+                    <textarea
+                      aria-label="Briefing original"
+                      maxLength={24000}
+                      rows={7}
+                      placeholder={
+                        'Cliente:\nProjeto:\nObjetivo:\nPrazo:\nCondições:'
+                      }
+                      value={draft.briefing}
+                      onChange={(e) => {
+                        change({ briefing: e.target.value });
+                        setSuggested(null);
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!draft.briefing.trim()}
+                      onClick={() =>
+                        setSuggested(readZeroBrief(draft.briefing))
+                      }
+                    >
+                      <FileText /> Identificar campos
+                    </Button>
+                    {suggested?.warnings.map((warning) => (
+                      <p key={warning} role="status">
+                        {warning}
+                      </p>
+                    ))}
+                    {suggested && (
+                      <div className={styles.suggestions}>
+                        <h3>Campos identificados</h3>
+                        {Object.keys(suggested.fields).length ? (
+                          <>
+                            <dl>
+                              {Object.entries(suggested.fields).map(
+                                ([key, value]) => (
+                                  <div key={key}>
+                                    <dt>
+                                      {
+                                        {
+                                          client: 'Cliente',
+                                          title: 'Título',
+                                          objective: 'Objetivo',
+                                          timeline: 'Prazo',
+                                          terms: 'Condições',
+                                          exclusions: 'Exclusões',
+                                          validity: 'Validade',
+                                        }[key]
+                                      }
+                                    </dt>
+                                    <dd>{value}</dd>
+                                  </div>
+                                ),
+                              )}
+                            </dl>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                change(suggested.fields);
+                                setNeedsCompose(false);
+                                setNotice(
+                                  'Campos aplicados. Confira os dados e os valores antes de exportar.',
+                                );
+                              }}
+                            >
+                              <Check /> Aplicar campos
+                            </Button>
+                          </>
+                        ) : (
+                          <p>
+                            Nenhum campo rotulado encontrado. O briefing
+                            original permanece intacto.
+                          </p>
+                        )}
+                        {!!suggested.suggestions.length && (
+                          <>
+                            <h3>Serviços relacionados</h3>
+                            <div className={styles.catalog}>
+                              {suggested.suggestions.map((key) => (
+                                <Button
+                                  key={key}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => addService(key)}
+                                  disabled={draft.services.length >= 24}
+                                >
+                                  <Plus />
+                                  {
+                                    zeroCatalog.find((s) => s.key === key)
+                                      ?.title
+                                  }
+                                </Button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+                {tab === 'scope' && (
+                  <>
+                    <div className={styles.sectionTitle}>
+                      <h2>Serviços e valores</h2>
+                      <span>{draft.services.length}/24</span>
+                    </div>
+                    <details
+                      className={styles.catalogDetails}
+                      open={!draft.services.length}
+                    >
+                      <summary>Catálogo de escopos</summary>
+                      <div className={styles.catalog}>
+                        {zeroCatalog.map((item) => (
+                          <button
+                            key={item.key}
+                            onClick={() => addService(item.key)}
+                            disabled={draft.services.length >= 24}
+                          >
+                            <Plus size={16} />
+                            {item.title}
+                          </button>
+                        ))}
+                      </div>
+                    </details>
+                    {draft.services.map((s, i) => (
+                      <article key={s.id} className={styles.service}>
+                        <div className={styles.serviceHead}>
+                          <strong>{String(i + 1).padStart(2, '0')}</strong>
+                          <div>
+                            <Icon
+                              label="Mover serviço para cima"
+                              onClick={() => move(i, -1)}
+                              disabled={i === 0}
+                            >
+                              <ArrowUp />
+                            </Icon>
+                            <Icon
+                              label="Mover serviço para baixo"
+                              onClick={() => move(i, 1)}
+                              disabled={i === draft.services.length - 1}
+                            >
+                              <ArrowDown />
+                            </Icon>
+                            <Icon
+                              label="Remover serviço"
+                              onClick={() =>
+                                change({
+                                  services: draft.services.filter(
+                                    (item) => item.id !== s.id,
+                                  ),
+                                })
+                              }
+                            >
+                              <Trash2 />
+                            </Icon>
+                          </div>
+                        </div>
+                        <Field label="Serviço">
+                          <Input
+                            maxLength={160}
+                            value={s.title}
+                            onChange={(e) =>
+                              editService(s.id, { title: e.target.value })
+                            }
+                          />
+                        </Field>
+                        <Field label="Entregáveis">
+                          <textarea
+                            maxLength={4000}
+                            rows={4}
+                            value={s.description}
+                            onChange={(e) =>
+                              editService(s.id, { description: e.target.value })
+                            }
+                          />
+                        </Field>
+                        <div className={styles.priceFields}>
+                          <Field label="Quantidade">
+                            <Input
+                              type="number"
+                              min={1}
+                              max={10000}
+                              step={1}
+                              value={s.quantity}
+                              onChange={(e) =>
+                                editService(s.id, {
+                                  quantity: Math.max(
+                                    1,
+                                    Math.min(
+                                      10000,
+                                      Math.floor(Number(e.target.value) || 1),
+                                    ),
+                                  ),
+                                })
+                              }
+                            />
+                          </Field>
+                          <Field label="Valor unitário (R$)">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={1000000}
+                              step="0.01"
+                              value={
+                                s.unitCents === null ? '' : s.unitCents / 100
+                              }
+                              placeholder="A definir"
+                              onChange={(e) =>
+                                editService(s.id, {
+                                  unitCents:
+                                    e.target.value === ''
+                                      ? null
+                                      : Math.max(
+                                          0,
+                                          Math.min(
+                                            100000000,
+                                            Math.round(
+                                              (Number(e.target.value) || 0) *
+                                                100,
+                                            ),
+                                          ),
+                                        ),
+                                })
+                              }
+                            />
+                          </Field>
+                        </div>
+                        <Field label="Cobrança">
+                          <select
+                            value={s.billing}
+                            onChange={(e) =>
+                              editService(s.id, {
+                                billing: e.target
+                                  .value as ZeroService['billing'],
+                              })
+                            }
+                          >
+                            <option value="monthly">Mensal</option>
+                            <option value="once">Pagamento único</option>
+                          </select>
+                        </Field>
+                      </article>
+                    ))}
+                    <Button
+                      variant="outline"
+                      onClick={() => addService()}
+                      disabled={draft.services.length >= 24}
+                    >
+                      <Plus /> Serviço personalizado
+                    </Button>
+                  </>
+                )}
+                {tab === 'terms' && (
+                  <>
+                    <h2>Condições comerciais</h2>
                     <div className={styles.priceFields}>
-                      <Field label="Quantidade">
+                      <Field label="Vigência (meses)">
                         <Input
                           type="number"
-                          min={1}
-                          max={10000}
-                          step={1}
-                          value={s.quantity}
+                          min={0}
+                          max={120}
+                          value={draft.months || ''}
+                          placeholder="A definir"
                           onChange={(e) =>
-                            editService(s.id, {
-                              quantity: Math.max(
-                                1,
-                                Math.min(
-                                  10000,
-                                  Math.floor(Number(e.target.value) || 1),
+                            change({
+                              months: Math.min(
+                                120,
+                                Math.max(
+                                  0,
+                                  Math.floor(Number(e.target.value) || 0),
                                 ),
                               ),
                             })
                           }
                         />
                       </Field>
-                      <Field label="Valor unitário (R$)">
+                      <Field label="Desconto (%)">
                         <Input
                           type="number"
                           min={0}
-                          max={1000000}
+                          max={100}
                           step="0.01"
-                          value={s.unitCents === null ? '' : s.unitCents / 100}
-                          placeholder="A definir"
+                          value={draft.discountPercent}
                           onChange={(e) =>
-                            editService(s.id, {
-                              unitCents:
-                                e.target.value === ''
-                                  ? null
-                                  : Math.max(
-                                      0,
-                                      Math.min(
-                                        100000000,
-                                        Math.round(
-                                          (Number(e.target.value) || 0) * 100,
-                                        ),
-                                      ),
-                                    ),
+                            change({
+                              discountPercent: Math.min(
+                                100,
+                                Math.max(0, Number(e.target.value) || 0),
+                              ),
                             })
                           }
                         />
                       </Field>
                     </div>
-                    <Field label="Cobrança">
+                    <Field label="Validade da proposta">
+                      <Input
+                        maxLength={160}
+                        value={draft.validity}
+                        placeholder="Ex.: 15 dias"
+                        onChange={(e) => change({ validity: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Cronograma">
+                      <textarea
+                        rows={4}
+                        maxLength={4000}
+                        value={draft.timeline}
+                        onChange={(e) => change({ timeline: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Pagamento e demais condições">
+                      <textarea
+                        rows={5}
+                        maxLength={6000}
+                        value={draft.terms}
+                        onChange={(e) => change({ terms: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Fora do escopo">
+                      <textarea
+                        rows={4}
+                        maxLength={4000}
+                        value={draft.exclusions}
+                        onChange={(e) => change({ exclusions: e.target.value })}
+                      />
+                    </Field>
+                  </>
+                )}
+                {tab === 'design' && (
+                  <>
+                    <h2>Identidade e composição</h2>
+                    <Field label="Fornecedor">
+                      <Input
+                        maxLength={240}
+                        value={draft.supplier}
+                        onChange={(e) => change({ supplier: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="E-mail">
+                      <Input
+                        maxLength={240}
+                        value={draft.email}
+                        onChange={(e) => change({ email: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Telefone">
+                      <Input
+                        maxLength={240}
+                        value={draft.phone}
+                        onChange={(e) => change({ phone: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Logo da biblioteca">
                       <select
-                        value={s.billing}
-                        onChange={(e) =>
-                          editService(s.id, {
-                            billing: e.target.value as ZeroService['billing'],
-                          })
-                        }
+                        value={draft.logo}
+                        onChange={(e) => change({ logo: e.target.value })}
                       >
-                        <option value="monthly">Mensal</option>
-                        <option value="once">Pagamento único</option>
+                        <option value="">Somente nome do fornecedor</option>
+                        {logos.map((l) => (
+                          <option key={l.url} value={l.url}>
+                            {l.name}
+                          </option>
+                        ))}
                       </select>
                     </Field>
-                  </article>
-                ))}
-                <Button
-                  variant="outline"
-                  onClick={() => addService()}
-                  disabled={draft.services.length >= 24}
-                >
-                  <Plus /> Serviço personalizado
-                </Button>
-              </>
-            )}
-            {tab === 'terms' && (
-              <>
-                <h2>Condições comerciais</h2>
-                <div className={styles.priceFields}>
-                  <Field label="Vigência (meses)">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={120}
-                      value={draft.months || ''}
-                      placeholder="A definir"
-                      onChange={(e) =>
-                        change({
-                          months: Math.min(
-                            120,
-                            Math.max(
-                              0,
-                              Math.floor(Number(e.target.value) || 0),
-                            ),
-                          ),
-                        })
-                      }
-                    />
-                  </Field>
-                  <Field label="Desconto (%)">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step="0.01"
-                      value={draft.discountPercent}
-                      onChange={(e) =>
-                        change({
-                          discountPercent: Math.min(
-                            100,
-                            Math.max(0, Number(e.target.value) || 0),
-                          ),
-                        })
-                      }
-                    />
-                  </Field>
-                </div>
-                <Field label="Validade da proposta">
-                  <Input
-                    maxLength={160}
-                    value={draft.validity}
-                    placeholder="Ex.: 15 dias"
-                    onChange={(e) => change({ validity: e.target.value })}
-                  />
-                </Field>
-                <Field label="Cronograma">
-                  <textarea
-                    rows={4}
-                    maxLength={4000}
-                    value={draft.timeline}
-                    onChange={(e) => change({ timeline: e.target.value })}
-                  />
-                </Field>
-                <Field label="Pagamento e demais condições">
-                  <textarea
-                    rows={5}
-                    maxLength={6000}
-                    value={draft.terms}
-                    onChange={(e) => change({ terms: e.target.value })}
-                  />
-                </Field>
-                <Field label="Fora do escopo">
-                  <textarea
-                    rows={4}
-                    maxLength={4000}
-                    value={draft.exclusions}
-                    onChange={(e) => change({ exclusions: e.target.value })}
-                  />
-                </Field>
-              </>
-            )}
-            {tab === 'design' && (
-              <>
-                <h2>Identidade e composição</h2>
-                <Field label="Fornecedor">
-                  <Input
-                    maxLength={240}
-                    value={draft.supplier}
-                    onChange={(e) => change({ supplier: e.target.value })}
-                  />
-                </Field>
-                <Field label="E-mail">
-                  <Input
-                    maxLength={240}
-                    value={draft.email}
-                    onChange={(e) => change({ email: e.target.value })}
-                  />
-                </Field>
-                <Field label="Telefone">
-                  <Input
-                    maxLength={240}
-                    value={draft.phone}
-                    onChange={(e) => change({ phone: e.target.value })}
-                  />
-                </Field>
-                <Field label="Logo da biblioteca">
-                  <select
-                    value={draft.logo}
-                    onChange={(e) => change({ logo: e.target.value })}
-                  >
-                    <option value="">Somente nome do fornecedor</option>
-                    {logos.map((l) => (
-                      <option key={l.url} value={l.url}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <div className={styles.designChoices} aria-label="Composição">
-                  {(
-                    [
-                      { key: 'editorial', label: 'Editorial' },
-                      { key: 'contrast', label: 'Estúdio' },
-                      { key: 'compact', label: 'Executiva' },
-                    ] as const
-                  ).map((d) => (
-                    <button
-                      key={d.key}
-                      aria-pressed={draft.design === d.key}
-                      onClick={() => change({ design: d.key })}
+                    <div
+                      className={styles.designChoices}
+                      aria-label="Composição"
                     >
-                      <span className={styles.designThumb} data-design={d.key}>
-                        <img src={zeroCover(draft)} alt="" />
-                        <span>{draft.supplier || 'Sua empresa'}</span>
-                      </span>
-                      <span>{d.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className={styles.sectionTitle}>
-                  <h2>Imagem de capa</h2>
-                  <Icon
-                    label="Enviar imagem"
-                    onClick={() => imageFile.current?.click()}
-                  >
-                    <Upload />
-                  </Icon>
-                </div>
-                <div className={styles.coverChoices}>
-                  <button
-                    type="button"
-                    aria-pressed={draft.cover === 'auto'}
-                    onClick={() => change({ cover: 'auto' })}
-                  >
-                    <img src={zeroCover({ ...draft, cover: 'auto' })} alt="" />
-                    <span>Automática</span>
-                  </button>
-                  {zeroCovers.map((cover) => (
-                    <button
-                      type="button"
-                      key={cover.url}
-                      aria-pressed={draft.cover === cover.url}
-                      onClick={() => change({ cover: cover.url })}
-                    >
-                      <img src={cover.url} alt={cover.alt} loading="lazy" />
-                      <span>{cover.name}</span>
-                    </button>
-                  ))}
-                </div>
-                {!!photos.length && (
-                  <Field label="Capa da sua biblioteca">
-                    <select
-                      value={
-                        draft.cover.startsWith('/api/assets/')
-                          ? draft.cover
-                          : ''
-                      }
-                      onChange={(e) =>
-                        change({ cover: e.target.value || 'auto' })
-                      }
-                    >
-                      <option value="">Imagens de composição</option>
-                      {photos.map((photo) => (
-                        <option key={photo.url} value={photo.url}>
-                          {photo.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                )}
-                <div className={styles.sectionTitle}>
-                  <h2>Imagens do projeto</h2>
-                  <span>{draft.gallery.length}/6</span>
-                </div>
-                {!!photos.length && (
-                  <div className={styles.photoChoices}>
-                    {photos.map((photo) => {
-                      const selected = draft.gallery.some(
-                        (item) => item.url === photo.url,
-                      );
-                      return (
-                        <label key={photo.url}>
-                          <img
-                            src={photo.url}
-                            alt={photo.name}
-                            loading="lazy"
-                          />
-                          <span>
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              disabled={!selected && draft.gallery.length >= 6}
-                              onChange={() =>
-                                change({
-                                  gallery: selected
-                                    ? draft.gallery.filter(
-                                        (item) => item.url !== photo.url,
-                                      )
-                                    : [
-                                        ...draft.gallery,
-                                        {
-                                          url: photo.url,
-                                          caption: photo.caption || '',
-                                        },
-                                      ],
-                                })
-                              }
-                            />
-                            {photo.name}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-                {!photos.length && (
-                  <Button
-                    variant="outline"
-                    onClick={() => imageFile.current?.click()}
-                  >
-                    <Upload /> Adicionar imagem
-                  </Button>
-                )}
-                {draft.gallery.map((photo, index) => (
-                  <Field
-                    key={photo.url}
-                    label={`Legenda da imagem ${index + 1}`}
-                  >
-                    <Input
-                      value={photo.caption}
-                      maxLength={240}
-                      onChange={(e) =>
-                        change({
-                          gallery: draft.gallery.map((item, i) =>
-                            i === index
-                              ? { ...item, caption: e.target.value }
-                              : item,
-                          ),
-                        })
-                      }
-                    />
-                  </Field>
-                ))}
-                <div className={styles.colorRow}>
-                  <Field label="Cor principal">
-                    <input
-                      type="color"
-                      value={draft.accent}
-                      onChange={(e) => change({ accent: e.target.value })}
-                    />
-                  </Field>
-                  <Field label="Tipografia">
-                    <select
-                      value={draft.serif ? 'serif' : 'sans'}
-                      onChange={(e) =>
-                        change({ serif: e.target.value === 'serif' })
-                      }
-                    >
-                      <option value="serif">Editorial, com serifa</option>
-                      <option value="sans">Direta, sem serifa</option>
-                    </select>
-                  </Field>
-                </div>
-                <h2>Referência visual</h2>
-                <Field label="Link público">
-                  <Input
-                    type="url"
-                    maxLength={4096}
-                    value={draft.referenceUrl}
-                    onChange={(e) => {
-                      change({ referenceUrl: e.target.value });
-                      setReference(null);
-                    }}
-                    placeholder="https://"
-                  />
-                </Field>
-                <Button
-                  variant="outline"
-                  onClick={() => void readReference()}
-                  disabled={!draft.referenceUrl.trim()}
-                >
-                  <Palette /> Ler cores e tipografia
-                </Button>
-                {reference && (
-                  <div className={styles.suggestions}>
-                    <h3>{reference.title || 'Referência lida'}</h3>
-                    <div className={styles.swatches}>
-                      {reference.colors.map((color) => (
+                      {(
+                        [
+                          { key: 'editorial', label: 'Editorial' },
+                          { key: 'contrast', label: 'Estúdio' },
+                          { key: 'compact', label: 'Executiva' },
+                        ] as const
+                      ).map((d) => (
                         <button
-                          key={color}
-                          type="button"
-                          style={{ background: color }}
-                          title={'Usar ' + color}
-                          aria-label={'Usar cor ' + color}
-                          onClick={() => change({ accent: color })}
-                        />
+                          key={d.key}
+                          aria-pressed={draft.design === d.key}
+                          onClick={() => change({ design: d.key })}
+                        >
+                          <span
+                            className={styles.designThumb}
+                            data-design={d.key}
+                          >
+                            <img src={zeroCover(draft)} alt="" />
+                            <span>{draft.supplier || 'Sua empresa'}</span>
+                          </span>
+                          <span>{d.label}</span>
+                        </button>
                       ))}
                     </div>
-                    {!reference.colors.length && (
-                      <p>Nenhuma cor compatível foi encontrada.</p>
+                    <div className={styles.sectionTitle}>
+                      <h2>Imagem de capa</h2>
+                      <Icon
+                        label="Enviar imagem"
+                        onClick={() => imageFile.current?.click()}
+                      >
+                        <Upload />
+                      </Icon>
+                    </div>
+                    <div className={styles.coverChoices}>
+                      <button
+                        type="button"
+                        aria-pressed={draft.cover === 'auto'}
+                        onClick={() => change({ cover: 'auto' })}
+                      >
+                        <img
+                          src={zeroCover({ ...draft, cover: 'auto' })}
+                          alt=""
+                        />
+                        <span>Automática</span>
+                      </button>
+                      {zeroCovers.map((cover) => (
+                        <button
+                          type="button"
+                          key={cover.url}
+                          aria-pressed={draft.cover === cover.url}
+                          onClick={() => change({ cover: cover.url })}
+                        >
+                          <img src={cover.url} alt={cover.alt} loading="lazy" />
+                          <span>{cover.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {!!photos.length && (
+                      <Field label="Capa da sua biblioteca">
+                        <select
+                          value={
+                            draft.cover.startsWith('/api/assets/')
+                              ? draft.cover
+                              : ''
+                          }
+                          onChange={(e) =>
+                            change({ cover: e.target.value || 'auto' })
+                          }
+                        >
+                          <option value="">Imagens de composição</option>
+                          {photos.map((photo) => (
+                            <option key={photo.url} value={photo.url}>
+                              {photo.name}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
                     )}
+                    <div className={styles.sectionTitle}>
+                      <h2>Imagens do projeto</h2>
+                      <span>{draft.gallery.length}/6</span>
+                    </div>
+                    {!!photos.length && (
+                      <div className={styles.photoChoices}>
+                        {photos.map((photo) => {
+                          const selected = draft.gallery.some(
+                            (item) => item.url === photo.url,
+                          );
+                          return (
+                            <label key={photo.url}>
+                              <img
+                                src={photo.url}
+                                alt={photo.name}
+                                loading="lazy"
+                              />
+                              <span>
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  disabled={
+                                    !selected && draft.gallery.length >= 6
+                                  }
+                                  onChange={() =>
+                                    change({
+                                      gallery: selected
+                                        ? draft.gallery.filter(
+                                            (item) => item.url !== photo.url,
+                                          )
+                                        : [
+                                            ...draft.gallery,
+                                            {
+                                              url: photo.url,
+                                              caption: photo.caption || '',
+                                            },
+                                          ],
+                                    })
+                                  }
+                                />
+                                {photo.name}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {!photos.length && (
+                      <Button
+                        variant="outline"
+                        onClick={() => imageFile.current?.click()}
+                      >
+                        <Upload /> Adicionar imagem
+                      </Button>
+                    )}
+                    {draft.gallery.map((photo, index) => (
+                      <Field
+                        key={photo.url}
+                        label={`Legenda da imagem ${index + 1}`}
+                      >
+                        <Input
+                          value={photo.caption}
+                          maxLength={240}
+                          onChange={(e) =>
+                            change({
+                              gallery: draft.gallery.map((item, i) =>
+                                i === index
+                                  ? { ...item, caption: e.target.value }
+                                  : item,
+                              ),
+                            })
+                          }
+                        />
+                      </Field>
+                    ))}
+                    <div className={styles.colorRow}>
+                      <Field label="Cor principal">
+                        <input
+                          type="color"
+                          value={draft.accent}
+                          onChange={(e) => change({ accent: e.target.value })}
+                        />
+                      </Field>
+                      <Field label="Tipografia">
+                        <select
+                          value={draft.serif ? 'serif' : 'sans'}
+                          onChange={(e) =>
+                            change({ serif: e.target.value === 'serif' })
+                          }
+                        >
+                          <option value="serif">Editorial, com serifa</option>
+                          <option value="sans">Direta, sem serifa</option>
+                        </select>
+                      </Field>
+                    </div>
+                    <h2>Referência visual</h2>
+                    <Field label="Link público">
+                      <Input
+                        type="url"
+                        maxLength={4096}
+                        value={draft.referenceUrl}
+                        onChange={(e) => {
+                          change({ referenceUrl: e.target.value });
+                          setReference(null);
+                        }}
+                        placeholder="https://"
+                      />
+                    </Field>
                     <Button
                       variant="outline"
-                      size="sm"
-                      onClick={() => change({ serif: reference.serif })}
+                      onClick={() => void readReference()}
+                      disabled={!draft.referenceUrl.trim()}
                     >
-                      Usar tipografia{' '}
-                      {reference.serif ? 'com serifa' : 'sem serifa'}
+                      <Palette /> Ler cores e tipografia
                     </Button>
-                  </div>
+                    {reference && (
+                      <div className={styles.suggestions}>
+                        <h3>{reference.title || 'Referência lida'}</h3>
+                        <div className={styles.swatches}>
+                          {reference.colors.map((color) => (
+                            <button
+                              key={color}
+                              type="button"
+                              style={{ background: color }}
+                              title={'Usar ' + color}
+                              aria-label={'Usar cor ' + color}
+                              onClick={() => change({ accent: color })}
+                            />
+                          ))}
+                        </div>
+                        {!reference.colors.length && (
+                          <p>Nenhuma cor compatível foi encontrada.</p>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => change({ serif: reference.serif })}
+                        >
+                          Usar tipografia{' '}
+                          {reference.serif ? 'com serifa' : 'sem serifa'}
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
-              </>
-            )}
-          </fieldset>
+              </fieldset>
+            </>
+          )}
           <footer className={styles.editorFooter}>
             <span>
               <strong>{zeroMoney(totals.monthly)}</strong>/mês
@@ -1360,6 +1581,9 @@ export function ZeroLab({
           }
           change({ briefing: text });
           setSuggested(readZeroBrief(text));
+          setComposition(null);
+          setNeedsCompose(true);
+          setDetails(false);
         }}
       />
     </div>
