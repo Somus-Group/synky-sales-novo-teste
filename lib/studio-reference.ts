@@ -1,6 +1,7 @@
 import { referenceUrl, StudioError } from '@/lib/studio';
 import { extractReactReference } from '@/lib/studio-reference-react';
 import { imageDataUrl, type StudioMedia } from '@/lib/studio-media';
+import { selectStudioReferenceStyles } from '@/lib/studio-reference-styles';
 
 export type StudioReference = {
   url: string;
@@ -11,6 +12,12 @@ export type StudioReference = {
   styles: string;
   media: StudioMedia[];
   mediaWarnings: string[];
+  designEvidence: {
+    colors: string[];
+    fonts: string[];
+    sectionOrder: string[];
+    stylesTruncated: boolean;
+  };
 };
 const unavailable = (message: string) =>
   new StudioError(message, 422, 'reference_unavailable');
@@ -223,6 +230,9 @@ export async function readStudioReference(
     let structure = '';
     let css = '';
     let headings = 0;
+    const classNames: string[] = [];
+    let sectionOrder: string[] = [];
+    let headingText = '';
     // HTMLRewriter parses markup without running scripts or loading any resources.
     let hidden = 0;
     const parser = new HTMLRewriter()
@@ -237,6 +247,25 @@ export async function readStudioReference(
       .on('title', {
         text(chunk) {
           title += chunk.text;
+        },
+      })
+      .on('[class]', {
+        element(element) {
+          classNames.push(
+            ...(element.getAttribute('class') || '').split(/\s+/),
+          );
+        },
+      })
+      .on('h1,h2', {
+        element(element) {
+          headingText = '';
+          element.onEndTag(() => {
+            if (headingText.trim())
+              sectionOrder.push(compact(headingText).slice(0, 160));
+          });
+        },
+        text(chunk) {
+          headingText += chunk.text;
         },
       })
       .on('link[rel="stylesheet"]', {
@@ -289,6 +318,15 @@ export async function readStudioReference(
               .filter(([, value]) => value !== null),
           );
           structure += `\n${element.tagName} ${JSON.stringify(attributes)}`;
+          const tag = element.tagName;
+          if (
+            !/^(h1|h2|area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/.test(
+              tag,
+            )
+          )
+            element.onEndTag(() => {
+              if (structure.length < 55000) structure += `\n/${tag}`;
+            });
           if (/^(h[1-6]|p|li|section|div)$/.test(element.tagName)) text += '\n';
         },
       })
@@ -321,6 +359,7 @@ export async function readStudioReference(
       let appText = '';
       let appStructure = '';
       let appHeadings = 0;
+      const appSectionOrder: string[] = [];
       while (queue.length && visited.size < 4) {
         const asset = queue.shift()!;
         if (visited.has(asset)) continue;
@@ -331,6 +370,8 @@ export async function readStudioReference(
           appText += '\n' + extracted.text;
           appStructure += '\n' + extracted.structure;
           appHeadings += extracted.headings;
+          classNames.push(...extracted.classNames);
+          appSectionOrder.push(...extracted.sectionOrder);
           images.push(...extracted.images);
           for (const path of extracted.imports) {
             const next = referenceUrl(new URL(path, script.url).href);
@@ -349,6 +390,7 @@ export async function readStudioReference(
         structure = appStructure;
         headings = appHeadings;
         method = 'react-source';
+        sectionOrder = appSectionOrder;
       }
     }
     if (compact(text).length < 250 || headings < 2)
@@ -357,6 +399,13 @@ export async function readStudioReference(
       );
     const media: StudioMedia[] = [];
     const mediaWarnings: string[] = [];
+    const designStyles = selectStudioReferenceStyles(css, classNames);
+    if (!designStyles.styles.trim())
+      mediaWarnings.push(
+        'A página foi lida, mas seus estilos não estavam disponíveis. A direção visual usa a estrutura e as imagens acessíveis.',
+      );
+    else if (designStyles.truncated)
+      mediaWarnings.push('Parte dos estilos da referência não pôde ser lida.');
     const uniqueImages = images
       .filter(
         (item, index) =>
@@ -395,12 +444,13 @@ export async function readStudioReference(
       mediaWarnings,
       text: compact(text).slice(0, 24000),
       structure: structure.slice(0, 55000),
-      styles:
-        css.length <= 48000
-          ? css
-          : css.slice(0, 16000) +
-            '\n/* Amostra resumida */\n' +
-            css.slice(-32000),
+      styles: designStyles.styles,
+      designEvidence: {
+        colors: designStyles.colors,
+        fonts: designStyles.fonts,
+        sectionOrder: sectionOrder.slice(0, 30),
+        stylesTruncated: designStyles.truncated,
+      },
     };
   } catch (error) {
     if (error instanceof StudioError) throw error;

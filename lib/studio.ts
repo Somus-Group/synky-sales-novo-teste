@@ -13,6 +13,9 @@ export type StudioMessage = {
     logo: boolean;
     missing: string[];
     warnings: string[];
+    design?: import('./studio-design').StudioDesign;
+    covered?: string[];
+    referenceAssessment?: string;
   };
   attachment?: { name: string; mime: string };
   intent?: 'edit' | 'plan';

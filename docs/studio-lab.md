@@ -16,6 +16,23 @@ Agente de propostas, Configurar agente e Propostas continuam disponíveis.
 
 ## Editor por conversa
 
+- **Sob medida** é o padrão. Os templates só são usados quando escolhidos
+  explicitamente. Uma referência visual tem prioridade sobre o template.
+- Links HTTPS enviados na conversa são lidos e salvos como referência junto com
+  a versão concluída. Links identificados como contato não substituem o modelo.
+- O briefing de até 40.000 caracteres é enviado inteiro. A mensagem original,
+  as dez mensagens recentes e o último plano preservam o contexto de pedidos
+  longos colados diretamente no chat.
+- A geração tem três etapas: especificação de requisitos e direção visual,
+  construção e revisão independente de conteúdo. Se a revisão detectar omissões,
+  dados inventados ou falhas de apresentação, há uma tentativa de correção antes
+  de salvar. Falhas mantêm a versão anterior e explicam os pontos encontrados.
+- A aba Revisão apresenta a direção visual e os requisitos conferidos. A conversa
+  recebe o progresso real do servidor por streaming, sem porcentagens estimadas.
+- A leitura de links seleciona as regras CSS das classes encontradas, mantém
+  regras responsivas completas e extrai cores, fontes e títulos. Não renderiza
+  uma captura da referência nem promete reprodução visual idêntica.
+
 - **Criar** executa pedidos na proposta atual; **Planejar** apenas conversa e salva
   o plano. O servidor descarta qualquer HTML retornado no modo Planejar. **Aplicar
   plano** executa o último plano em uma nova versão.
@@ -37,8 +54,11 @@ Agente de propostas, Configurar agente e Propostas continuam disponíveis.
 O servidor precisa de `OPENAI_API_KEY`. A chave nunca deve ser enviada no chat do
 estúdio, incluída no código, exposta no navegador ou adicionada ao Git.
 O módulo usa a Responses API, com `store: false`, no mesmo padrão do agente existente.
-O modelo padrão é `gpt-5.5`; `STUDIO_AI_MODEL` permite configurar outro modelo
-compatível com Responses, JSON Schema, PDFs e web search. Nenhuma assinatura do
+O designer usa `STUDIO_DESIGN_AI_MODEL`, depois `STUDIO_AI_MODEL`, ou `gpt-5.5`.
+A especificação e a revisão usam `STUDIO_INITIAL_AI_MODEL` (padrão `gpt-5-mini`).
+Edições pontuais usam `STUDIO_DETAIL_AI_MODEL` (padrão `gpt-5-mini`). Os modelos
+devem aceitar Responses, JSON Schema, imagens e PDFs. A revisão acrescenta
+chamadas à API; a geração pode exigir uma correção adicional. Nenhuma assinatura do
 ChatGPT ou da Lovable é usada como crédito de API.
 
 No desenvolvimento com Cloudflare/Vite, configure os segredos no arquivo local
@@ -67,7 +87,7 @@ inspecionar e selecionar elementos; `allow-scripts` nunca é concedido. A prévi
 separada mantém o sandbox opaco. Edições visuais são validadas e sanitizadas no
 servidor; cores e estilos aceitam apenas valores limitados.
 
-Validação: `node --test tests/studio.test.mjs tests/proposal-workflow.test.mjs`,
+Validação: `node --test tests/studio.test.mjs tests/studio-media.test.mjs tests/studio-reference.test.mjs tests/proposal-workflow.test.mjs`,
 `npx tsc --noEmit` e `npm run build`.
 
 Referências oficiais:

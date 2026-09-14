@@ -154,6 +154,12 @@ export function extractReactReference(source: string) {
       .slice(0, 24000),
     headings: useful.filter((item) => /^h[1-6]$/.test(item.tag) && item.text)
       .length,
+    sectionOrder: useful
+      .filter((item) => /^h[12]$/.test(item.tag) && item.text)
+      .map((item) => item.text),
+    classNames: useful.flatMap((item) =>
+      String(item.attributes.className || '').split(/\s+/),
+    ),
     imports: [...new Set(imports)].slice(0, 4),
     images: useful
       .filter(

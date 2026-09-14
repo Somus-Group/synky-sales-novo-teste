@@ -104,6 +104,7 @@ export async function saveStudioVersion(
   html: string,
   messages: StudioMessage[],
   summary: string,
+  reference = row.referenceUrl,
 ) {
   const revision = row.revision + 1;
   const now = Math.max(Date.now(), row.updatedAt + 1);
@@ -125,7 +126,7 @@ export async function saveStudioVersion(
         row.revision,
       ),
     db
-      .prepare(`UPDATE studio_projects SET title = ?, html = ?, messages_json = ?, revision = ?, updated_at = ?, lock_token = '', locked_until = 0
+      .prepare(`UPDATE studio_projects SET title = ?, html = ?, messages_json = ?, revision = ?, updated_at = ?, reference_url = ?, lock_token = '', locked_until = 0
       WHERE id = ? AND lock_token = ? AND revision = ?`)
       .bind(
         title,
@@ -133,6 +134,7 @@ export async function saveStudioVersion(
         JSON.stringify(messages),
         revision,
         now,
+        reference,
         row.id,
         token,
         row.revision,

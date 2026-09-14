@@ -259,9 +259,44 @@ test('imports real logo bytes, while rejecting private image redirects', async (
     result.reference.media[0].dataUrl,
     'data:image/png;base64,' + png,
   );
-  assert.equal(result.reference.mediaWarnings.length, 1);
+  assert.equal(
+    result.reference.mediaWarnings.filter((item) => /logo/.test(item)).length,
+    1,
+  );
   assert.equal(
     result.visited.some((item) => item.url.includes('127.0.0.1')),
     false,
   );
+});
+
+test('keeps relevant brand and responsive rules from the middle of large utility stylesheets', async () => {
+  const unrelated = Array.from(
+    { length: 2000 },
+    (_, i) => `.unused-${i}{padding:12px;color:#cccccc}`,
+  ).join('');
+  const result = await run({
+    url: 'https://example.com/proposta',
+    resources: {
+      'https://example.com/proposta': {
+        body: html.replace('class="scope"', 'class="scope md:grid"'),
+      },
+      'https://example.com/theme.css': {
+        body:
+          unrelated +
+          ':root{--brand:#ad184e}.scope{background:var(--brand);font-family:Georgia}@media(min-width:700px){.md\\:grid{display:grid;grid-template-columns:1fr 1fr}}' +
+          unrelated,
+        headers: { 'content-type': 'text/css' },
+      },
+    },
+  });
+  assert.equal(result.status, 200, result.error);
+  assert.match(result.reference.styles, /#ad184e/);
+  assert.match(result.reference.styles, /@media/);
+  assert.match(result.reference.styles, /grid-template-columns/);
+  assert.doesNotMatch(result.reference.styles, /unused-/);
+  assert.deepEqual(result.reference.designEvidence.sectionOrder, [
+    'Proposta comercial',
+    'Escopo',
+  ]);
+  assert.ok(result.reference.designEvidence.colors.includes('#ad184e'));
 });

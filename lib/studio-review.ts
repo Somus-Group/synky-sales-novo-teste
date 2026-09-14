@@ -1,14 +1,20 @@
+import { selectStudioReferenceStyles } from '@/lib/studio-reference-styles';
+
 export type StudioReview = {
   headings: string[];
   imageCount: number;
   logo: boolean;
   missing: string[];
   warnings: string[];
+  design?: import('./studio-design').StudioDesign;
+  covered?: string[];
+  referenceAssessment?: string;
 };
 
 export type StudioReviewOptions = {
   strict?: boolean;
   hasReference?: boolean;
+  sectionIds?: string[];
 };
 
 export async function reviewStudioHtml(
@@ -133,16 +139,24 @@ export async function reviewStudioHtml(
     );
   if (links.some((link) => !ids.has(link)))
     issues.push('Corrija os links do menu para seções que realmente existem.');
+  const missingSections = options.sectionIds?.filter((id) => !ids.has(id));
+  if (missingSections?.length)
+    issues.push(
+      'Inclua as seções planejadas com seus IDs: ' + missingSections.join(', '),
+    );
   if (options.strict) {
-    const visualLanguage = `${classNames} ${styleText}`.toLowerCase();
+    const activeStyles = selectStudioReferenceStyles(
+      styleText,
+      classNames.split(/\s+/),
+    );
+    const visualLanguage = activeStyles.styles.toLowerCase();
     const layoutSignals = [
       /display\s*:\s*grid/.test(visualLanguage),
       /display\s*:\s*flex/.test(visualLanguage),
-      /\b(hero|cover|capa)\b/.test(visualLanguage),
-      /\b(panel|painel|summary|signal|metric|stat)\b/.test(visualLanguage),
-      /\b(card|tile|bloco)\b/.test(visualLanguage) && articleCount >= 2,
-      /\b(timeline|steps|trilha|method|metodo)\b/.test(visualLanguage),
-      /\b(split|grid|columns|colunas)\b/.test(visualLanguage),
+      /grid-template-columns\s*:|columns\s*:/.test(visualLanguage),
+      /background(?:-color)?\s*:/.test(visualLanguage),
+      /border(?:-top|-bottom|-left)?\s*:/.test(visualLanguage),
+      articleCount >= 2 && /(?:padding|gap)\s*:/.test(visualLanguage),
       asideCount > 0,
       detailsCount > 0,
       tableCount > 0,
@@ -158,6 +172,18 @@ export async function reviewStudioHtml(
     if (styleText.trim().length < 420)
       issues.push(
         'Inclua CSS interno suficiente para uma direção visual própria, responsiva e diferente de uma proposta em texto corrido.',
+      );
+    if (
+      !/@media|@container|auto-(?:fit|fill)|flex-wrap\s*:\s*wrap/.test(
+        visualLanguage,
+      )
+    )
+      issues.push(
+        'Inclua regras responsivas que adaptem colunas e navegação ao celular.',
+      );
+    if (!activeStyles.styles.trim())
+      issues.push(
+        'As classes da página precisam de estilos CSS válidos e aplicáveis, não apenas nomes de classes.',
       );
     if (options.hasReference && layoutSignals < 4)
       issues.push(

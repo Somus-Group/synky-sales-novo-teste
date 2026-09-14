@@ -698,8 +698,12 @@
   animation: voice-listening-pulse 1.4s ease-out infinite;
 }
 @keyframes voice-listening-pulse {
-  70% { box-shadow: 0 0 0 6px rgb(27 132 234 / 0%); }
-  100% { box-shadow: 0 0 0 0 rgb(27 132 234 / 0%); }
+  70% {
+    box-shadow: 0 0 0 6px rgb(27 132 234 / 0%);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(27 132 234 / 0%);
+  }
 }
 .attachmentTag,
 .referenceTag {
@@ -1098,7 +1102,10 @@
   border-radius: 10px;
 }
 .workspace {
-  grid-template-columns: minmax(330px, var(--studio-chat-width)) 6px minmax(0, 1fr);
+  grid-template-columns: minmax(330px, var(--studio-chat-width)) 6px minmax(
+      0,
+      1fr
+    );
 }
 .conversation,
 .composerArea {
@@ -1209,7 +1216,9 @@
   box-shadow: 0 10px 24px #2534520d;
 }
 .composer:focus-within {
-  box-shadow: 0 0 0 3px #0875ef0c, 0 10px 24px #2534520d;
+  box-shadow:
+    0 0 0 3px #0875ef0c,
+    0 10px 24px #2534520d;
 }
 .send {
   border-radius: 10px;
@@ -1964,11 +1973,12 @@
   font-size: 14px;
 }
 .studio .welcome {
-  padding: 15px 0;
+  padding: 0 0 12px;
 }
 .studio .welcome h2 {
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.3;
+  margin-bottom: 14px;
 }
 .studio .welcome > p {
   color: var(--muted);
@@ -1980,7 +1990,9 @@
 }
 .studio .starterModes button {
   font-size: 13px;
-  padding: 12px 7px;
+  padding: 9px 7px;
+  min-height: 40px;
+  border-radius: 6px;
 }
 .studio .starterModes {
   flex-wrap: wrap;
@@ -2027,7 +2039,7 @@
   flex-shrink: 0;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--studio-surface);
   color: #89919b;
   padding: 8px;
 }
@@ -2253,6 +2265,126 @@
 .studio .feedback {
   max-height: 140px;
   overflow: auto;
+}
+.startContext {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+}
+.startContext label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.startContext input,
+.startContext textarea {
+  width: 100%;
+  min-width: 0;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.startContext .urlInput input {
+  border: 0;
+  padding: 10px 0;
+  background: transparent;
+}
+.generationProgress {
+  padding: 18px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.generationProgress > div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.generationProgress > div svg {
+  color: var(--blue);
+  flex-shrink: 0;
+}
+.generationProgress ol {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.generationProgress li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+}
+.generationProgress li svg {
+  flex-shrink: 0;
+  visibility: hidden;
+}
+.generationProgress li[data-state='done'] svg {
+  visibility: visible;
+  color: #168266;
+}
+.generationProgress li[data-state='active'] {
+  color: var(--blue);
+}
+.designReview {
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.designReview h3 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.designReview p,
+.designReview summary,
+.designReview li {
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.designReview p {
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.designReview summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+.designReview ul {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 10px;
+}
+.designReview li {
+  display: flex;
+  gap: 8px;
+}
+.designReview li svg {
+  color: #168266;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.designPalette {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
+}
+.designPalette span {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #8885;
+  border-radius: 4px;
 }
 @media (max-width: 1100px) {
   .editToolbar span {

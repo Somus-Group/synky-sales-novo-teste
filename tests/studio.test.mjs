@@ -22,15 +22,18 @@ function transpile(path) {
 function load(path, mocks = {}) {
   const mod = { exports: {} };
   // Execute repository source only. Model HTML is never executed by this loader.
-  new Function('require', 'module', 'exports', transpile(path))(
+  new Function('require', 'module', 'exports', 'fetch', transpile(path))(
     (id) => (id in mocks ? mocks[id] : require(id)),
     mod,
     mod.exports,
+    mocks.fetch || ((...args) => globalThis.fetch(...args)),
   );
   return mod.exports;
 }
 const studio = load('lib/studio.ts');
 const studioTemplates = load('lib/studio-templates.ts');
+const studioDesign = load('lib/studio-design.ts', { '@/lib/studio': studio });
+const studioStream = load('lib/studio-stream.ts');
 const html =
   '<!doctype html><html><head><style>body{color:#123}</style></head><body><h1>Proposta teste</h1><p>Escopo confirmado</p></body></html>';
 const request = (payload, method = 'POST') =>
@@ -42,6 +45,30 @@ const request = (payload, method = 'POST') =>
 const context = (id) => ({ params: Promise.resolve({ id }) });
 
 function fixture() {
+  const pipeline = {
+    requests: [],
+    design: {
+      summary: 'Proposta de teste',
+      client: 'Cliente teste',
+      requirements: [],
+      sections: [
+        {
+          id: 'escopo',
+          title: 'Escopo',
+          composition: 'Grade editorial',
+          requirements: [],
+        },
+      ],
+      visual: {
+        direction: 'Editorial',
+        palette: ['#10a090'],
+        typography: 'Arial',
+        referenceTraits: [],
+      },
+      missing: [],
+    },
+    audit: { issues: [], covered: [], referenceAssessment: '' },
+  };
   const sqlite = new DatabaseSync(':memory:');
   for (const file of readdirSync(new URL('../drizzle/', import.meta.url))
     .filter((f) => f.endsWith('.sql'))
@@ -100,9 +127,30 @@ function fixture() {
     },
   };
   const modules = {
+    fetch: async (url, options) => {
+      if (String(url) === 'https://api.openai.com/v1/responses') {
+        const body = JSON.parse(options.body);
+        const name = body.text?.format?.name;
+        if (name === 'studio_design' || name === 'studio_audit') {
+          pipeline.requests.push(body);
+          const result =
+            name === 'studio_design'
+              ? pipeline.design
+              : typeof pipeline.audit === 'function'
+                ? pipeline.audit(body)
+                : pipeline.audit;
+          return Response.json({
+            status: 'completed',
+            output_text: JSON.stringify(result),
+          });
+        }
+      }
+      return globalThis.fetch(url, options);
+    },
     'cloudflare:workers': { env },
     '@/db': { getD1: () => d1 },
     '@/lib/studio': studio,
+    '@/lib/studio-design': studioDesign,
     '@/lib/studio-templates': studioTemplates,
     '@/lib/studio-media': {
       prepareStudioMedia: async (
@@ -169,6 +217,7 @@ function fixture() {
     );
   }
   return {
+    pipeline,
     modules,
     sqlite,
     d1,
@@ -246,6 +295,292 @@ test('accepts a complete long proposal brief while keeping a bounded request siz
       revision: 0,
     }),
   );
+});
+
+test('detects references in the current request and retains original long conversation facts', () => {
+  assert.equal(
+    studioDesign.studioMessageReference(
+      'Siga este modelo: https://example.com/modelo.',
+      'https://old.example.com',
+    ),
+    'https://example.com/modelo',
+  );
+  assert.equal(
+    studioDesign.studioMessageReference(
+      'Use [esta referência](https://example.com/modelo).',
+    ),
+    'https://example.com/modelo',
+  );
+  assert.equal(
+    studioDesign.studioMessageReference(
+      'Contato: https://example.com/contato',
+      'https://old.example.com',
+    ),
+    'https://old.example.com/',
+  );
+  assert.throws(() =>
+    studioDesign.studioMessageReference('https://127.0.0.1/secret'),
+  );
+  const original = {
+    role: 'user',
+    text: 'Briefing completo '.repeat(1000) + 'Honorários: R$ 7.350.',
+    at: 1,
+  };
+  const messages = [
+    original,
+    ...Array.from({ length: 20 }, (_, i) => ({
+      role: 'user',
+      text: `Ajuste ${i}`,
+      at: i + 2,
+    })),
+  ];
+  const result = studioDesign.studioConversation(messages);
+  assert.equal(result[0].text, original.text);
+  assert.equal(result.at(-1).text, 'Ajuste 19');
+  assert.equal(
+    studioDesign.studioCreativeRequest(
+      'Está muito genérico, reconstrua.',
+      true,
+      '',
+      false,
+    ),
+    true,
+  );
+  assert.equal(
+    studioDesign.studioCreativeRequest(
+      'Mude só este título.',
+      true,
+      'h1',
+      false,
+    ),
+    false,
+  );
+});
+
+test('reads streamed progress across split UTF-8 chunks and refuses incomplete or failed streams', async () => {
+  const events = [
+    { type: 'progress', stage: 'reading' },
+    { type: 'progress', stage: 'reviewing' },
+    { type: 'complete', result: { title: 'Proposta de consultoria e gestão' } },
+  ];
+  const bytes = new TextEncoder().encode(
+    events.map((x) => JSON.stringify(x)).join('\n') + '\n',
+  );
+  const stages = [];
+  const response = new Response(
+    new ReadableStream({
+      start(controller) {
+        for (let i = 0; i < bytes.length; i += 7)
+          controller.enqueue(bytes.slice(i, i + 7));
+        controller.close();
+      },
+    }),
+    { headers: { 'Content-Type': 'application/x-ndjson' } },
+  );
+  assert.deepEqual(
+    await studioStream.readStudioStream(response, (stage) =>
+      stages.push(stage),
+    ),
+    events[2].result,
+  );
+  assert.deepEqual(stages, ['reading', 'reviewing']);
+  for (const body of [
+    '{"type":"progress","stage":"reading"}\n',
+    '{"type":"error","error":"Falha na revisão"}\n',
+  ])
+    await assert.rejects(() =>
+      studioStream.readStudioStream(
+        new Response(body, {
+          headers: { 'Content-Type': 'application/x-ndjson' },
+        }),
+        () => {},
+      ),
+    );
+});
+
+test('full briefing and inline reference reach all stages, and the reference is persisted with the version', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    if (String(url) === 'https://example.com/modelo')
+      return new Response('Referência real');
+    calls.push(JSON.parse(options.body));
+    return Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Teste',
+        message: 'Proposta criada.',
+        html,
+        reference_status: 'used',
+      }),
+    });
+  };
+  try {
+    const briefing =
+      'Contexto do cliente. '.repeat(900) +
+      'Condição intermediária: mídia não inclusa. ' +
+      'Escopo completo. '.repeat(900);
+    const { project } = await (await f.create({ briefing })).json();
+    const response = await f.messages.POST(
+      request({
+        message: 'Siga este modelo: https://example.com/modelo',
+        revision: 0,
+      }),
+      context(project.id),
+    );
+    assert.equal(
+      response.status,
+      200,
+      JSON.stringify(await response.clone().json()),
+    );
+    const result = await response.json();
+    assert.equal(result.project.referenceUrl, 'https://example.com/modelo');
+    for (const call of [...calls, ...f.pipeline.requests]) {
+      const content = JSON.parse(call.input[0].content[0].text);
+      assert.equal(content.briefing, briefing.trim());
+      assert.equal(content.referenceDocument.url, 'https://example.com/modelo');
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('independent content audit repairs an omitted commercial condition before saving a single version', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  const condition = 'R$ 4.800 por mês. Verba de mídia não inclusa.';
+  f.pipeline.design.requirements = [
+    { id: 'r01', content: condition, evidence: condition },
+  ];
+  f.pipeline.design.sections[0].requirements = ['r01'];
+  f.pipeline.audit = (body) => {
+    const candidate = JSON.parse(
+      body.input[0].content.at(-1).text,
+    ).previousAttempt;
+    return {
+      issues: [],
+      covered: candidate.includes(condition) ? ['r01'] : [],
+      referenceAssessment: '',
+    };
+  };
+  globalThis.fetch = async (_url, options) => {
+    calls.push(JSON.parse(options.body));
+    return Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Teste',
+        message: 'Proposta criada.',
+        html:
+          calls.length === 1
+            ? html
+            : html.replace('</body>', `<p>${condition}</p></body>`),
+        reference_status: 'not_requested',
+      }),
+    });
+  };
+  try {
+    const { project } = await (await f.create({ briefing: condition })).json();
+    const response = await f.messages.POST(
+      request({ message: 'Crie a proposta completa.', revision: 0 }),
+      context(project.id),
+    );
+    assert.equal(
+      response.status,
+      200,
+      JSON.stringify(await response.clone().json()),
+    );
+    const result = await response.json();
+    assert.equal(calls.length, 2);
+    assert.match(calls[1].input[0].content.at(-1).text, /r01/);
+    assert.ok(result.project.html.includes(condition));
+    assert.equal(result.versions.length, 1);
+    assert.deepEqual(result.project.messages.at(-1).review.covered, ['r01']);
+    assert.equal(
+      result.project.messages.at(-1).review.design.requirements[0].evidence,
+      condition,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('an empty creation is repaired and a failed repair never replaces the saved proposal', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  let count = 0;
+  globalThis.fetch = async () => {
+    count++;
+    return Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Teste',
+        message: 'Vou criar sua proposta.',
+        html: '',
+        reference_status: 'not_requested',
+      }),
+    });
+  };
+  try {
+    const { project } = await (await f.create()).json();
+    const response = await f.messages.POST(
+      request({ message: 'Crie a proposta completa.', revision: 0 }),
+      context(project.id),
+    );
+    assert.equal(response.status, 502);
+    assert.equal((await response.json()).code, 'proposal_empty');
+    assert.equal(count, 2);
+    const row = await f.database.studioProject(project.id, 'one');
+    assert.equal(row.revision, 0);
+    assert.equal(row.messagesJson, '[]');
+    assert.equal(row.lockToken, '');
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
+test('streaming reports actual stages and only completes after the saved version exists', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    Response.json({
+      status: 'completed',
+      output_text: JSON.stringify({
+        title: 'Teste',
+        message: 'Proposta criada.',
+        html,
+        reference_status: 'not_requested',
+      }),
+    });
+  try {
+    const { project } = await (await f.create()).json();
+    const outgoing = request({ message: 'Crie a proposta.', revision: 0 });
+    outgoing.headers.set('Accept', 'application/x-ndjson');
+    const response = await f.messages.POST(outgoing, context(project.id));
+    const stages = [];
+    const result = await studioStream.readStudioStream(response, (stage) =>
+      stages.push(stage),
+    );
+    assert.deepEqual(stages, [
+      'reading',
+      'designing',
+      'generating',
+      'reviewing',
+      'saving',
+    ]);
+    assert.equal(result.project.revision, 1);
+    assert.equal(
+      (await f.database.studioProject(project.id, 'one')).lockToken,
+      '',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
 });
 
 test('both creation modes persist, enforce briefing, accept text and PDF, and isolate workspaces', async () => {
@@ -355,7 +690,7 @@ test('disconnected AI never fabricates a result or loses the saved briefing', as
   }
 });
 
-test('template projects use GPT-5 Mini once and render the visual locally', async () => {
+test('explicit templates keep their visual and receive content analysis and an independent audit', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
   let sent;
@@ -369,7 +704,11 @@ test('template projects use GPT-5 Mini once and render the visual locally', asyn
         headline: 'Crescimento com foco em resultado.',
         summary: 'Uma proposta objetiva para acelerar a operacao.',
         objective: 'Organizar a estrategia e a execucao comercial.',
-        scope: ['Diagnostico do funil', 'Plano de midia', 'Rotina de otimizacao'],
+        scope: [
+          'Diagnostico do funil',
+          'Plano de midia',
+          'Rotina de otimizacao',
+        ],
         method: ['Imersao', 'Plano de acao', 'Acompanhamento'],
         timeline: ['Semana 1: diagnostico', 'Semanas 2 a 4: execucao'],
         investment: 'Investimento a definir conforme o escopo final.',
@@ -390,6 +729,10 @@ test('template projects use GPT-5 Mini once and render the visual locally', asyn
     assert.equal(response.status, 200);
     assert.equal(sent.model, 'gpt-5-mini');
     assert.equal(sent.text.format.name, 'studio_template');
+    assert.deepEqual(
+      f.pipeline.requests.map((r) => r.text.format.name),
+      ['studio_design', 'studio_audit'],
+    );
     const result = await response.json();
     assert.match(result.project.html, /Crescimento com foco em resultado/);
     assert.match(result.project.html, /#0f9d72/);
@@ -426,7 +769,7 @@ test('conversation edits use existing HTML, restore adds history, stale edits an
     );
     assert.equal(first.status, 200);
     const v1 = await first.json();
-    assert.equal(calls[0].model, 'gpt-5-mini');
+    assert.equal(calls[0].model, 'gpt-5.5');
     assert.equal(v1.project.revision, 1);
     assert.equal(v1.versions.length, 1);
     assert.equal(v1.project.messages.length, 2);
@@ -567,7 +910,9 @@ test('missing logo triggers one repair; a complete version stores review results
     const input = JSON.parse(calls[0].input[0].content[0].text);
     assert.equal(input.preferredLogoId, logo.id);
     assert.equal(input.mediaCatalog[0].dataUrl, undefined);
-    assert.equal(calls[0].input[0].content.at(-1).image_url, logo.dataUrl);
+    assert.ok(
+      calls[0].input[0].content.some((item) => item.image_url === logo.dataUrl),
+    );
     assert.match(calls[1].input[0].content.at(-1).text, /Inclua a logo real/);
     const result = await response.json();
     assert.equal(result.project.messages.at(-1).review.logo, true);
@@ -736,7 +1081,7 @@ test('blocked reference or model refusal preserves the page and releases the pro
       context(project.id),
     );
     assert.equal(ignored.status, 502);
-    assert.equal((await ignored.json()).code, 'reference_not_applied');
+    assert.equal((await ignored.json()).code, 'proposal_review_failed');
     row = await f.database.studioProject(project.id, 'one');
     assert.equal(row.revision, 0);
     assert.equal(row.messagesJson, '[]');
@@ -775,10 +1120,13 @@ test('conversation accepts a safe image reference without storing its data', asy
       context(project.id),
     );
     assert.equal(response.status, 200);
-    assert.deepEqual(sent.input[0].content.at(-1), {
-      type: 'input_image',
-      image_url: image.data,
-    });
+    assert.deepEqual(
+      sent.input[0].content.find((item) => item.type === 'input_image'),
+      {
+        type: 'input_image',
+        image_url: image.data,
+      },
+    );
     const result = await response.json();
     assert.deepEqual(result.project.messages[0].attachment, {
       name: image.name,

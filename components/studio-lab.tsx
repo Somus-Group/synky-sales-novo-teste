@@ -59,6 +59,11 @@ import {
 } from '@/lib/studio';
 import { studioTemplates, type StudioTemplateId } from '@/lib/studio-templates';
 import {
+  readStudioStream,
+  studioStages,
+  type StudioStage,
+} from '@/lib/studio-stream';
+import {
   StudioCanvas,
   type StudioSelection,
   type StudioCanvasReport,
@@ -82,7 +87,9 @@ type VoiceRecognition = {
   start: () => void;
   stop: () => void;
   abort: () => void;
-  onresult: ((event: { results: ArrayLike<VoiceRecognitionResult> }) => void) | null;
+  onresult:
+    | ((event: { results: ArrayLike<VoiceRecognitionResult> }) => void)
+    | null;
   onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
 };
@@ -91,7 +98,7 @@ const emptyContext: ContextDraft = {
   title: '',
   briefing: '',
   referenceUrl: '',
-  templateId: 'commercial',
+  templateId: 'none',
 };
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
@@ -122,6 +129,7 @@ export function StudioLab() {
   const [notice, setNotice] = useState('');
   const [prompt, setPrompt] = useState('');
   const [pending, setPending] = useState('');
+  const [stage, setStage] = useState<StudioStage>('reading');
   const [intent, setIntent] = useState<'edit' | 'plan'>('edit');
   const [mode, setMode] = useState<StudioMode>('free');
   const [draft, setDraft] = useState<ContextDraft>(emptyContext);
@@ -212,10 +220,13 @@ export function StudioLab() {
       SpeechRecognition?: VoiceRecognitionConstructor;
       webkitSpeechRecognition?: VoiceRecognitionConstructor;
     };
-    setVoiceSupported(Boolean(browser.SpeechRecognition || browser.webkitSpeechRecognition));
+    setVoiceSupported(
+      Boolean(browser.SpeechRecognition || browser.webkitSpeechRecognition),
+    );
   }, []);
   useEffect(() => {
-    messagesEnd.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    if (tab === 'chat' && (pending || project?.messages.length))
+      messagesEnd.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
   }, [project?.messages.length, pending, tab]);
   useEffect(() => {
     if (library) dialog.current?.showModal();
@@ -422,6 +433,7 @@ export function StudioLab() {
     setError('');
     setNotice('');
     setPending(text);
+    setStage('reading');
     setPrompt('');
     setTab('chat');
     setHistorical(null);
@@ -432,24 +444,30 @@ export function StudioLab() {
       const active =
         project || (await createProject(text, request.current.signal));
       accept(
-        await api<ProjectResponse>(`/api/studio/${active.id}/message`, {
-          method: 'POST',
-          signal: request.current.signal,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: text,
-            revision: active.revision,
-            intent: nextIntent,
-            selection: selection
-              ? JSON.stringify({
-                  tag: selection.tag,
-                  text: selection.text,
-                  index: selection.index,
-                })
-              : undefined,
-            image: await imagePayload(image),
+        await readStudioStream<ProjectResponse>(
+          await fetch(`/api/studio/${active.id}/message`, {
+            method: 'POST',
+            signal: request.current.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/x-ndjson',
+            },
+            body: JSON.stringify({
+              message: text,
+              revision: active.revision,
+              intent: nextIntent,
+              selection: selection
+                ? JSON.stringify({
+                    tag: selection.tag,
+                    text: selection.text,
+                    index: selection.index,
+                  })
+                : undefined,
+              image: await imagePayload(image),
+            }),
           }),
-        }),
+          setStage,
+        ),
       );
       setAiReady(true);
     } catch (cause) {
@@ -593,9 +611,12 @@ export function StudioLab() {
       SpeechRecognition?: VoiceRecognitionConstructor;
       webkitSpeechRecognition?: VoiceRecognitionConstructor;
     };
-    const Recognition = browser.SpeechRecognition || browser.webkitSpeechRecognition;
+    const Recognition =
+      browser.SpeechRecognition || browser.webkitSpeechRecognition;
     if (!Recognition) {
-      setError('O ditado por voz não está disponível neste navegador. Use uma versão recente do Chrome, Edge ou Safari.');
+      setError(
+        'O ditado por voz não está disponível neste navegador. Use uma versão recente do Chrome, Edge ou Safari.',
+      );
       return;
     }
     const initialPrompt = prompt.trimEnd();
@@ -609,11 +630,17 @@ export function StudioLab() {
         .map((result) => result[0]?.transcript || '')
         .join('')
         .trim();
-      setPrompt(initialPrompt ? `${initialPrompt} ${transcript}`.trim() : transcript);
+      setPrompt(
+        initialPrompt ? `${initialPrompt} ${transcript}`.trim() : transcript,
+      );
     };
     voice.onerror = (event) => {
       if (event.error === 'aborted') return;
-      setError(event.error === 'not-allowed' ? 'Permita o uso do microfone para ditar sua mensagem.' : 'Não foi possível transcrever o áudio. Tente novamente.');
+      setError(
+        event.error === 'not-allowed'
+          ? 'Permita o uso do microfone para ditar sua mensagem.'
+          : 'Não foi possível transcrever o áudio. Tente novamente.',
+      );
     };
     voice.onend = () => {
       setListening(false);
@@ -623,7 +650,9 @@ export function StudioLab() {
       voice.start();
       setError('');
       setListening(true);
-      setNotice('Ouvindo você. Fale normalmente; a transcrição aparecerá no campo.');
+      setNotice(
+        'Ouvindo você. Fale normalmente; a transcrição aparecerá no campo.',
+      );
     } catch {
       setError('Não foi possível iniciar o ditado. Tente novamente.');
     }
@@ -751,20 +780,14 @@ export function StudioLab() {
             >
               {!project?.messages.length && (
                 <div className={styles.welcome}>
-                  <span className={styles.assistantMark}>
-                    <Sparkles size={20} />
-                  </span>
-                  <p className={styles.welcomeEyebrow}>Estúdio Synky</p>
                   <h2>
                     {project
                       ? 'Vamos criar a primeira versão.'
-                      : 'O que vamos criar hoje?'}
+                      : 'Nova proposta'}
                   </h2>
-                  <p>
-                    {project?.briefing
-                      ? 'Briefing pronto para usar.'
-                      : 'Sua próxima proposta começa com uma ideia.'}
-                  </p>
+                  {(project?.briefing || briefFile) && (
+                    <p>{briefFile?.name || 'Briefing pronto para usar.'}</p>
+                  )}
                   <div className={styles.starterModes}>
                     <button
                       aria-pressed={mode === 'free'}
@@ -791,22 +814,72 @@ export function StudioLab() {
                         onClick={() => setTab('context')}
                       >
                         <PanelsTopLeft size={17} />
-                        Escolher template
+                        {draft.templateId === 'none'
+                          ? 'Sob medida'
+                          : selectedTemplate.name}
+                        <ChevronDown size={14} />
                       </button>
                     )}
                   </div>
-                  <div className={styles.suggestions}>
-                    {[
-                      'Crie uma proposta de marketing com escopo e investimento.',
-                      'Quero uma proposta de consultoria, clara e objetiva.',
-                      'Vamos planejar a apresentação para meu cliente.',
-                    ].map((text) => (
-                      <button key={text} onClick={() => choosePrompt(text)}>
-                        {text}
-                        <ArrowUp size={14} />
-                      </button>
-                    ))}
-                  </div>
+                  {!project && (
+                    <div className={styles.startContext}>
+                      <label>
+                        Referência visual
+                        <div className={styles.urlInput}>
+                          <Link2 size={16} />
+                          <input
+                            type="url"
+                            aria-label="Referência visual"
+                            placeholder="https://proposta-de-referencia.com"
+                            value={draft.referenceUrl}
+                            disabled={blocked}
+                            maxLength={4000}
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                referenceUrl: event.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                      </label>
+                      <label>
+                        Briefing
+                        <textarea
+                          aria-label="Briefing"
+                          rows={4}
+                          maxLength={40000}
+                          disabled={blocked}
+                          value={draft.briefing}
+                          placeholder="Cliente, objetivo, entregáveis, valores e prazos..."
+                          onChange={(event) =>
+                            setDraft({ ...draft, briefing: event.target.value })
+                          }
+                        />
+                      </label>
+                    </div>
+                  )}
+                  <button
+                    className={styles.primary}
+                    disabled={
+                      blocked ||
+                      (!draft.briefing.trim() &&
+                        !briefFile &&
+                        !project?.briefing &&
+                        !project?.fileName)
+                    }
+                    onClick={() =>
+                      void send(
+                        undefined,
+                        draft.referenceUrl
+                          ? 'Crie a proposta com todo o briefing, seguindo a identidade visual e as composições da referência.'
+                          : 'Crie a proposta completa a partir do briefing, com uma direção visual própria.',
+                        'edit',
+                      )
+                    }
+                  >
+                    <Sparkles size={16} /> Criar proposta
+                  </button>
                 </div>
               )}
               {project?.messages.map((message, index) => (
@@ -895,7 +968,9 @@ export function StudioLab() {
                         >
                           <Link2 size={12} />
                           {message.reference
-                            ? 'Modelo lido e aplicado'
+                            ? message.intent === 'plan'
+                              ? 'Referência lida'
+                              : 'Referência utilizada'
                             : 'Referência consultada'}
                         </a>
                       ))}
@@ -909,15 +984,46 @@ export function StudioLab() {
                     <span className={styles.messageBy}>Você</span>
                     <p>{pending}</p>
                   </article>
-                  <div className={styles.working}>
-                    <Loader2 className={styles.spin} size={17} />
-                    <span>
-                      {draft.referenceUrl
-                        ? 'Lendo o modelo e preparando sua proposta…'
-                        : intent === 'plan'
-                          ? 'Preparando o plano…'
-                          : 'Criando sua próxima versão…'}
-                    </span>
+                  <div
+                    className={styles.generationProgress}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <div>
+                      <Loader2 className={styles.spin} size={17} />
+                      <strong>
+                        {studioStages.find((item) => item.id === stage)?.label}
+                      </strong>
+                    </div>
+                    {intent !== 'plan' && (
+                      <ol>
+                        {studioStages
+                          .filter(
+                            (item) =>
+                              item.id !== 'repairing' || stage === 'repairing',
+                          )
+                          .map((item) => (
+                            <li
+                              key={item.id}
+                              data-state={
+                                item.id === stage
+                                  ? 'active'
+                                  : studioStages.findIndex(
+                                        (s) => s.id === item.id,
+                                      ) <
+                                      studioStages.findIndex(
+                                        (s) => s.id === stage,
+                                      )
+                                    ? 'done'
+                                    : 'waiting'
+                              }
+                            >
+                              <Check size={13} />
+                              <span>{item.label}</span>
+                            </li>
+                          ))}
+                      </ol>
+                    )}
                   </div>
                 </>
               )}
@@ -984,6 +1090,18 @@ export function StudioLab() {
                 <fieldset className={styles.templatePicker}>
                   <legend>Template da proposta</legend>
                   <div>
+                    <button
+                      type="button"
+                      aria-pressed={draft.templateId === 'none'}
+                      disabled={blocked}
+                      onClick={() => setDraft({ ...draft, templateId: 'none' })}
+                    >
+                      <Sparkles size={20} />
+                      <span>
+                        <strong>Sob medida</strong>
+                        <small>Briefing e referência do projeto</small>
+                      </span>
+                    </button>
                     {studioTemplates.map((template) => (
                       <button
                         key={template.id}
@@ -997,7 +1115,9 @@ export function StudioLab() {
                         <span
                           className={styles.templateSwatch}
                           style={
-                            { '--template-accent': template.accent } as CSSProperties
+                            {
+                              '--template-accent': template.accent,
+                            } as CSSProperties
                           }
                         />
                         <span>
@@ -1008,29 +1128,31 @@ export function StudioLab() {
                       </button>
                     ))}
                   </div>
-                  <aside
-                    className={styles.templatePreview}
-                    style={
-                      {
-                        '--template-accent': selectedTemplate.accent,
-                        '--template-surface': selectedTemplate.surface,
-                      } as CSSProperties
-                    }
-                  >
-                    <span>Selecionado</span>
-                    <strong>{selectedTemplate.name}</strong>
-                    <p>{selectedTemplate.description}</p>
-                    <dl>
-                      <div>
-                        <dt>Ideal para</dt>
-                        <dd>{selectedTemplate.bestFor}</dd>
-                      </div>
-                      <div>
-                        <dt>Estrutura</dt>
-                        <dd>{selectedTemplate.structure}</dd>
-                      </div>
-                    </dl>
-                  </aside>
+                  {draft.templateId !== 'none' && (
+                    <aside
+                      className={styles.templatePreview}
+                      style={
+                        {
+                          '--template-accent': selectedTemplate.accent,
+                          '--template-surface': selectedTemplate.surface,
+                        } as CSSProperties
+                      }
+                    >
+                      <span>Selecionado</span>
+                      <strong>{selectedTemplate.name}</strong>
+                      <p>{selectedTemplate.description}</p>
+                      <dl>
+                        <div>
+                          <dt>Ideal para</dt>
+                          <dd>{selectedTemplate.bestFor}</dd>
+                        </div>
+                        <div>
+                          <dt>Estrutura</dt>
+                          <dd>{selectedTemplate.structure}</dd>
+                        </div>
+                      </dl>
+                    </aside>
+                  )}
                 </fieldset>
               )}
               <label>
@@ -1200,6 +1322,48 @@ export function StudioLab() {
                     <p className={styles.reviewWarning}>
                       Há conteúdo ultrapassando a largura desta prévia.
                     </p>
+                  )}
+                  {review?.design && !historical && (
+                    <section className={styles.designReview}>
+                      <h3>Direção da proposta</h3>
+                      <p>{review.design.visual.direction}</p>
+                      <div
+                        className={styles.designPalette}
+                        aria-label="Paleta da proposta"
+                      >
+                        {review.design.visual.palette
+                          .filter((color) =>
+                            /^(#[\da-f]{3,8}|(?:rgb|hsl)a?\([\d\s.,%/]+\))$/i.test(
+                              color,
+                            ),
+                          )
+                          .map((color) => (
+                            <span
+                              key={color}
+                              title={color}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                      </div>
+                      {review.referenceAssessment && (
+                        <p>{review.referenceAssessment}</p>
+                      )}
+                      <details>
+                        <summary>
+                          {review.covered?.length || 0} de{' '}
+                          {review.design.requirements.length} requisitos
+                          conferidos
+                        </summary>
+                        <ul>
+                          {review.design.requirements.map((item) => (
+                            <li key={item.id}>
+                              <Check size={14} />
+                              <span>{item.content}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    </section>
                   )}
                   {!!review?.missing.length && !historical && (
                     <section className={styles.missingInfo}>
@@ -1515,7 +1679,8 @@ export function StudioLab() {
               )}
               {listening && (
                 <p className={styles.voiceStatus} aria-live="polite">
-                  <span />Ouvindo… toque no microfone para parar.
+                  <span />
+                  Ouvindo… toque no microfone para parar.
                 </p>
               )}
               <textarea
@@ -1590,7 +1755,13 @@ export function StudioLab() {
                   <Link2 size={17} />
                 </IconButton>
                 <IconButton
-                  label={listening ? 'Parar ditado por voz' : voiceSupported ? 'Ditar mensagem por voz' : 'Ditado por voz indisponível neste navegador'}
+                  label={
+                    listening
+                      ? 'Parar ditado por voz'
+                      : voiceSupported
+                        ? 'Ditar mensagem por voz'
+                        : 'Ditado por voz indisponível neste navegador'
+                  }
                   disabled={blocked || !voiceSupported}
                   pressed={listening}
                   onClick={toggleVoiceInput}
