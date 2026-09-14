@@ -1772,3 +1772,89 @@ html:not(.dark) [data-slot='dropdown-menu-content'] {
   .sales-app:not(.theme-dark) .actions-focus-hero,
   .sales-app:not(.theme-dark) .clients-value-hero { background-position: center, 72% center !important; }
 }
+
+/* Light hero contrast and image variety. The overview keeps its approved art;
+   every other image-led workspace has its own visual subject. */
+.sales-app:not(.theme-dark) .actions-focus-hero {
+  background-image:
+    linear-gradient(90deg, rgba(3, 42, 96, .86) 0%, rgba(4, 72, 145, .58) 42%, rgba(4, 101, 196, .08) 78%),
+    url('/dashboard/actions-campus-light.png') !important;
+  background-position: center, right 52% !important;
+}
+.sales-app:not(.theme-dark) .clients-value-hero {
+  background-image:
+    linear-gradient(90deg, rgba(3, 39, 88, .88) 0%, rgba(4, 68, 132, .56) 43%, rgba(5, 91, 170, .08) 78%),
+    url('/dashboard/clients-headquarters-light.png') !important;
+  background-position: center, right 50% !important;
+}
+.sales-app:not(.theme-dark) .sales-content[data-view='agent_setup'] > div > section:first-child {
+  background-image:
+    linear-gradient(90deg, rgba(3, 39, 90, .9) 0%, rgba(4, 62, 122, .62) 47%, rgba(7, 92, 165, .12) 76%),
+    url('/dashboard/agent-studio-light.png') !important;
+  background-position: center, right 50% !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100%, cover !important;
+}
+.sales-app:not(.theme-dark) .sales-content[data-view='team'] > div > section:first-of-type > article:first-child {
+  background-image:
+    linear-gradient(90deg, rgba(3, 35, 79, .78) 0%, rgba(4, 59, 115, .36) 50%, rgba(4, 82, 151, .04) 82%),
+    url('/team/organization-office.png') !important;
+  background-position: center, 66% center !important;
+}
+
+.sales-app:not(.theme-dark) :is(
+  .actions-focus-hero,
+  .clients-value-hero,
+  .sales-content[data-view='agent'] > div > section:first-child,
+  .sales-content[data-view='agent_setup'] > div > section:first-child,
+  .sales-content[data-view='team'] > div > section:first-of-type > article:first-child
+) :is(h1, h2, h3, strong) {
+  color: #ffffff !important;
+  text-shadow: 0 2px 14px rgba(0, 28, 72, .28);
+}
+.sales-app:not(.theme-dark) :is(
+  .actions-focus-hero,
+  .clients-value-hero,
+  .sales-content[data-view='agent'] > div > section:first-child,
+  .sales-content[data-view='agent_setup'] > div > section:first-child,
+  .sales-content[data-view='team'] > div > section:first-of-type > article:first-child
+) :is(p, blockquote) {
+  color: #eef7ff !important;
+  text-shadow: 0 1px 10px rgba(0, 29, 73, .25);
+}
+.sales-app:not(.theme-dark) :is(
+  .actions-focus-hero,
+  .clients-value-hero,
+  .sales-content[data-view='agent'] > div > section:first-child,
+  .sales-content[data-view='agent_setup'] > div > section:first-child,
+  .sales-content[data-view='team'] > div > section:first-of-type > article:first-child
+) > div :is(span[class*='text-white'], span[class*='text-[#']) {
+  color: #f5faff !important;
+}
+.sales-app:not(.theme-dark) .sales-content[data-view='agent_setup'] > div > div > aside {
+  background: linear-gradient(160deg, #086cdf 0%, #0756b6 50%, #073d83 100%) !important;
+}
+.sales-app:not(.theme-dark) .sales-content[data-view='agent_setup'] > div > div > aside :is(h1, h2, h3, strong) {
+  color: #ffffff !important;
+}
+.sales-app:not(.theme-dark) .sales-content[data-view='agent_setup'] > div > div > aside :is(p, span) {
+  color: #d9edff !important;
+}
+.sales-app:not(.theme-dark) .sales-content[data-view='agent_setup'] > div > div > aside [class*='bg-white'] {
+  background-color: rgba(255,255,255,.14) !important;
+}
+
+@media (max-width: 767px) {
+  .sales-app:not(.theme-dark) .actions-focus-hero { background-position: center, 68% center !important; }
+  .sales-app:not(.theme-dark) .clients-value-hero { background-position: center, 72% center !important; }
+  .sales-app:not(.theme-dark) .sales-content[data-view='agent_setup'] > div > section:first-child { background-position: center, 70% center !important; }
+  .sales-app:not(.theme-dark) .sales-content[data-view='team'] > div > section:first-of-type > article:first-child { background-position: center, 70% center !important; }
+}
+
+.sales-app:not(.theme-dark) .sales-content[data-view='agent'] > div > header:first-child h1 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 14px rgba(0, 28, 72, .28);
+}
+.sales-app:not(.theme-dark) .sales-content[data-view='agent'] > div > header:first-child p {
+  color: #eef7ff !important;
+}
