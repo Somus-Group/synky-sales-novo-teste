@@ -856,6 +856,41 @@
   }
 }
 
+/* Dark workspaces: preserve a distinct, visible photograph instead of hiding it
+   below the shared dark-theme layers. */
+.sales-app.theme-dark .sales-content[data-view='team'] > div > section:first-of-type > article:first-child {
+  background-image:
+    linear-gradient(90deg, rgb(3 21 42 / 94%) 0%, rgb(3 28 55 / 74%) 46%, rgb(3 25 48 / 12%) 100%),
+    url('/team/organization-office.png') !important;
+  background-position: center, right center !important;
+}
+.sales-app.theme-dark .sales-content[data-view='agent_setup'] > div > section:first-child {
+  background-image:
+    linear-gradient(90deg, rgb(3 21 42 / 94%) 0%, rgb(5 43 84 / 72%) 48%, rgb(8 91 174 / 10%) 100%),
+    url('/dashboard/agent-studio-light.png') !important;
+  background-position: center, right center !important;
+}
+.sales-app.theme-dark .sales-content[data-view='agent'] > div > header:first-child > img,
+.sales-app.theme-dark .sales-content[data-view='agent_setup'] > div > section:first-child > img {
+  display: block !important;
+  inset: 0 0 0 auto !important;
+  width: 58% !important;
+  height: 100% !important;
+  object-position: center !important;
+  opacity: 1 !important;
+}
+.sales-app.theme-dark .sales-content[data-view='agent'] > div > header:first-child > img + div,
+.sales-app.theme-dark .sales-content[data-view='agent_setup'] > div > section:first-child > img + div {
+  background: linear-gradient(90deg, #071d3d 0%, rgb(7 36 75 / 92%) 42%, rgb(7 45 93 / 28%) 69%, rgb(7 45 93 / 0%) 100%) !important;
+}
+@media (max-width: 639px) {
+  .sales-app.theme-dark .sales-content[data-view='agent'] > div > header:first-child > img,
+  .sales-app.theme-dark .sales-content[data-view='agent_setup'] > div > section:first-child > img {
+    width: 100% !important;
+    opacity: .45 !important;
+  }
+}
+
 /* Reference-led commercial surfaces: the data stays native to Synky, while the
    visual framing gives each workspace a clear, premium decision-making focus. */
 .sales-app .overview-inspiration,
