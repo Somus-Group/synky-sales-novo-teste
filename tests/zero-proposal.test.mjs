@@ -83,8 +83,25 @@ test('new composer opens with one visible text input and optional details, no fo
   const compositions = nodes.find((n) =>
     n.attrs.some((a) => a.name === 'aria-label' && a.value === 'Composição'),
   );
-  const choices = compositions.childNodes.filter((n) => n.tagName === 'button');
+  const choices = compositions.childNodes
+    .flatMap((n) => n.childNodes || [])
+    .filter((n) => n.tagName === 'button');
   assert.equal(choices.length, 3);
+  const thumbnails = nodes.filter(
+    (n) => n.tagName === 'iframe' && n.attrs.some((a) => a.name === 'inert'),
+  );
+  assert.equal(thumbnails.length, 3);
+  for (const thumbnail of thumbnails) {
+    assert.ok(
+      thumbnail.attrs.some(
+        (a) => a.name === 'sandbox' && a.value === 'allow-same-origin',
+      ),
+    );
+    assert.match(
+      thumbnail.attrs.find((a) => a.name === 'srcdoc').value,
+      /<section class="hero">/,
+    );
+  }
   assert.equal(
     choices.filter((n) =>
       n.attrs.some((a) => a.name === 'aria-pressed' && a.value === 'true'),
@@ -149,15 +166,92 @@ test('natural inline client, decimal prices and custom services do not need cata
       [250000, 1],
     ],
   );
-  assert.equal(
-    result.draft.services[0].description,
-    'fotografia de produtos por R$ 1.234,56, pagamento único',
-  );
+  assert.equal(result.draft.services[0].description, '');
   assert.match(
     result.draft.services[1].description,
     /Inclui revisão com a cliente/,
   );
   assert.deepEqual(result.unresolved, []);
+});
+
+test('scope text is separated from price wording without inventing deliverables', () => {
+  const original =
+    'Proposta para Aurora. Gestão de tráfego com 4 campanhas por R$ 2.500 por mês, incluindo relatório de resultados. Site por R$ 4.000, pagamento único.';
+  const { draft } = composeZeroBrief(original, zero.emptyZeroDraft('Synky'));
+  assert.equal(draft.briefing, original);
+  assert.equal(draft.services[0].title, 'Gestão de tráfego');
+  assert.equal(
+    draft.services[0].description,
+    '4 campanhas\nrelatório de resultados',
+  );
+  assert.equal(draft.services[1].description, '');
+  assert.equal(draft.services[0].unitCents, 250000);
+  assert.equal(draft.services[1].unitCents, 400000);
+  for (const design of ['editorial', 'contrast', 'compact']) {
+    const html = zero.renderZeroProposal({ ...draft, design });
+    assert.match(html, /<h1>Aurora<\/h1>/);
+    assert.match(html, /<li>4 campanhas<\/li>/);
+    assert.doesNotMatch(html, /<li>[^<]*R\$/);
+  }
+});
+
+test('three proposal compositions use distinct content structures with no empty boilerplate', () => {
+  const value = {
+    ...zero.emptyZeroDraft('Synky'),
+    client: 'Aurora',
+    title: 'Projeto de marca',
+    services: [
+      {
+        id: 'one',
+        title: 'Identidade visual',
+        description: 'Manual de marca\nArquivos finais',
+        quantity: 1,
+        unitCents: 400000,
+        billing: 'once',
+      },
+    ],
+  };
+  for (const [design, structure] of [
+    ['editorial', 'scope-chapter'],
+    ['contrast', 'scope-tile'],
+    ['compact', 'scope-row'],
+  ]) {
+    const html = zero.renderZeroProposal({ ...value, design });
+    assert.match(html, new RegExp('class="' + structure + '"'));
+    assert.doesNotMatch(
+      html,
+      /Objetivo a definir|cliente a definir|Vamos alinhar os próximos passos|1 unidade/,
+    );
+    assert.doesNotMatch(
+      html,
+      /id="objetivo"|id="cronograma"|id="condicoes"|id="referencias"/,
+    );
+    assert.equal(
+      html.indexOf('id="investimento"') < html.indexOf('id="escopo"'),
+      design === 'compact',
+    );
+  }
+  const empty = zero.renderZeroProposal(zero.emptyZeroDraft());
+  assert.doesNotMatch(empty, /id="escopo"|id="investimento"|<details/);
+  const long = zero.renderZeroProposal({
+    ...value,
+    objective: 'Objetivo extenso. '.repeat(100),
+  });
+  assert.match(long, /class="objective-copy long-copy"/);
+  assert.equal(
+    zero.zeroCover({
+      ...value,
+      services: [{ ...value.services[0], title: 'Automação de sistemas' }],
+    }),
+    '/proposal/chrome-cover.png',
+  );
+  assert.equal(
+    zero.zeroCover({
+      ...value,
+      services: [{ ...value.services[0], title: 'Design de interiores' }],
+    }),
+    '/proposal/editorial-cover.png',
+  );
 });
 
 test('packages stay together; shared totals, exclusions and vague instructions are not billed', () => {
@@ -457,8 +551,8 @@ test('standalone output embeds cover and gallery, preserves full content, and ne
   );
   assert.match(html, /&lt;Projeto real&gt;/);
   assert.match(html, /Objetivo integral confirmado/);
-  assert.match(html, /Primeira etapa: dados/);
-  assert.match(html, /Segunda etapa: aprovação/);
+  assert.match(html, /<h3>Primeira etapa<\/h3><p>dados<\/p>/);
+  assert.match(html, /<h3>Segunda etapa<\/h3><p>aprovação<\/p>/);
   const empty = zero.renderZeroProposal(draft());
   assert.doesNotMatch(empty, /<ol class="process/);
   assert.doesNotMatch(empty, /<div class="portfolio/);

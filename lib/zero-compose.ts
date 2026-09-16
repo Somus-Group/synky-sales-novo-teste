@@ -84,7 +84,7 @@ export function composeZeroBrief(
   };
   const addService = (raw: string, explicit = false) => {
     const found = amounts(raw);
-    const title = (found.length ? raw.slice(0, found[0].index) : raw)
+    const commercialTitle = (found.length ? raw.slice(0, found[0].index) : raw)
       .replace(/^(?:[-*•]\s*|\d+[.)]\s*)/, '')
       .replace(
         /^(?:(?:servi[cç]o|escopo|entregas?)\s*:\s*|(?:quero|preciso\s+de|oferecer|ofere[cç]a|incluir|inclua)\s+)/i,
@@ -95,6 +95,12 @@ export function composeZeroBrief(
         '',
       )
       .trim();
+    const scopeStart = commercialTitle.match(
+      /\s+(?:com|inclui|incluindo|contemplando)\s+(.+)$/i,
+    );
+    const title = scopeStart
+      ? commercialTitle.slice(0, scopeStart.index).trim()
+      : commercialTitle;
     if (
       !title ||
       title.length > 160 ||
@@ -143,13 +149,30 @@ export function composeZeroBrief(
     const old = base.services.find(
       (service) => fold(service.title) === fold(title),
     );
+    let description = scopeStart?.[1] || '';
+    if (found.length === 1 && unitCents !== null) {
+      const suffix = raw
+        .slice(found[0].index! + found[0][0].length)
+        .replace(/^[\s,;.-]+/, '')
+        .replace(
+          /^(?:por\s+m[eê]s|ao\s+m[eê]s|mensal(?:mente)?|mensais|\/\s*m[eê]s|pagamento\s+[uú]nico|[uú]nico|[uú]nica|pontual|uma\s+vez)\b/i,
+          '',
+        )
+        .replace(/^[\s,;.-]+/, '')
+        .replace(/^(?:e\s+)?(?:inclui|incluindo|com|contemplando)\s+/i, '')
+        .trim();
+      description = [description, suffix].filter(Boolean).join('\n');
+    } else if (found.length) {
+      // Keep ambiguous commercial wording visible rather than silently dropping it.
+      description = raw.trim();
+    }
     const service: ZeroService = {
       id:
         old && !draft.services.some((s) => s.id === old.id)
           ? old.id
           : crypto.randomUUID(),
       title: title[0].toLocaleUpperCase('pt-BR') + title.slice(1),
-      description: raw.trim(),
+      description,
       quantity: 1,
       unitCents,
       billing: monthly.test(raw) ? 'monthly' : 'once',

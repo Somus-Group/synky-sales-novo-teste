@@ -67,6 +67,11 @@ export const zeroCovers = [
     name: 'Interiores',
     alt: 'Interior com luz natural e materiais',
   },
+  {
+    url: '/proposal/chrome-cover.png',
+    name: 'Tecnologia',
+    alt: 'Composição metálica em azul e prata',
+  },
 ] as const;
 
 export function zeroCover(draft: ZeroDraft): string {
@@ -77,7 +82,10 @@ export function zeroCover(draft: ZeroDraft): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
-  if (/arquitet|interior/.test(scope)) return zeroCovers[2].url;
+  if (/interior|decoracao|ambientes/.test(scope)) return zeroCovers[3].url;
+  if (/arquitet|construcao|engenharia/.test(scope)) return zeroCovers[2].url;
+  if (/software|aplicativ|sistema|automacao|tecnolog|saas|integrac/.test(scope))
+    return zeroCovers[4].url;
   if (/trafego|conteudo|marketing|design|site|digital/.test(scope))
     return zeroCovers[1].url;
   return zeroCovers[0].url;
@@ -444,50 +452,57 @@ export function renderZeroProposal(
   const coverAlt =
     zeroCovers.find((item) => item.url === cover)?.alt ||
     'Imagem de capa selecionada';
-  const middle = [
-    '02',
-    ...(d.timeline ? ['03'] : []),
-    ...(d.gallery.length ? ['04'] : []),
-  ];
-  const order = [
-    '01',
-    ...(d.design === 'compact' ? ['05', ...middle] : [...middle, '05']),
-    ...(d.terms || d.exclusions ? ['06'] : []),
-    '07',
-  ];
-  const label = (number: string, title: string) =>
-    `<span class="section-label">${String(order.indexOf(number) + 1).padStart(2, '0')} / ${title}</span>`;
-  const heading = (
-    number: string,
-    category: string,
-    title: string,
-    aside = '',
-  ) =>
-    `<div class="section-heading"><div>${label(number, category)}<h2>${title}</h2></div>${aside ? `<span>${aside}</span>` : ''}</div>`;
-  const facts = `<dl class="facts"><div><dt>Preparada para</dt><dd>${escape(d.client || 'Cliente a definir')}</dd></div>${d.services.length ? `<div><dt>Frentes de trabalho</dt><dd>${String(d.services.length).padStart(2, '0')}</dd></div>` : ''}${d.months ? `<div><dt>Vigência</dt><dd>${d.months} meses</dd></div>` : ''}${d.validity ? `<div><dt>Validade da proposta</dt><dd>${escape(d.validity)}</dd></div>` : ''}</dl>`;
-  const context = `<section class="section"><div class="wrap overview"><div>${label('01', 'O projeto')}<h2>${escape(d.title || 'Proposta comercial')}</h2>${d.objective ? `<div class="prose">${lines(d.objective)}</div>` : '<p class="draft-note">Objetivo a definir.</p>'}</div>${facts}</div></section>`;
+  const client = escape(d.client || 'Seu próximo projeto');
+  const subject = escape(d.title || 'Proposta comercial');
+  const servicePrice = (service: ZeroService) =>
+    service.unitCents === null
+      ? 'A definir'
+      : zeroMoney(service.unitCents * service.quantity);
+  const subtitle = (value: string) =>
+    `<span class="section-label">${value}</span>`;
+  const heading = (title: string, aside = '') =>
+    `<div class="section-heading"><h2>${title}</h2>${aside ? `<span>${aside}</span>` : ''}</div>`;
+  const facts = `<dl class="project-facts"><div><dt>Proposta de</dt><dd>${escape(d.supplier || 'Sua empresa')}</dd></div>${d.services.length ? `<div><dt>Escopo</dt><dd>${d.services.length} ${d.services.length === 1 ? 'serviço' : 'serviços'}</dd></div>` : ''}${d.months ? `<div><dt>Vigência</dt><dd>${d.months} meses</dd></div>` : ''}${d.validity ? `<div><dt>Validade</dt><dd>${escape(d.validity)}</dd></div>` : ''}</dl>`;
+  const context = d.objective
+    ? `<section id="objetivo" class="section context"><div class="wrap">${subtitle('O objetivo')}<div class="objective-copy${d.objective.length > 340 ? ' long-copy' : ''}">${lines(d.objective)}</div></div></section>`
+    : '';
   const serviceRows = d.services
-    .map(
-      (s, index) =>
-        `<article class="service"><div class="service-top"><span class="service-icon" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><small>${s.billing === 'monthly' ? 'RECORRENTE' : 'PROJETO'}</small></div><h3>${escape(s.title || 'Serviço a definir')}</h3><ul class="deliverables">${s.description
-          .split(/\r?\n/)
-          .filter((line) => line.trim())
-          .map(
-            (line) =>
-              `<li><span aria-hidden="true">&#10003;</span><span>${escape(line)}</span></li>`,
-          )
-          .join(
-            '',
-          )}</ul><div class="service-bottom"><span>${s.quantity} ${s.quantity === 1 ? 'unidade' : 'unidades'}</span><span>${s.billing === 'monthly' ? 'Cobrança mensal' : 'Pagamento único'}</span></div></article>`,
-    )
+    .map((service, index) => {
+      const items = service.description
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const description = items.length
+        ? `<ul class="deliverables">${items.map((item) => `<li>${escape(item)}</li>`).join('')}</ul>`
+        : '';
+      const number = String(index + 1).padStart(2, '0');
+      const billing = service.billing === 'monthly' ? 'Mensal' : 'Pontual';
+      const amount = `<div class="service-price"><strong>${servicePrice(service)}</strong><span>${service.billing === 'monthly' ? 'por mês' : 'pagamento único'}${service.quantity > 1 ? ` / ${service.quantity} unidades` : ''}</span></div>`;
+      if (d.design === 'compact')
+        return `<li class="scope-row"><div class="scope-name"><span class="service-number">${number}</span><h3>${escape(service.title)}</h3></div><div class="scope-description">${description}</div>${amount}</li>`;
+      if (d.design === 'contrast')
+        return `<article class="scope-tile"><div class="tile-top"><span class="service-number">${number}</span><span class="service-type">${billing}</span></div><h3>${escape(service.title)}</h3>${description}${amount}</article>`;
+      return `<article class="scope-chapter"><div class="chapter-title"><span class="service-number">${number}</span><div><span class="service-type">${billing}</span><h3>${escape(service.title)}</h3></div></div><div class="chapter-content">${description}${amount}</div></article>`;
+    })
     .join('');
-  const scope = `<section id="escopo" class="section scope"><div class="wrap">${heading('02', 'Escopo de trabalho', 'O que está incluído.', d.services.length ? `${d.services.length} frentes de trabalho` : '')}<div class="services">${serviceRows || '<p class="draft-note">Nenhum serviço selecionado.</p>'}</div></div></section>`;
+  const scope = d.services.length
+    ? `<section id="escopo" class="section scope"><div class="wrap">${subtitle('Escopo proposto')}${heading(d.design === 'contrast' ? 'O projeto, em partes.' : 'Serviços e entregas', String(d.services.length).padStart(2, '0') + ' / ' + (d.services.length === 1 ? 'serviço' : 'serviços'))}${d.design === 'compact' ? `<ol class="scope-ledger">${serviceRows}</ol>` : `<div class="${d.design === 'contrast' ? 'scope-grid' : 'scope-chapters'}">${serviceRows}</div>`}</div></section>`
+    : '';
   const steps = d.timeline.split(/\r?\n/).filter((line) => line.trim());
   const process = steps.length
-    ? `<section id="cronograma" class="section"><div class="wrap">${heading('03', 'Cronograma', 'Etapas do projeto.')}<ol class="process${steps.length === 1 ? ' single' : ''}">${steps.map((step, index) => `<li><div class="step-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</div><p>${escape(step)}</p></li>`).join('')}</ol></div></section>`
+    ? `<section id="cronograma" class="section schedule"><div class="wrap">${subtitle('Plano de execução')}${heading('Etapas e prazos')}<ol class="process${steps.length === 1 ? ' single' : ''}">${steps
+        .map((step, index) => {
+          const separator = step.indexOf(':');
+          const content =
+            separator > 0 && separator < 120
+              ? `<h3>${escape(step.slice(0, separator))}</h3><p>${escape(step.slice(separator + 1).trim())}</p>`
+              : `<p>${escape(step)}</p>`;
+          return `<li><span class="step-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><div>${content}</div></li>`;
+        })
+        .join('')}</ol></div></section>`
     : '';
   const gallery = d.gallery.length
-    ? `<section class="section"><div class="wrap">${heading('04', 'Seleção visual', 'Referências do projeto.')}<div class="portfolio">${d.gallery.map((item) => `<figure><img src="${escape(imageUrl(item.url))}" alt="${escape(item.caption || 'Imagem selecionada para a proposta')}" width="800" height="600" loading="lazy">${item.caption ? `<figcaption>${escape(item.caption)}</figcaption>` : ''}</figure>`).join('')}</div></div></section>`
+    ? `<section id="referencias" class="section references"><div class="wrap">${subtitle('Seleção visual')}${heading('Referências do projeto')}<div class="portfolio">${d.gallery.map((item) => `<figure><img src="${escape(imageUrl(item.url))}" alt="${escape(item.caption || 'Imagem selecionada para a proposta')}" width="800" height="600" loading="lazy">${item.caption ? `<figcaption>${escape(item.caption)}</figcaption>` : ''}</figure>`).join('')}</div></div></section>`
     : '';
   const monthlyPending = d.services.some(
     (s) => s.billing === 'monthly' && s.unitCents === null,
@@ -503,10 +518,12 @@ export function renderZeroProposal(
     .join('');
   const totalBlock = (name: string, amount: number, note: string) =>
     `<div class="total"><span>${name}</span><strong>${zeroMoney(amount)}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
-  const investment = `<section id="investimento" class="section investment"><div class="wrap">${heading('05', 'Investimento', 'Valores e condições.')}<div class="totals">${d.services.some((s) => s.billing === 'monthly') ? totalBlock('Mensalidade' + (monthlyPending ? ' parcial' : ''), totals.monthly, 'por mês') : ''}${d.services.some((s) => s.billing === 'once') ? totalBlock('Pagamento único' + (oncePending ? ' parcial' : ''), totals.once, 'sem recorrência') : ''}${d.months && totals.contract !== null ? totalBlock(`Total em ${d.months} meses${totals.pending ? ' (parcial)' : ''}`, totals.contract, 'mensalidades + pagamentos únicos') : ''}</div>${totals.pending ? '<p class="investment-note">Valores pendentes de definição. Os totais consideram somente os itens precificados.</p>' : ''}${totals.discount ? `<p class="investment-note">Desconto de ${d.discountPercent}% aplicado aos valores mensais e únicos. Desconto nesta composição: ${zeroMoney(totals.discount)}.</p>` : ''}<details class="price-detail" open><summary>Composição do investimento</summary><div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Qtd.</th><th>Recorrência</th><th>Valor</th></tr></thead><tbody>${priceRows}</tbody></table></div></details></div></section>`;
+  const investment = d.services.length
+    ? `<section id="investimento" class="section investment"><div class="wrap">${subtitle('Condições da proposta')}${heading('Investimento', d.validity ? 'Validade: ' + escape(d.validity) : '')}<div class="totals">${d.services.some((s) => s.billing === 'monthly') ? totalBlock('Mensalidade' + (monthlyPending ? ' parcial' : ''), totals.monthly, 'por mês') : ''}${d.services.some((s) => s.billing === 'once') ? totalBlock('Pagamento único' + (oncePending ? ' parcial' : ''), totals.once, 'sem recorrência') : ''}${d.months && totals.contract !== null ? totalBlock(`Total em ${d.months} meses${totals.pending ? ' (parcial)' : ''}`, totals.contract, 'mensalidades + pagamentos únicos') : ''}</div>${totals.pending ? '<p class="investment-note">Valores pendentes de definição. Os totais consideram somente os itens precificados.</p>' : ''}${totals.discount ? `<p class="investment-note">Desconto de ${d.discountPercent}% aplicado aos valores mensais e únicos. Desconto nesta composição: ${zeroMoney(totals.discount)}.</p>` : ''}<details class="price-detail" open><summary>Composição do investimento</summary><div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Qtd.</th><th>Recorrência</th><th>Valor</th></tr></thead><tbody>${priceRows}</tbody></table></div></details></div></section>`
+    : '';
   const conditions =
     d.terms || d.exclusions
-      ? `<section id="condicoes" class="section"><div class="wrap">${heading('06', 'Alinhamento', 'Combinados com clareza.')}<div class="conditions">${d.terms ? `<div><h3>Condições comerciais</h3>${lines(d.terms)}</div>` : ''}${d.exclusions ? `<div><h3>Fora do escopo</h3>${lines(d.exclusions)}</div>` : ''}</div></div></section>`
+      ? `<section id="condicoes" class="section agreements"><div class="wrap">${subtitle('Alinhamento')}${heading('Condições e limites')}<div class="conditions">${d.terms ? `<div><h3>Condições comerciais</h3>${lines(d.terms)}</div>` : ''}${d.exclusions ? `<div><h3>Fora do escopo</h3>${lines(d.exclusions)}</div>` : ''}</div></div></section>`
       : '';
   const email = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(d.email)
     ? `mailto:${encodeURIComponent(d.email)}?subject=${encodeURIComponent('Proposta: ' + d.title)}`
@@ -520,6 +537,14 @@ export function renderZeroProposal(
     email || whatsapp
       ? `<div class="contact">${email ? `<a href="${escape(email)}" target="_blank" rel="noopener noreferrer">Conversar sobre a proposta <span aria-hidden="true">&#8599;</span></a>` : ''}${whatsapp ? `<a class="secondary" href="${escape(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp <span aria-hidden="true">&#8599;</span></a>` : ''}</div>`
       : '';
-  const closing = `<footer class="closing"><div class="wrap"><div class="closing-row"><div>${label('07', 'Próxima conversa')}<h2>Vamos alinhar os próximos passos?</h2>${d.client ? `<p>Proposta preparada para ${escape(d.client)}.</p>` : ''}${contact}</div></div><div class="signature"><strong>${escape(d.supplier)}</strong><span>${escape([d.email, d.phone].filter(Boolean).join(' / '))}</span></div></div></footer>`;
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><title>${escape(d.title)}</title><style>${zeroProposalStyles}</style></head><body class="${d.design}" style="--accent:${d.accent};--ink:${ink};--on-accent:${onAccent};--display:${d.serif ? 'Georgia,serif' : 'Arial,sans-serif'};--weight:${d.serif ? 400 : 700}"><header class="brandbar wrap"><div class="brand">${logo ? `<img src="${escape(logo)}" alt="${escape(d.supplier || 'Fornecedor')}">` : escape(d.supplier || 'Sua empresa')}</div><nav aria-label="Seções da proposta"><a href="#escopo">Escopo</a>${steps.length ? '<a href="#cronograma">Etapas</a>' : ''}<a href="#investimento">Investimento</a></nav></header><main><section class="hero"><img class="hero-media" src="${escape(imageUrl(cover))}" alt="${escape(coverAlt)}" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-copy"><div class="eyebrow">Proposta comercial / ${escape(d.supplier || 'Sua empresa')}</div><h1${d.title.length > 85 ? ' class="long-title"' : ''}>${escape(d.title || 'Proposta comercial')}</h1><p class="client">Preparada para ${escape(d.client || 'cliente a definir')}</p><div class="hero-foot"><span>${d.validity ? `Validade: ${escape(d.validity)}` : 'Escopo, investimento e próximos passos'}</span><a href="#escopo">Ver proposta <span aria-hidden="true">&#8595;</span></a></div></div></section>${context}${d.design === 'compact' ? investment + scope + process + gallery : scope + process + gallery + investment}${conditions}</main>${closing}</body></html>`;
+  const closing = `<footer class="closing"><div class="wrap">${contact ? `<div class="closing-row"><div>${subtitle('Contato')}<h2>${escape(d.supplier)}</h2></div>${contact}</div>` : ''}<div class="signature"><strong>${escape(d.supplier)}</strong><span>${d.client ? 'Preparada para ' + client : 'Proposta comercial'}</span><span>${escape([d.email, d.phone].filter(Boolean).join(' / '))}</span></div></div></footer>`;
+  const nav = `${d.objective ? '<a href="#objetivo">Objetivo</a>' : ''}${d.services.length ? '<a href="#escopo">Escopo</a><a href="#investimento">Investimento</a>' : ''}`;
+  const hero = `<section class="hero"><img class="hero-media" src="${escape(imageUrl(cover))}" alt="${escape(coverAlt)}" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-copy"><span class="eyebrow">Proposta comercial</span><h1${(d.client || '').length > 40 ? ' class="long-title"' : ''}>${client}</h1><p class="hero-subject">${subject}</p>${d.services.length ? '<a class="hero-link" href="#escopo">Conhecer o escopo <span aria-hidden="true">&#8599;</span></a>' : ''}</div></section>`;
+  const content =
+    d.design === 'compact'
+      ? investment + context + scope + process + gallery
+      : d.design === 'contrast'
+        ? scope + context + gallery + process + investment
+        : context + scope + gallery + process + investment;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><title>${escape(d.title)}${d.client ? ' | ' + client : ''}</title><style>${zeroProposalStyles}</style></head><body class="${d.design}" style="--accent:${d.accent};--ink:${ink};--on-accent:${onAccent};--display:${d.serif ? 'Georgia,serif' : 'Arial,sans-serif'};--weight:${d.serif ? 400 : 700}"><header class="brandbar wrap"><div class="brand">${logo ? `<img src="${escape(logo)}" alt="${escape(d.supplier || 'Fornecedor')}">` : escape(d.supplier || 'Sua empresa')}</div><nav aria-label="Seções da proposta">${nav}</nav></header><main>${hero}<div class="project-strip"><div class="wrap">${facts}</div></div>${content}${conditions}</main>${closing}</body></html>`;
 }

@@ -41,12 +41,22 @@ unico. Validade de 15 dias.`
 - Quantities, discounts, one-off fees, monthly fees and duration recalculate
   locally using integer cents. No tax is calculated or implied. Contract totals
   multiply only monthly fees by duration and add one-off fees once.
-- Three page compositions (Editorial, Estudio, Executiva) use a full-width image
-  cover, visual deliverables, supplied timeline steps, highlighted investment and
-  optional contact links. Executiva places investment before scope; Estudio uses
-  a typographic service grid; Editorial uses individual delivery cards.
+- The three proposal compositions have different document structures, not just
+  color variations. Editorial uses numbered service chapters; Estudio uses a bold
+  client cover and a visual service grid; Executiva starts with investment and
+  presents scope as a statement-of-work ledger. The client is the cover heading,
+  the project title is supporting copy, and empty objective/timeline/conditions
+  sections are omitted. No generic closing slogan or invented content is added.
+- Composition choices show actual scaled, inert, script-free previews of the
+  current draft. They use the same renderer as HTML export and PDF printing.
+- Newly composed service descriptions separate supplied scope from the price
+  sentence, so the request is not repeated as a deliverable. Explicit scope
+  following `com` or `incluindo` is retained. Ambiguous commercial wording remains
+  visible for review, and the complete original briefing stays stored privately.
 - The cover can follow the selected service category, use existing built-in
   composition images or use an image from the current workspace's library.
+  Interior design, architecture, technology, marketing and business scopes have
+  separate existing cover selections. A manually selected cover is never replaced.
   Built-in images are illustrative, never presented as the supplier's portfolio.
   Add up to six workspace images with editable captions; no cases, testimonials,
   performance metrics, terms or timeline steps are invented.

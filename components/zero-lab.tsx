@@ -105,15 +105,23 @@ function DesignChoices({
           { key: 'compact', label: 'Executiva' },
         ] as const
       ).map((design) => (
-        <button
-          key={design.key}
-          type="button"
-          aria-pressed={draft.design === design.key}
-          onClick={() => onChange(design.key)}
-        >
-          <span className={styles.designThumb} data-design={design.key}>
-            <img src={zeroCover(draft)} alt="" />
-            <span>{draft.supplier || 'Sua empresa'}</span>
+        <div key={design.key} className={styles.designOption}>
+          <div className={styles.designThumb} aria-hidden="true">
+            <iframe
+              srcDoc={renderZeroProposal({ ...draft, design: design.key })}
+              title={`Composição ${design.label}`}
+              sandbox="allow-same-origin"
+              tabIndex={-1}
+              inert
+              loading="lazy"
+            />
+          </div>
+          <button
+            type="button"
+            aria-pressed={draft.design === design.key}
+            onClick={() => onChange(design.key)}
+          >
+            <span>{design.label}</span>
             {draft.design === design.key && (
               <Check
                 className={styles.selectedDesign}
@@ -121,9 +129,8 @@ function DesignChoices({
                 aria-hidden="true"
               />
             )}
-          </span>
-          <span>{design.label}</span>
-        </button>
+          </button>
+        </div>
       ))}
     </div>
   );
