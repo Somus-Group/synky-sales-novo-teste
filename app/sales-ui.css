@@ -2061,3 +2061,40 @@ html:not(.dark) [data-slot='dropdown-menu-content'] {
     scroll-behavior: auto !important;
   }
 }
+
+/* Must stay last: older dark-theme rules use !important and were covering the
+   photographs. Each workspace deliberately receives a different visual. */
+.sales-app.theme-dark .actions-focus-hero {
+  background-image: linear-gradient(90deg, rgb(3 21 42 / 94%) 0%, rgb(3 28 55 / 70%) 44%, rgb(3 25 48 / 8%) 100%), url('/dashboard/actions-campus-light.png') !important;
+  background-position: center, right center !important;
+}
+.sales-app.theme-dark .clients-value-hero {
+  background-image: linear-gradient(90deg, rgb(3 21 42 / 94%) 0%, rgb(3 28 55 / 70%) 44%, rgb(3 25 48 / 8%) 100%), url('/dashboard/clients-headquarters-light.png') !important;
+  background-position: center, right center !important;
+}
+.sales-app.theme-dark .sales-content[data-view='team'] > div > section:first-of-type > article:first-child {
+  background-image: linear-gradient(90deg, rgb(3 21 42 / 93%) 0%, rgb(3 28 55 / 66%) 45%, rgb(3 25 48 / 4%) 100%), url('/team/organization-office.png') !important;
+  background-position: center, right center !important;
+}
+.sales-app.theme-dark .sales-content[data-view='agent_setup'] > div > section:first-child {
+  background-image: linear-gradient(90deg, rgb(3 21 42 / 94%) 0%, rgb(3 28 55 / 68%) 45%, rgb(3 25 48 / 7%) 100%), url('/dashboard/agent-studio-light.png') !important;
+  background-position: center, right center !important;
+}
+.sales-app.theme-dark .sales-content[data-view='agent'] > div > header:first-child > img {
+  content: url('/dashboard/architecture-hero-light-v2.png');
+  display: block !important;
+  inset: 0 0 0 auto !important;
+  width: 58% !important;
+  height: 100% !important;
+  object-position: center !important;
+  opacity: 1 !important;
+}
+.sales-app.theme-dark .sales-content[data-view='agent'] > div > header:first-child > img + div {
+  background: linear-gradient(90deg, #071d3d 0%, rgb(7 36 75 / 90%) 42%, rgb(7 45 93 / 24%) 69%, transparent 100%) !important;
+}
+.sales-app.theme-dark :is(.sales-content[data-view='agent'], .sales-content[data-view='agent_setup']) :is(header, section):first-child > div.pointer-events-none.absolute.-right-16 {
+  display: none !important;
+}
+@media (max-width: 639px) {
+  .sales-app.theme-dark .sales-content[data-view='agent'] > div > header:first-child > img { width: 100% !important; opacity: .45 !important; }
+}
