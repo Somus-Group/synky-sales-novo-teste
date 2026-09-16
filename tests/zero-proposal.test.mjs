@@ -222,9 +222,14 @@ test('three proposal compositions use distinct content structures with no empty 
       html,
       /Objetivo a definir|cliente a definir|Vamos alinhar os próximos passos|1 unidade/,
     );
+    assert.match(html, /id="objetivo"/);
+    assert.match(html, /id="metodo"/);
+    assert.match(html, /id="proximos-passos"/);
+    assert.match(html, /Leitura do projeto/);
+    assert.match(html, /Entregas que sustentam a proposta/);
     assert.doesNotMatch(
       html,
-      /id="objetivo"|id="cronograma"|id="condicoes"|id="referencias"/,
+      /id="cronograma"|id="condicoes"|id="referencias"/,
     );
     assert.equal(
       html.indexOf('id="investimento"') < html.indexOf('id="escopo"'),
@@ -324,16 +329,9 @@ test('rebuilding keeps identity and imagery, reuses service IDs, and removes sta
   assert.equal(draft.months, 0);
   assert.equal(draft.terms, '');
   assert.equal(draft.discountPercent, 0);
-  for (const key of [
-    'supplier',
-    'email',
-    'phone',
-    'logo',
-    'cover',
-    'gallery',
-    'design',
-  ])
+  for (const key of ['supplier', 'email', 'phone', 'logo', 'cover', 'gallery'])
     assert.deepEqual(draft[key], base[key]);
+  assert.equal(draft.design, 'contrast');
   assert.equal(draft.services[0].id, 'same-id');
   assert.equal(draft.services[0].unitCents, 200000);
   assert.equal(base.client, 'Antigo');
@@ -532,7 +530,7 @@ test('legacy drafts get a visual cover, and known service categories select rele
     );
 });
 
-test('standalone output embeds cover and gallery, preserves full content, and never invents portfolio or steps', () => {
+test('standalone output embeds cover and gallery, preserves full content, and adds deterministic guidance only', () => {
   const image = '/api/assets/visual-own';
   const value = {
     ...draft(),
@@ -554,7 +552,9 @@ test('standalone output embeds cover and gallery, preserves full content, and ne
   assert.match(html, /<h3>Primeira etapa<\/h3><p>dados<\/p>/);
   assert.match(html, /<h3>Segunda etapa<\/h3><p>aprovação<\/p>/);
   const empty = zero.renderZeroProposal(draft());
-  assert.doesNotMatch(empty, /<ol class="process/);
+  assert.match(empty, /<ol class="process method"/);
+  assert.match(empty, /Ritmo de trabalho/);
+  assert.match(empty, /id="proximos-passos"/);
   assert.doesNotMatch(empty, /<div class="portfolio/);
   assert.doesNotMatch(empty, /href="https:\/\/wa.me/);
 });

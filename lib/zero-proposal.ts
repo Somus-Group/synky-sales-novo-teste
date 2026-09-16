@@ -419,6 +419,172 @@ const lines = (value: string) =>
     .map((line) => `<p>${escape(line)}</p>`)
     .join('');
 
+const folded = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+const sentence = (value: string) =>
+  value
+    .trim()
+    .replace(/[.!;]+$/, '')
+    .trim();
+const listText = (items: string[]) => {
+  if (items.length <= 1) return items[0] || '';
+  if (items.length === 2) return `${items[0]} e ${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} e ${items.at(-1)}`;
+};
+const serviceItems = (service: ZeroService) =>
+  service.description
+    .split(/\r?\n/)
+    .map((item) => sentence(item))
+    .filter(Boolean);
+const catalogDeliverables = (title: string) => {
+  const key = folded(title);
+  const found = zeroCatalog.find((item) => {
+    const catalog = folded(item.title);
+    return key.includes(catalog) || catalog.includes(key);
+  });
+  if (found)
+    return found.description
+      .split(/\r?\n/)
+      .map((item) => sentence(item))
+      .filter(Boolean);
+  if (/site|landing|pagina|presenca digital/.test(key))
+    return [
+      'Estrutura das páginas',
+      'Layout responsivo',
+      'Implementação',
+      'Revisão final',
+    ];
+  if (/trafego|ads|anuncio|campanha/.test(key))
+    return [
+      'Planejamento das campanhas',
+      'Configuração dos anúncios',
+      'Otimização recorrente',
+      'Relatório de desempenho',
+    ];
+  if (/conteudo|social|redes/.test(key))
+    return [
+      'Calendário editorial',
+      'Produção das peças',
+      'Revisão e aprovação',
+      'Programação das publicações',
+    ];
+  if (/consultoria|diagnostico/.test(key))
+    return [
+      'Diagnóstico do cenário',
+      'Plano de ação',
+      'Reunião de alinhamento',
+      'Documento de recomendações',
+    ];
+  if (/financeir|bpo|conciliacao/.test(key))
+    return [
+      'Organização da rotina financeira',
+      'Conciliação e acompanhamento',
+      'Fluxo de caixa',
+      'Relatório gerencial',
+    ];
+  return [];
+};
+const proposalMood = (draft: ZeroDraft) => {
+  const scope = folded(
+    `${draft.title} ${draft.objective} ${draft.briefing} ${draft.services.map((s) => s.title).join(' ')}`,
+  );
+  if (/trafego|ads|marketing|conteudo|social|campanha/.test(scope))
+    return {
+      label: 'Crescimento e presença',
+      promise:
+        'transformar o pedido em uma operação comercial clara, mensurável e pronta para evolução.',
+    };
+  if (/site|sistema|software|app|automacao|tecnolog|saas/.test(scope))
+    return {
+      label: 'Experiência digital',
+      promise:
+        'tirar a solução do plano das ideias e organizar uma entrega objetiva, navegável e útil para o cliente final.',
+    };
+  if (/financeir|bpo|crm|comercial|processo|operacao/.test(scope))
+    return {
+      label: 'Operação e controle',
+      promise:
+        'dar método, cadência e visibilidade para a rotina que precisa funcionar melhor.',
+    };
+  if (/arquitet|interior|obra|ambiente|design/.test(scope))
+    return {
+      label: 'Projeto e materialidade',
+      promise:
+        'traduzir intenção, estética e execução em um caminho de entrega mais seguro.',
+    };
+  return {
+    label: 'Projeto sob medida',
+    promise:
+      'organizar escopo, responsabilidades e investimento em uma decisão simples de aprovar.',
+  };
+};
+function zeroStory(draft: ZeroDraft) {
+  const services = draft.services
+    .map((service) => service.title)
+    .filter(Boolean);
+  const mood = proposalMood(draft);
+  const intro =
+    sentence(draft.objective) ||
+    (services.length
+      ? `Esta proposta organiza ${listText(services)}${draft.client ? ` para ${draft.client}` : ''}, com escopo, investimento e próximos passos claros.`
+      : sentence(draft.briefing.slice(0, 280)));
+  const focus = [
+    services.length
+      ? {
+          title: 'Escopo com leitura comercial',
+          body: `As frentes de ${listText(services.slice(0, 4))} foram organizadas para facilitar a aprovação e reduzir zonas cinzentas na execução.`,
+        }
+      : null,
+    {
+      title: mood.label,
+      body: `A direção desta proposta é ${mood.promise}`,
+    },
+    draft.months
+      ? {
+          title: 'Vigência definida',
+          body: `O planejamento considera uma vigência de ${draft.months} meses, mantendo a visão de execução e investimento no mesmo documento.`,
+        }
+      : null,
+    draft.validity
+      ? {
+          title: 'Janela de decisão',
+          body: `A proposta permanece válida por ${draft.validity}, preservando a composição comercial apresentada.`,
+        }
+      : null,
+  ].filter(Boolean) as Array<{ title: string; body: string }>;
+  const allDeliverables = draft.services.flatMap((service) => {
+    const own = serviceItems(service);
+    return (own.length ? own : catalogDeliverables(service.title))
+      .slice(0, 3)
+      .map((item) => ({ service: service.title, item }));
+  });
+  const highlights = allDeliverables.slice(0, 6);
+  const method = [
+    {
+      title: 'Alinhamento',
+      body: 'Confirmação do escopo, responsáveis, prioridades e materiais necessários para iniciar sem ruído.',
+    },
+    {
+      title: 'Produção',
+      body: services.length
+        ? `Execução das frentes de ${listText(services.slice(0, 3))}, mantendo o foco nas entregas aprovadas.`
+        : 'Execução do escopo aprovado com acompanhamento da evolução do projeto.',
+    },
+    {
+      title: 'Validação',
+      body: 'Rodada de revisão para ajustar detalhes, confirmar aderência e evitar entregas desalinhadas.',
+    },
+    {
+      title: 'Entrega',
+      body: 'Fechamento com materiais, orientações e próximos passos necessários para continuidade.',
+    },
+  ];
+  return { intro, focus, highlights, method };
+}
+
 export function renderZeroProposal(
   draft: ZeroDraft,
   assetOrigin = '',
@@ -427,6 +593,7 @@ export function renderZeroProposal(
 ) {
   const d = normalizeZeroDraft(draft);
   const totals = zeroTotals(d);
+  const story = zeroStory(d);
   const rgb = d.accent
     .slice(1)
     .match(/../g)!
@@ -463,15 +630,18 @@ export function renderZeroProposal(
   const heading = (title: string, aside = '') =>
     `<div class="section-heading"><h2>${title}</h2>${aside ? `<span>${aside}</span>` : ''}</div>`;
   const facts = `<dl class="project-facts"><div><dt>Proposta de</dt><dd>${escape(d.supplier || 'Sua empresa')}</dd></div>${d.services.length ? `<div><dt>Escopo</dt><dd>${d.services.length} ${d.services.length === 1 ? 'serviço' : 'serviços'}</dd></div>` : ''}${d.months ? `<div><dt>Vigência</dt><dd>${d.months} meses</dd></div>` : ''}${d.validity ? `<div><dt>Validade</dt><dd>${escape(d.validity)}</dd></div>` : ''}</dl>`;
-  const context = d.objective
-    ? `<section id="objetivo" class="section context"><div class="wrap">${subtitle('O objetivo')}<div class="objective-copy${d.objective.length > 340 ? ' long-copy' : ''}">${lines(d.objective)}</div></div></section>`
-    : '';
+  const context =
+    story.intro || story.focus.length || story.highlights.length
+      ? `<section id="objetivo" class="section context"><div class="wrap">${subtitle('Leitura do projeto')}<div class="objective-copy${story.intro.length > 340 ? ' long-copy' : ''}">${lines(story.intro)}</div>${story.focus.length ? `<div class="insight-grid">${story.focus.map((item) => `<article><span></span><h3>${escape(item.title)}</h3><p>${escape(item.body)}</p></article>`).join('')}</div>` : ''}${story.highlights.length ? `<div class="scope-signals"><strong>Entregas que sustentam a proposta</strong><ul>${story.highlights.map((item) => `<li><span>${escape(item.service)}</span>${escape(item.item)}</li>`).join('')}</ul></div>` : ''}</div></section>`
+      : '';
   const serviceRows = d.services
     .map((service, index) => {
-      const items = service.description
-        .split(/\r?\n/)
-        .map((item) => item.trim())
-        .filter(Boolean);
+      const explicitItems = serviceItems(service);
+      const suggestedItems = explicitItems.length
+        ? explicitItems
+        : catalogDeliverables(service.title);
+      const items = suggestedItems.slice(0, 8);
+      const suggestion = !explicitItems.length && items.length;
       const description = items.length
         ? `<ul class="deliverables">${items.map((item) => `<li>${escape(item)}</li>`).join('')}</ul>`
         : '';
@@ -479,10 +649,10 @@ export function renderZeroProposal(
       const billing = service.billing === 'monthly' ? 'Mensal' : 'Pontual';
       const amount = `<div class="service-price"><strong>${servicePrice(service)}</strong><span>${service.billing === 'monthly' ? 'por mês' : 'pagamento único'}${service.quantity > 1 ? ` / ${service.quantity} unidades` : ''}</span></div>`;
       if (d.design === 'compact')
-        return `<li class="scope-row"><div class="scope-name"><span class="service-number">${number}</span><h3>${escape(service.title)}</h3></div><div class="scope-description">${description}</div>${amount}</li>`;
+        return `<li class="scope-row"><div class="scope-name"><span class="service-number">${number}</span><h3>${escape(service.title)}</h3>${suggestion ? '<small>Base sugerida</small>' : ''}</div><div class="scope-description">${description}</div>${amount}</li>`;
       if (d.design === 'contrast')
-        return `<article class="scope-tile"><div class="tile-top"><span class="service-number">${number}</span><span class="service-type">${billing}</span></div><h3>${escape(service.title)}</h3>${description}${amount}</article>`;
-      return `<article class="scope-chapter"><div class="chapter-title"><span class="service-number">${number}</span><div><span class="service-type">${billing}</span><h3>${escape(service.title)}</h3></div></div><div class="chapter-content">${description}${amount}</div></article>`;
+        return `<article class="scope-tile"><div class="tile-top"><span class="service-number">${number}</span><span class="service-type">${billing}${suggestion ? ' · base sugerida' : ''}</span></div><h3>${escape(service.title)}</h3>${description}${amount}</article>`;
+      return `<article class="scope-chapter"><div class="chapter-title"><span class="service-number">${number}</span><div><span class="service-type">${billing}${suggestion ? ' · base sugerida' : ''}</span><h3>${escape(service.title)}</h3></div></div><div class="chapter-content">${description}${amount}</div></article>`;
     })
     .join('');
   const scope = d.services.length
@@ -500,7 +670,9 @@ export function renderZeroProposal(
           return `<li><span class="step-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><div>${content}</div></li>`;
         })
         .join('')}</ol></div></section>`
-    : '';
+    : d.services.length
+      ? `<section id="metodo" class="section schedule"><div class="wrap">${subtitle('Como conduzimos')}${heading('Ritmo de trabalho')}<ol class="process method">${story.method.map((step, index) => `<li><span class="step-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><div><h3>${escape(step.title)}</h3><p>${escape(step.body)}</p></div></li>`).join('')}</ol></div></section>`
+      : '';
   const gallery = d.gallery.length
     ? `<section id="referencias" class="section references"><div class="wrap">${subtitle('Seleção visual')}${heading('Referências do projeto')}<div class="portfolio">${d.gallery.map((item) => `<figure><img src="${escape(imageUrl(item.url))}" alt="${escape(item.caption || 'Imagem selecionada para a proposta')}" width="800" height="600" loading="lazy">${item.caption ? `<figcaption>${escape(item.caption)}</figcaption>` : ''}</figure>`).join('')}</div></div></section>`
     : '';
@@ -537,14 +709,17 @@ export function renderZeroProposal(
     email || whatsapp
       ? `<div class="contact">${email ? `<a href="${escape(email)}" target="_blank" rel="noopener noreferrer">Conversar sobre a proposta <span aria-hidden="true">&#8599;</span></a>` : ''}${whatsapp ? `<a class="secondary" href="${escape(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp <span aria-hidden="true">&#8599;</span></a>` : ''}</div>`
       : '';
+  const nextStep = d.services.length
+    ? `<section id="proximos-passos" class="section next-steps"><div class="wrap">${subtitle('Próximo movimento')}${heading('Para avançar')}<div class="next-board"><article><strong>1</strong><h3>Validar escopo</h3><p>Confirmar se as entregas e limites representam o que precisa ser contratado.</p></article><article><strong>2</strong><h3>Aprovar condições</h3><p>Definir forma de pagamento, vigência e data de início com base nesta composição.</p></article><article><strong>3</strong><h3>Iniciar operação</h3><p>Reunir acessos, materiais e responsáveis para começar sem retrabalho.</p></article></div></div></section>`
+    : '';
   const closing = `<footer class="closing"><div class="wrap">${contact ? `<div class="closing-row"><div>${subtitle('Contato')}<h2>${escape(d.supplier)}</h2></div>${contact}</div>` : ''}<div class="signature"><strong>${escape(d.supplier)}</strong><span>${d.client ? 'Preparada para ' + client : 'Proposta comercial'}</span><span>${escape([d.email, d.phone].filter(Boolean).join(' / '))}</span></div></div></footer>`;
   const nav = `${d.objective ? '<a href="#objetivo">Objetivo</a>' : ''}${d.services.length ? '<a href="#escopo">Escopo</a><a href="#investimento">Investimento</a>' : ''}`;
   const hero = `<section class="hero"><img class="hero-media" src="${escape(imageUrl(cover))}" alt="${escape(coverAlt)}" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-copy"><span class="eyebrow">Proposta comercial</span><h1${(d.client || '').length > 40 ? ' class="long-title"' : ''}>${client}</h1><p class="hero-subject">${subject}</p>${d.services.length ? '<a class="hero-link" href="#escopo">Conhecer o escopo <span aria-hidden="true">&#8599;</span></a>' : ''}</div></section>`;
   const content =
     d.design === 'compact'
-      ? investment + context + scope + process + gallery
+      ? investment + context + scope + process + gallery + nextStep
       : d.design === 'contrast'
-        ? scope + context + gallery + process + investment
-        : context + scope + gallery + process + investment;
+        ? context + scope + gallery + process + investment + nextStep
+        : context + scope + gallery + process + investment + nextStep;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><title>${escape(d.title)}${d.client ? ' | ' + client : ''}</title><style>${zeroProposalStyles}</style></head><body class="${d.design}" style="--accent:${d.accent};--ink:${ink};--on-accent:${onAccent};--display:${d.serif ? 'Georgia,serif' : 'Arial,sans-serif'};--weight:${d.serif ? 400 : 700}"><header class="brandbar wrap"><div class="brand">${logo ? `<img src="${escape(logo)}" alt="${escape(d.supplier || 'Fornecedor')}">` : escape(d.supplier || 'Sua empresa')}</div><nav aria-label="Seções da proposta">${nav}</nav></header><main>${hero}<div class="project-strip"><div class="wrap">${facts}</div></div>${content}${conditions}</main>${closing}</body></html>`;
 }

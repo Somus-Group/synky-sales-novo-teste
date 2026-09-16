@@ -334,6 +334,27 @@ export function composeZeroBrief(
     const title = draft.services.map((s) => s.title).join(' + ');
     if (title.length <= 160) draft.title = title;
   }
+  if (!draft.objective && draft.services.length) {
+    const services = draft.services.map((s) => s.title);
+    draft.objective = `Estruturar ${services.length === 1 ? services[0] : services.slice(0, -1).join(', ') + ' e ' + services.at(-1)}${draft.client ? ` para ${draft.client}` : ''}, com escopo, investimento e próximos passos claros para aprovação.`;
+  }
+  const visualSignal = fold(
+    `${draft.title} ${draft.objective} ${draft.briefing} ${draft.services.map((s) => s.title).join(' ')}`,
+  );
+  if (/arquitet|interior|decoracao|ambiente|obra/.test(visualSignal))
+    draft.design = 'editorial';
+  else if (
+    /site|sistema|software|app|automacao|tecnolog|trafego|marketing|conteudo|campanha|design/.test(
+      visualSignal,
+    )
+  )
+    draft.design = 'contrast';
+  else if (
+    /financeir|bpo|crm|comercial|consultoria|operacao|processo/.test(
+      visualSignal,
+    )
+  )
+    draft.design = 'compact';
   if (!draft.client) warnings.push('Falta o nome do cliente.');
   if (!draft.supplier) warnings.push('Falta o nome da sua empresa.');
   if (!draft.services.length) warnings.push('Nenhum serviço identificado.');
