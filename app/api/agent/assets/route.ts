@@ -1,7 +1,7 @@
-import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
 import { getD1 } from '@/db';
 import { getWorkspaceForUser } from '@/db/workspace';
+import { deleteFile, getFileStore, putFile } from '@/lib/file-store';
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const allowedKinds = new Set(['logo', 'portfolio', 'gallery']);
@@ -17,12 +17,6 @@ type StoredAsset = {
   sizeBytes: number;
   createdAt: number;
 };
-
-function filesBucket() {
-  const bucket = (env as unknown as { FILES?: R2Bucket }).FILES;
-  if (!bucket) throw new Error('Biblioteca de imagens indisponível.');
-  return bucket;
-}
 
 function publicAsset(asset: StoredAsset) {
   return { ...asset, url: `/api/assets/${asset.publicToken}` };
@@ -59,11 +53,12 @@ export async function POST(request: Request) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-100) || 'imagem';
     const publicToken = crypto.randomUUID();
     const objectKey = `${workspaceId.replace(/[^a-zA-Z0-9_-]+/g, '-')}/brand-assets/${publicToken}-${safeName}`;
-    await filesBucket().put(objectKey, await file.arrayBuffer(), { httpMetadata: { contentType: file.type }, customMetadata: { originalName: file.name, kind } });
+    const files = getFileStore('Biblioteca de imagens indisponível.');
+    await putFile(files, objectKey, await file.arrayBuffer(), { contentType: file.type, metadata: { originalName: file.name, kind } });
 
     if (kind === 'logo') {
       const previous = await db.prepare('SELECT object_key AS objectKey FROM brand_assets WHERE workspace_id = ? AND kind = ?').bind(workspaceId, 'logo').all<{ objectKey: string }>();
-      for (const asset of previous.results) await filesBucket().delete(asset.objectKey);
+      for (const asset of previous.results) await deleteFile(files, asset.objectKey);
       await db.prepare('DELETE FROM brand_assets WHERE workspace_id = ? AND kind = ?').bind(workspaceId, 'logo').run();
     }
 
@@ -102,7 +97,7 @@ export async function DELETE(request: Request) {
     const id = Number(payload.id);
     const asset = await getD1().prepare('SELECT object_key AS objectKey FROM brand_assets WHERE id = ? AND workspace_id = ? LIMIT 1').bind(id, workspaceId).first<{ objectKey: string }>();
     if (!asset) return Response.json({ error: 'Imagem não encontrada.' }, { status: 404 });
-    await filesBucket().delete(asset.objectKey);
+    await deleteFile(getFileStore('Biblioteca de imagens indisponível.'), asset.objectKey);
     await getD1().prepare('DELETE FROM brand_assets WHERE id = ? AND workspace_id = ?').bind(id, workspaceId).run();
     return Response.json({ status: 'deleted' });
   } catch (error) {

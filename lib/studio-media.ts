@@ -1,4 +1,5 @@
 import { StudioError } from '@/lib/studio';
+import { getFile, type FileStore } from '@/lib/file-store';
 
 export type StudioMedia = {
   id: string;
@@ -31,7 +32,7 @@ export function imageDataUrl(bytes: Uint8Array, mime: string) {
 
 export async function prepareStudioMedia(
   db: D1Database,
-  bucket: R2Bucket | undefined,
+  files: FileStore | undefined,
   workspaceId: string,
   reference: StudioMedia[],
   html: string,
@@ -58,7 +59,7 @@ export async function prepareStudioMedia(
       );
       continue;
     }
-    const object = await bucket?.get(row.objectKey);
+    const object = await getFile(files, row.objectKey);
     const dataUrl = object
       ? imageDataUrl(
           new Uint8Array(await object.arrayBuffer()),

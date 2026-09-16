@@ -6,6 +6,7 @@ import {
   studioFailure,
 } from '@/db/studio';
 import { referenceUrl, StudioError, type StudioSummary } from '@/lib/studio';
+import { deleteFile, maybeFileStore, putFile } from '@/lib/file-store';
 import { studioTemplateId } from '@/lib/studio-templates';
 
 export async function GET() {
@@ -30,7 +31,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   let uploadedKey = '';
-  const bucket = (env as unknown as { FILES?: R2Bucket }).FILES;
+  const files = maybeFileStore();
   try {
     const { db, workspaceId } = await studioContext();
     if (Number(request.headers.get('content-length')) > 9 * 1024 * 1024)
@@ -67,14 +68,14 @@ export async function POST(request: Request) {
         const bytes = await file.arrayBuffer();
         if (!new TextDecoder().decode(bytes.slice(0, 5)).startsWith('%PDF-'))
           throw new StudioError('O arquivo não é um PDF válido.');
-        if (!bucket)
+        if (!files)
           throw new StudioError(
             'O armazenamento de arquivos está indisponível. Cole o briefing no campo de texto.',
             503,
           );
         uploadedKey = `studio/${workspaceId}/${id}/briefing.pdf`;
-        await bucket.put(uploadedKey, bytes, {
-          httpMetadata: { contentType: 'application/pdf' },
+        await putFile(files, uploadedKey, bytes, {
+          contentType: 'application/pdf',
         });
       } else {
         const text = await file.text();
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    if (uploadedKey && bucket) await bucket.delete(uploadedKey).catch(() => {});
+    if (uploadedKey && files) await deleteFile(files, uploadedKey).catch(() => {});
     return studioFailure(error);
   }
 }

@@ -28,6 +28,11 @@ import { reviewStudioHtml, type StudioReview } from '@/lib/studio-review';
 import { studioMessageReference } from '@/lib/studio-design';
 import { studioStages, type StudioStage } from '@/lib/studio-stream';
 import {
+  getFile,
+  putFile,
+  type FileStore,
+} from '@/lib/file-store';
+import {
   parseStudioTemplateContent,
   renderStudioTemplate,
   studioTemplate,
@@ -150,11 +155,11 @@ export async function POST(
 }
 
 async function readCache<T>(
-  bucket: R2Bucket | undefined,
+  files: FileStore | undefined,
   key: string,
 ): Promise<T | null> {
-  if (!bucket) return null;
-  const object = await bucket.get(key);
+  if (!files) return null;
+  const object = await getFile(files, key);
   if (!object) return null;
   try {
     return JSON.parse(
@@ -165,15 +170,15 @@ async function readCache<T>(
   }
 }
 async function writeCache(
-  bucket: R2Bucket | undefined,
+  files: FileStore | undefined,
   key: string,
   value: unknown,
 ) {
-  if (!bucket) return;
+  if (!files) return;
   // Cache writes must not turn a successful paid response into a failed request.
   try {
-    await bucket.put(key, JSON.stringify(value), {
-      httpMetadata: { contentType: 'application/json' },
+    await putFile(files, key, JSON.stringify(value), {
+      contentType: 'application/json',
     });
   } catch {
     console.warn('Studio source cache could not be saved');
@@ -204,7 +209,7 @@ async function runMessage(
       STUDIO_ECONOMY_AI_MODEL?: string;
       STUDIO_DESIGN_AI_MODEL?: string;
       STUDIO_DAILY_BUDGET_USD?: string;
-      FILES?: R2Bucket;
+      FILES?: FileStore;
     };
     const messages: StudioMessage[] = JSON.parse(project.messagesJson);
     if (messages.length > 180)
@@ -408,7 +413,7 @@ async function runMessage(
       ];
       let attachedPdf = false;
       if (project.fileKey && !cachedFile?.text) {
-        const file = await configuration.FILES?.get(project.fileKey);
+        const file = await getFile(configuration.FILES, project.fileKey);
         if (!file)
           throw new StudioError(
             'O anexo do briefing não está disponível. Reenvie o briefing em um novo projeto.',

@@ -1,0 +1,43 @@
+{
+  "name": "synky-sales",
+  "main": "dist/server/index.js",
+  "workers_dev": true,
+  "preview_urls": true,
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "sales.synky.com.br/*",
+      "zone_name": "synky.com.br"
+    }
+  ],
+  "assets": {
+    "directory": "dist/client"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "synky-sales-db",
+      "database_id": "e3a5ec9a-45af-4fa7-89dc-598ff4fa573b"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "FILES",
+      "id": "16bc7d1d2f3a45dba5057e00418f1975"
+    }
+  ],
+  "vars": {
+    "STUDIO_DAILY_BUDGET_USD": "1"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "no_bundle": true,
+  "rules": [
+    {
+      "type": "ESModule",
+      "globs": ["**/*.js", "**/*.mjs"]
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
 import { getD1 } from '@/db';
 import { getWorkspaceForUser } from '@/db/workspace';
+import { getFile, maybeFileStore } from '@/lib/file-store';
 import { briefingSchema, copySchema, isBriefing, isProposalCopy, briefApprovalError } from '@/lib/proposal-workflow';
 
 export async function POST(request: Request) {
@@ -47,18 +48,18 @@ export async function POST(request: Request) {
     feedback: payload.feedback || '',
     previousCopy: phase === 'copy' && isProposalCopy(payload.previousCopy) ? payload.previousCopy : undefined,
   }) });
-  const bucket = (env as unknown as { FILES?: R2Bucket }).FILES;
+  const files = maybeFileStore();
   let totalReferenceBytes = 0;
-  if (bucket) for (const reference of references.results) {
+  if (files) for (const reference of references.results) {
     if (totalReferenceBytes + reference.sizeBytes > 12 * 1024 * 1024) continue;
-    const object = await bucket.get(reference.objectKey);
+    const object = await getFile(files, reference.objectKey);
     if (!object) continue;
     inputContent.push({ type: 'input_file', filename: reference.name, file_data: `data:${reference.contentType};base64,${bytesToBase64(new Uint8Array(await object.arrayBuffer()))}` });
     totalReferenceBytes += reference.sizeBytes;
   }
-  if (bucket) for (const asset of visualAssets.slice(0, 4)) {
+  if (files) for (const asset of visualAssets.slice(0, 4)) {
     if (totalReferenceBytes + asset.sizeBytes > 16 * 1024 * 1024) continue;
-    const object = await bucket.get(asset.objectKey);
+    const object = await getFile(files, asset.objectKey);
     if (!object) continue;
     inputContent.push({ type: 'input_image', image_url: `data:${asset.contentType};base64,${bytesToBase64(new Uint8Array(await object.arrayBuffer()))}` });
     totalReferenceBytes += asset.sizeBytes;
