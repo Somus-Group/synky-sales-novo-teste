@@ -6,7 +6,7 @@ import { createCollectionExample, getCollectionDesign } from '@/lib/proposal-col
 import { getProposalTemplate, proposalTemplates, type ProposalTemplateTheme } from '@/lib/proposal-templates';
 
 export type ProposalTemplateId = ProposalTemplateTheme;
-export type ProposalSlideContent = { type: string; eyebrow: string; title: string; body: string; bullets: string[]; backgroundColor?: string };
+export type ProposalSlideContent = { type: string; eyebrow: string; title: string; body: string; bullets: string[]; backgroundColor?: string; fontScale?: number };
 export type ArtworkProposal = {
   code: string;
   client: string;
