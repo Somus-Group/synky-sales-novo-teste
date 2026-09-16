@@ -487,6 +487,28 @@ const catalogDeliverables = (title: string) => {
     ];
   return [];
 };
+const serviceOutcome = (service: ZeroService) => {
+  const key = folded(`${service.title} ${service.description}`);
+  if (/site|landing|pagina|presenca digital/.test(key))
+    return 'Uma presença digital mais clara, bonita e pronta para converter visitantes em contatos.';
+  if (/trafego|ads|anuncio|campanha/.test(key))
+    return 'Campanhas organizadas para atrair demanda qualificada e facilitar a leitura dos resultados.';
+  if (/conteudo|social|redes|post/.test(key))
+    return 'Comunicação com mais constância, estética e direção para sustentar a presença da marca.';
+  if (/identidade|marca|branding|visual/.test(key))
+    return 'Uma linguagem visual mais forte, coerente e fácil de aplicar nos materiais da empresa.';
+  if (/crm|comercial|venda|funil/.test(key))
+    return 'Um processo comercial com mais controle, rotina e previsibilidade de acompanhamento.';
+  if (/financeir|bpo|conciliacao|caixa/.test(key))
+    return 'Uma rotina financeira mais organizada, com informações melhores para tomada de decisão.';
+  if (/consultoria|diagnostico|estrateg/.test(key))
+    return 'Um caminho de decisão mais objetivo, com prioridades, riscos e próximos passos bem definidos.';
+  if (/arquitet|interior|obra|ambiente/.test(key))
+    return 'Um projeto mais bem direcionado, equilibrando estética, funcionalidade e execução.';
+  if (/software|sistema|app|automacao|integrac/.test(key))
+    return 'Uma solução digital desenhada para reduzir trabalho manual e melhorar a operação.';
+  return 'Uma entrega organizada para transformar o pedido em algo claro, vendável e executável.';
+};
 const proposalMood = (draft: ZeroDraft) => {
   const scope = folded(
     `${draft.title} ${draft.objective} ${draft.briefing} ${draft.services.map((s) => s.title).join(' ')}`,
@@ -562,6 +584,9 @@ function zeroStory(draft: ZeroDraft) {
       .map((item) => ({ service: service.title, item }));
   });
   const highlights = allDeliverables.slice(0, 6);
+  const outcomeLine = services.length
+    ? `A proposta reúne ${listText(services.slice(0, 4))} em uma apresentação visual, objetiva e pronta para discussão comercial.`
+    : 'A proposta organiza o pedido em uma apresentação visual, objetiva e pronta para discussão comercial.';
   const method = [
     {
       title: 'Alinhamento',
@@ -582,7 +607,7 @@ function zeroStory(draft: ZeroDraft) {
       body: 'Fechamento com materiais, orientações e próximos passos necessários para continuidade.',
     },
   ];
-  return { intro, focus, highlights, method };
+  return { intro, focus, highlights, method, outcomeLine };
 }
 
 export function renderZeroProposal(
@@ -642,9 +667,7 @@ export function renderZeroProposal(
         : catalogDeliverables(service.title);
       const items = suggestedItems.slice(0, 8);
       const suggestion = !explicitItems.length && items.length;
-      const description = items.length
-        ? `<ul class="deliverables">${items.map((item) => `<li>${escape(item)}</li>`).join('')}</ul>`
-        : '';
+      const description = `${`<p class="service-outcome">${escape(serviceOutcome(service))}</p>`}${items.length ? `<ul class="deliverables">${items.map((item) => `<li>${escape(item)}</li>`).join('')}</ul>` : ''}`;
       const number = String(index + 1).padStart(2, '0');
       const billing = service.billing === 'monthly' ? 'Mensal' : 'Pontual';
       const amount = `<div class="service-price"><strong>${servicePrice(service)}</strong><span>${service.billing === 'monthly' ? 'por mês' : 'pagamento único'}${service.quantity > 1 ? ` / ${service.quantity} unidades` : ''}</span></div>`;
@@ -691,7 +714,7 @@ export function renderZeroProposal(
   const totalBlock = (name: string, amount: number, note: string) =>
     `<div class="total"><span>${name}</span><strong>${zeroMoney(amount)}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
   const investment = d.services.length
-    ? `<section id="investimento" class="section investment"><div class="wrap">${subtitle('Condições da proposta')}${heading('Investimento', d.validity ? 'Validade: ' + escape(d.validity) : '')}<div class="totals">${d.services.some((s) => s.billing === 'monthly') ? totalBlock('Mensalidade' + (monthlyPending ? ' parcial' : ''), totals.monthly, 'por mês') : ''}${d.services.some((s) => s.billing === 'once') ? totalBlock('Pagamento único' + (oncePending ? ' parcial' : ''), totals.once, 'sem recorrência') : ''}${d.months && totals.contract !== null ? totalBlock(`Total em ${d.months} meses${totals.pending ? ' (parcial)' : ''}`, totals.contract, 'mensalidades + pagamentos únicos') : ''}</div>${totals.pending ? '<p class="investment-note">Valores pendentes de definição. Os totais consideram somente os itens precificados.</p>' : ''}${totals.discount ? `<p class="investment-note">Desconto de ${d.discountPercent}% aplicado aos valores mensais e únicos. Economia aplicada: ${zeroMoney(totals.discount)}.</p>` : ''}<details class="price-detail" open><summary>Detalhamento do investimento</summary><div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Qtd.</th><th>Recorrência</th><th>Valor</th></tr></thead><tbody>${priceRows}</tbody></table></div></details></div></section>`
+    ? `<section id="investimento" class="section investment"><div class="wrap investment-wrap">${subtitle('Condições da proposta')}${heading('Investimento', d.validity ? 'Validade: ' + escape(d.validity) : '')}<div class="investment-feature"><div><span>Resumo comercial</span><h3>${d.months && totals.contract !== null ? `Projeto de ${d.months} meses` : 'Modelo de contratação'}</h3><p>${d.services.some((s) => s.billing === 'monthly') && d.services.some((s) => s.billing === 'once') ? 'Combina recorrência mensal com entrega pontual, mantendo os valores separados para facilitar a aprovação.' : d.services.some((s) => s.billing === 'monthly') ? 'Investimento recorrente para manter acompanhamento, melhoria e cadência durante a vigência.' : 'Investimento pontual para execução do escopo apresentado, sem recorrência mensal obrigatória.'}</p></div><strong>${totals.contract !== null ? zeroMoney(totals.contract) : zeroMoney(totals.initial)}</strong></div><div class="totals">${d.services.some((s) => s.billing === 'monthly') ? totalBlock('Mensalidade' + (monthlyPending ? ' parcial' : ''), totals.monthly, 'por mês') : ''}${d.services.some((s) => s.billing === 'once') ? totalBlock('Pagamento único' + (oncePending ? ' parcial' : ''), totals.once, 'sem recorrência') : ''}${d.months && totals.contract !== null ? totalBlock(`Total em ${d.months} meses${totals.pending ? ' (parcial)' : ''}`, totals.contract, 'mensalidades + pagamentos únicos') : ''}</div>${totals.pending ? '<p class="investment-note">Valores pendentes de definição. Os totais consideram somente os itens precificados.</p>' : ''}${totals.discount ? `<p class="investment-note">Desconto de ${d.discountPercent}% aplicado aos valores mensais e únicos. Economia aplicada: ${zeroMoney(totals.discount)}.</p>` : ''}<details class="price-detail" open><summary>Detalhamento do investimento</summary><div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Qtd.</th><th>Recorrência</th><th>Valor</th></tr></thead><tbody>${priceRows}</tbody></table></div></details></div></section>`
     : '';
   const conditions =
     d.terms || d.exclusions
@@ -714,7 +737,7 @@ export function renderZeroProposal(
     : '';
   const closing = `<footer class="closing"><div class="wrap">${contact ? `<div class="closing-row"><div>${subtitle('Contato')}<h2>${escape(d.supplier)}</h2></div>${contact}</div>` : ''}<div class="signature"><strong>${escape(d.supplier)}</strong><span>${d.client ? 'Preparada para ' + client : 'Proposta comercial'}</span><span>${escape([d.email, d.phone].filter(Boolean).join(' / '))}</span></div></div></footer>`;
   const nav = `${d.objective ? '<a href="#objetivo">Objetivo</a>' : ''}${d.services.length ? '<a href="#escopo">Escopo</a><a href="#investimento">Investimento</a>' : ''}`;
-  const hero = `<section class="hero"><img class="hero-media" src="${escape(imageUrl(cover))}" alt="${escape(coverAlt)}" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-copy"><span class="eyebrow">Proposta comercial</span><h1${(d.client || '').length > 40 ? ' class="long-title"' : ''}>${client}</h1><p class="hero-subject">${subject}</p>${d.services.length ? '<a class="hero-link" href="#escopo">Conhecer o escopo <span aria-hidden="true">&#8599;</span></a>' : ''}</div></section>`;
+  const hero = `<section class="hero"><img class="hero-media" src="${escape(imageUrl(cover))}" alt="${escape(coverAlt)}" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-grid"><div class="hero-copy"><span class="eyebrow">Proposta pronta para aprovação</span><h1${(d.title || '').length > 52 ? ' class="long-title"' : ''}>${subject}</h1><p class="hero-subject">${escape(story.outcomeLine)}</p>${d.services.length ? '<a class="hero-link" href="#escopo">Ver proposta <span aria-hidden="true">&#8599;</span></a>' : ''}</div><aside class="hero-card" aria-label="Resumo da proposta"><span>Cliente</span><strong>${client}</strong>${d.services.length ? `<p>${d.services.length} ${d.services.length === 1 ? 'frente de entrega' : 'frentes de entrega'}</p>` : ''}${d.months ? `<p>${d.months} meses de vigência</p>` : ''}${totals.initial ? `<small>A partir de ${zeroMoney(totals.initial)}</small>` : ''}</aside></div></section>`;
   const content =
     d.design === 'compact'
       ? investment + context + scope + process + gallery + nextStep

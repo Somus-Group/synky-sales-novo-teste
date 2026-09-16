@@ -293,7 +293,7 @@ function proposalVisualImages(proposal: ArtworkProposal): ProposalVisualImage[] 
     Design: [
       { url: '/proposal/chrome-cover.png', name: 'Sistema visual', caption: 'Linguagem e forma' },
       { url: '/proposal/campaign-cover.png', name: 'Aplicação', caption: 'Presença de marca' },
-      { url: '/proposal/editorial-cover.png', name: 'Composição', caption: 'Ritmo editorial' },
+      { url: '/proposal/editorial-cover.png', name: 'Editorial', caption: 'Ritmo visual' },
     ],
     Consultoria: [
       { url: '/proposal/chrome-cover.png', name: 'Estratégia', caption: 'Clareza executiva' },

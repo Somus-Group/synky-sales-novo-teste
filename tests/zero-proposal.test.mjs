@@ -192,7 +192,8 @@ test('scope text is separated from price wording without inventing deliverables'
   assert.equal(draft.services[1].unitCents, 400000);
   for (const design of ['editorial', 'contrast', 'compact']) {
     const html = zero.renderZeroProposal({ ...draft, design });
-    assert.match(html, /<h1>Aurora<\/h1>/);
+    assert.match(html, /<h1>Gestão de tráfego \+ Site<\/h1>/);
+    assert.match(html, /<strong>Aurora<\/strong>/);
     assert.match(html, /<li>4 campanhas<\/li>/);
     assert.doesNotMatch(html, /<li>[^<]*R\$/);
   }

@@ -39,7 +39,7 @@ export const collectionDesigns: Record<string, CollectionDesign> = {
     name: 'Espaço corporativo', niche: 'Arquitetura', theme: 'noir', layout: 'workplace',
     colors: ['#222F35', '#A1B9AD', '#F4F6F5'], brand: 'PLANO / ARQUITETURA',
     title: 'Espaços para novas ideias.', subtitle: 'Arquitetura corporativa · escritório de 320 m²',
-    description: 'Composição arquitetônica com programa, implantação e entregáveis técnicos.',
+    description: 'Proposta arquitetônica com programa, implantação e entregáveis técnicos.',
     context: 'Projetar um ambiente de trabalho que equilibre concentração, colaboração e identidade da empresa, respeitando o espaço existente e as prioridades de implantação.',
     scope: ['Briefing com equipes e análise de ocupação', 'Layout, fluxos e programa de ambientes', 'Conceito de materiais, iluminação e mobiliário', 'Detalhamento executivo e compatibilização de interfaces'],
     steps: ['Etapa 1 · Briefing e estudo de ocupação', 'Etapa 2 · Anteprojeto e validação', 'Etapa 3 · Executivo e entrega técnica'],

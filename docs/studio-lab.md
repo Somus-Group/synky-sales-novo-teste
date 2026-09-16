@@ -30,7 +30,7 @@ Agente de propostas, Configurar agente e Propostas continuam disponíveis.
   elementos e retornam apenas mudanças de texto, estilo ou blocos. O servidor
   aplica essas mudanças preservando o restante da marcação. Preços em negrito e
   células de tabelas também aparecem no mapa. Alterações conflitantes são recusadas.
-- Verificações de estrutura, navegação e imagens são locais. Alertas de composição
+- Verificações de estrutura, navegação e imagens são locais. Alertas de proposta
   ficam na aba Revisão; não representam uma auditoria independente da fidelidade
   comercial. Documento vazio, referência declaradamente ignorada ou imagem
   inexistente preservam a versão anterior sem nova chamada. Logos ausentes na
