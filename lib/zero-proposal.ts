@@ -55,7 +55,7 @@ export const zeroCovers = [
   {
     url: '/proposal/campaign-cover.png',
     name: 'Campanha',
-    alt: 'Composição de papel e vidro coloridos',
+    alt: 'Materiais coloridos para apresentação de campanha',
   },
   {
     url: '/proposal/architecture-cover.png',
@@ -70,7 +70,7 @@ export const zeroCovers = [
   {
     url: '/proposal/chrome-cover.png',
     name: 'Tecnologia',
-    alt: 'Composição metálica em azul e prata',
+    alt: 'Materiais metálicos em azul e prata',
   },
 ] as const;
 
@@ -551,7 +551,7 @@ function zeroStory(draft: ZeroDraft) {
     draft.validity
       ? {
           title: 'Janela de decisão',
-          body: `A proposta permanece válida por ${draft.validity}, preservando a composição comercial apresentada.`,
+          body: `A proposta permanece válida por ${draft.validity}, mantendo as condições comerciais apresentadas.`,
         }
       : null,
   ].filter(Boolean) as Array<{ title: string; body: string }>;
@@ -649,14 +649,14 @@ export function renderZeroProposal(
       const billing = service.billing === 'monthly' ? 'Mensal' : 'Pontual';
       const amount = `<div class="service-price"><strong>${servicePrice(service)}</strong><span>${service.billing === 'monthly' ? 'por mês' : 'pagamento único'}${service.quantity > 1 ? ` / ${service.quantity} unidades` : ''}</span></div>`;
       if (d.design === 'compact')
-        return `<li class="scope-row"><div class="scope-name"><span class="service-number">${number}</span><h3>${escape(service.title)}</h3>${suggestion ? '<small>Base sugerida</small>' : ''}</div><div class="scope-description">${description}</div>${amount}</li>`;
+        return `<li class="scope-row"><div class="scope-name"><span class="service-number">${number}</span><h3>${escape(service.title)}</h3>${suggestion ? '<small>roteiro inicial</small>' : ''}</div><div class="scope-description">${description}</div>${amount}</li>`;
       if (d.design === 'contrast')
-        return `<article class="scope-tile"><div class="tile-top"><span class="service-number">${number}</span><span class="service-type">${billing}${suggestion ? ' · base sugerida' : ''}</span></div><h3>${escape(service.title)}</h3>${description}${amount}</article>`;
-      return `<article class="scope-chapter"><div class="chapter-title"><span class="service-number">${number}</span><div><span class="service-type">${billing}${suggestion ? ' · base sugerida' : ''}</span><h3>${escape(service.title)}</h3></div></div><div class="chapter-content">${description}${amount}</div></article>`;
+        return `<article class="scope-tile"><div class="tile-top"><span class="service-number">${number}</span><span class="service-type">${billing}${suggestion ? ' · roteiro inicial' : ''}</span></div><h3>${escape(service.title)}</h3>${description}${amount}</article>`;
+      return `<article class="scope-chapter"><div class="chapter-title"><span class="service-number">${number}</span><div><span class="service-type">${billing}${suggestion ? ' · roteiro inicial' : ''}</span><h3>${escape(service.title)}</h3></div></div><div class="chapter-content">${description}${amount}</div></article>`;
     })
     .join('');
   const scope = d.services.length
-    ? `<section id="escopo" class="section scope"><div class="wrap">${subtitle('Escopo proposto')}${heading(d.design === 'contrast' ? 'O projeto, em partes.' : 'Serviços e entregas', String(d.services.length).padStart(2, '0') + ' / ' + (d.services.length === 1 ? 'serviço' : 'serviços'))}${d.design === 'compact' ? `<ol class="scope-ledger">${serviceRows}</ol>` : `<div class="${d.design === 'contrast' ? 'scope-grid' : 'scope-chapters'}">${serviceRows}</div>`}</div></section>`
+    ? `<section id="escopo" class="section scope"><div class="wrap">${subtitle('Escopo proposto')}${heading(d.design === 'contrast' ? 'Plano de entrega' : 'Serviços e entregas', String(d.services.length).padStart(2, '0') + ' / ' + (d.services.length === 1 ? 'serviço' : 'serviços'))}${d.design === 'compact' ? `<ol class="scope-ledger">${serviceRows}</ol>` : `<div class="${d.design === 'contrast' ? 'scope-grid' : 'scope-chapters'}">${serviceRows}</div>`}</div></section>`
     : '';
   const steps = d.timeline.split(/\r?\n/).filter((line) => line.trim());
   const process = steps.length
@@ -691,7 +691,7 @@ export function renderZeroProposal(
   const totalBlock = (name: string, amount: number, note: string) =>
     `<div class="total"><span>${name}</span><strong>${zeroMoney(amount)}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
   const investment = d.services.length
-    ? `<section id="investimento" class="section investment"><div class="wrap">${subtitle('Condições da proposta')}${heading('Investimento', d.validity ? 'Validade: ' + escape(d.validity) : '')}<div class="totals">${d.services.some((s) => s.billing === 'monthly') ? totalBlock('Mensalidade' + (monthlyPending ? ' parcial' : ''), totals.monthly, 'por mês') : ''}${d.services.some((s) => s.billing === 'once') ? totalBlock('Pagamento único' + (oncePending ? ' parcial' : ''), totals.once, 'sem recorrência') : ''}${d.months && totals.contract !== null ? totalBlock(`Total em ${d.months} meses${totals.pending ? ' (parcial)' : ''}`, totals.contract, 'mensalidades + pagamentos únicos') : ''}</div>${totals.pending ? '<p class="investment-note">Valores pendentes de definição. Os totais consideram somente os itens precificados.</p>' : ''}${totals.discount ? `<p class="investment-note">Desconto de ${d.discountPercent}% aplicado aos valores mensais e únicos. Desconto nesta composição: ${zeroMoney(totals.discount)}.</p>` : ''}<details class="price-detail" open><summary>Composição do investimento</summary><div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Qtd.</th><th>Recorrência</th><th>Valor</th></tr></thead><tbody>${priceRows}</tbody></table></div></details></div></section>`
+    ? `<section id="investimento" class="section investment"><div class="wrap">${subtitle('Condições da proposta')}${heading('Investimento', d.validity ? 'Validade: ' + escape(d.validity) : '')}<div class="totals">${d.services.some((s) => s.billing === 'monthly') ? totalBlock('Mensalidade' + (monthlyPending ? ' parcial' : ''), totals.monthly, 'por mês') : ''}${d.services.some((s) => s.billing === 'once') ? totalBlock('Pagamento único' + (oncePending ? ' parcial' : ''), totals.once, 'sem recorrência') : ''}${d.months && totals.contract !== null ? totalBlock(`Total em ${d.months} meses${totals.pending ? ' (parcial)' : ''}`, totals.contract, 'mensalidades + pagamentos únicos') : ''}</div>${totals.pending ? '<p class="investment-note">Valores pendentes de definição. Os totais consideram somente os itens precificados.</p>' : ''}${totals.discount ? `<p class="investment-note">Desconto de ${d.discountPercent}% aplicado aos valores mensais e únicos. Economia aplicada: ${zeroMoney(totals.discount)}.</p>` : ''}<details class="price-detail" open><summary>Detalhamento do investimento</summary><div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Qtd.</th><th>Recorrência</th><th>Valor</th></tr></thead><tbody>${priceRows}</tbody></table></div></details></div></section>`
     : '';
   const conditions =
     d.terms || d.exclusions
@@ -710,7 +710,7 @@ export function renderZeroProposal(
       ? `<div class="contact">${email ? `<a href="${escape(email)}" target="_blank" rel="noopener noreferrer">Conversar sobre a proposta <span aria-hidden="true">&#8599;</span></a>` : ''}${whatsapp ? `<a class="secondary" href="${escape(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp <span aria-hidden="true">&#8599;</span></a>` : ''}</div>`
       : '';
   const nextStep = d.services.length
-    ? `<section id="proximos-passos" class="section next-steps"><div class="wrap">${subtitle('Próximo movimento')}${heading('Para avançar')}<div class="next-board"><article><strong>1</strong><h3>Validar escopo</h3><p>Confirmar se as entregas e limites representam o que precisa ser contratado.</p></article><article><strong>2</strong><h3>Aprovar condições</h3><p>Definir forma de pagamento, vigência e data de início com base nesta composição.</p></article><article><strong>3</strong><h3>Iniciar operação</h3><p>Reunir acessos, materiais e responsáveis para começar sem retrabalho.</p></article></div></div></section>`
+    ? `<section id="proximos-passos" class="section next-steps"><div class="wrap">${subtitle('Próximo movimento')}${heading('Para avançar')}<div class="next-board"><article><strong>1</strong><h3>Validar escopo</h3><p>Confirmar se as entregas e limites representam o que precisa ser contratado.</p></article><article><strong>2</strong><h3>Aprovar condições</h3><p>Definir forma de pagamento, vigência e data de início com base neste escopo.</p></article><article><strong>3</strong><h3>Iniciar operação</h3><p>Reunir acessos, materiais e responsáveis para começar sem retrabalho.</p></article></div></div></section>`
     : '';
   const closing = `<footer class="closing"><div class="wrap">${contact ? `<div class="closing-row"><div>${subtitle('Contato')}<h2>${escape(d.supplier)}</h2></div>${contact}</div>` : ''}<div class="signature"><strong>${escape(d.supplier)}</strong><span>${d.client ? 'Preparada para ' + client : 'Proposta comercial'}</span><span>${escape([d.email, d.phone].filter(Boolean).join(' / '))}</span></div></div></footer>`;
   const nav = `${d.objective ? '<a href="#objetivo">Objetivo</a>' : ''}${d.services.length ? '<a href="#escopo">Escopo</a><a href="#investimento">Investimento</a>' : ''}`;

@@ -78,12 +78,15 @@ test('new composer opens with one visible text input and optional details, no fo
     0,
   );
   assert.equal(nodes.filter((n) => n.tagName === 'select').length, 0);
-  assert.match(markup, /Montar proposta/);
-  assert.match(markup, /Ajustar detalhes/);
-  const compositions = nodes.find((n) =>
-    n.attrs.some((a) => a.name === 'aria-label' && a.value === 'Composição'),
+  assert.match(markup, /Gerar proposta bonita/);
+  assert.match(markup, /Editar campos/);
+  assert.doesNotMatch(markup, /Composição/);
+  const visualModels = nodes.find((n) =>
+    n.attrs.some(
+      (a) => a.name === 'aria-label' && a.value === 'Modelos visuais',
+    ),
   );
-  const choices = compositions.childNodes
+  const choices = visualModels.childNodes
     .flatMap((n) => n.childNodes || [])
     .filter((n) => n.tagName === 'button');
   assert.equal(choices.length, 3);

@@ -97,7 +97,11 @@ function DesignChoices({
   onChange: (design: ZeroDraft['design']) => void;
 }) {
   return (
-    <div className={styles.designChoices} role="group" aria-label="Composição">
+    <div
+      className={styles.designChoices}
+      role="group"
+      aria-label="Modelos visuais"
+    >
       {(
         [
           { key: 'editorial', label: 'Editorial' },
@@ -109,7 +113,7 @@ function DesignChoices({
           <div className={styles.designThumb} aria-hidden="true">
             <iframe
               srcDoc={renderZeroProposal({ ...draft, design: design.key })}
-              title={`Composição ${design.label}`}
+              title={`Modelo ${design.label}`}
               sandbox="allow-same-origin"
               tabIndex={-1}
               inert
@@ -651,7 +655,7 @@ export function ZeroLab({
           </span>
           <div>
             <h1>
-              Proposta Zero <small>Teste</small>
+              Proposta Zero <small>Sem IA</small>
             </h1>
             <p>
               {revision ? `Rascunho ${revision}` : 'Novo rascunho'} ·{' '}
@@ -752,10 +756,10 @@ export function ZeroLab({
             aria-label="Modo de edição"
           >
             <button onClick={() => setDetails(false)} aria-pressed={!details}>
-              <FileText size={16} /> Escrever
+              <FileText size={16} /> Escrever pedido
             </button>
             <button onClick={() => setDetails(true)} aria-pressed={details}>
-              <SlidersHorizontal size={16} /> Ajustar detalhes
+              <SlidersHorizontal size={16} /> Editar campos
             </button>
           </div>
           {!details && (
@@ -764,7 +768,7 @@ export function ZeroLab({
               disabled={busy}
             >
               <div className={styles.sectionTitle}>
-                <h2>Sua próxima proposta</h2>
+                <h2>Escreva como você pediria no WhatsApp</h2>
                 <PenLine size={20} aria-hidden="true" />
               </div>
               <div className={styles.promptBox}>
@@ -772,7 +776,7 @@ export function ZeroLab({
                   aria-label="Pedido da proposta"
                   rows={8}
                   maxLength={24000}
-                  placeholder="Proposta para Clínica Aurora. Gestão de tráfego por R$ 2.500 por mês e um site por R$ 4.000, pagamento único. Contrato de 6 meses. Objetivo: aumentar os agendamentos."
+                  placeholder="Ex.: proposta para Clínica Aurora. Fazer site moderno, gestão de tráfego mensal e campanha de lançamento. Site R$ 4.000 único, tráfego R$ 2.500 por mês, contrato 6 meses. Quero uma proposta bonita, clara e pronta para enviar."
                   value={draft.briefing}
                   onChange={(e) => {
                     change({ briefing: e.target.value });
@@ -796,20 +800,20 @@ export function ZeroLab({
                     disabled={!draft.briefing.trim()}
                   >
                     {draft.services.length
-                      ? 'Atualizar proposta'
-                      : 'Montar proposta'}
+                      ? 'Refazer proposta'
+                      : 'Gerar proposta bonita'}
                     <ArrowUp size={16} />
                   </Button>
                 </div>
               </div>
               {needsCompose && (
                 <p className={styles.pendingBrief} role="status">
-                  Pedido alterado. A prévia ainda não foi atualizada.
+                  Texto alterado. Gere novamente para atualizar a proposta.
                 </p>
               )}
               <section className={styles.quickDesign}>
                 <div className={styles.sectionTitle}>
-                  <h3>Composição</h3>
+                  <h3>Modelo visual</h3>
                   <Icon
                     label="Personalizar visual"
                     onClick={() => {
@@ -830,6 +834,7 @@ export function ZeroLab({
                   className={styles.composedSummary}
                   aria-label="Resumo da proposta"
                 >
+                  <span className={styles.summaryLabel}>Prévia do escopo</span>
                   <h3>{draft.client || 'Cliente a definir'}</h3>
                   <ul>
                     {draft.services.map((service) => (
@@ -857,7 +862,7 @@ export function ZeroLab({
                 <div className={styles.composeReview} aria-live="polite">
                   {composition.warnings.length > 0 && (
                     <>
-                      <h3>Para conferir</h3>
+                      <h3>Revise estes pontos</h3>
                       <ul>
                         {composition.warnings.map((warning) => (
                           <li key={warning}>{warning}</li>
@@ -869,7 +874,7 @@ export function ZeroLab({
                     <details open>
                       <summary>
                         {composition.unresolved.length} trecho(s) ainda não
-                        aplicado(s)
+                        transformado(s) em serviço
                       </summary>
                       <ul>
                         {composition.unresolved.map((part, index) => (
@@ -1281,7 +1286,7 @@ export function ZeroLab({
                 )}
                 {tab === 'design' && (
                   <>
-                    <h2>Identidade e composição</h2>
+                    <h2>Identidade e visual</h2>
                     <Field label="Fornecedor">
                       <Input
                         maxLength={240}
@@ -1365,7 +1370,7 @@ export function ZeroLab({
                             change({ cover: e.target.value || 'auto' })
                           }
                         >
-                          <option value="">Imagens de composição</option>
+                          <option value="">Imagens da biblioteca</option>
                           {photos.map((photo) => (
                             <option key={photo.url} value={photo.url}>
                               {photo.name}
