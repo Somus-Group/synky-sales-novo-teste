@@ -5,6 +5,7 @@ import { CollectionProposal } from './proposal-collection';
 import { getCollectionDesign } from '@/lib/proposal-collection';
 import { ArrowDown, Check, Loader2 } from 'lucide-react';
 import { resolveProposalTemplate, type ArtworkProposal, type ProposalTemplateId, type ProposalSlideContent } from '@/components/proposal-artwork';
+import { getProposalTemplate } from '@/lib/proposal-templates';
 
 type OnePageProps = {
   proposal: ArtworkProposal;
@@ -34,7 +35,9 @@ export function ProposalOnePage({ proposal, accepted = false, accepting = false,
   const secondaryColor = proposal.content?.secondary_color;
   const company = proposal.content?.company;
   const portfolioImages = proposal.content?.portfolio_images || [];
-  const heroImageUrl = proposal.content?.hero_image_url || portfolioImages[0]?.url;
+  const visualImages = proposalVisualImages(proposal);
+  const heroImageUrl = proposal.content?.hero_image_url || visualImages[0]?.url;
+  const sectionImages = visualImages.filter((image) => image.url !== heroImageUrl);
   const sections = slides.slice(1, -1);
   const closing = slides.at(-1)!;
   const investmentIndex = sections.findIndex((item) => item.type === 'investment');
@@ -64,7 +67,7 @@ export function ProposalOnePage({ proposal, accepted = false, accepting = false,
       <a href={`#${idPrefix}-section-1`} className="absolute bottom-7 right-7 z-20 grid size-11 place-items-center rounded-full border border-current/20 bg-white/10 backdrop-blur transition-transform hover:translate-y-1" aria-label="Continuar lendo"><ArrowDown className="size-4" /></a>
     </section>
 
-    {sections.map((section, index) => <Fragment key={`${section.type}-${index}`}>{section.type === 'investment' ? <InvestmentSection id={`${idPrefix}-section-${index + 1}`} theme={theme} section={section} proposal={proposal} height={height} accentColor={secondaryColor} editable={editable} selected={selectedSlide === index + 1} onSelect={() => onSelectSlide?.(index + 1)} onEdit={(field, value) => onEditSlide?.(index + 1, field, value)} /> : <NarrativeSection id={`${idPrefix}-section-${index + 1}`} theme={theme} section={section} index={index} height={height} accentColor={secondaryColor} editable={editable} selected={selectedSlide === index + 1} onSelect={() => onSelectSlide?.(index + 1)} onEdit={(field, value) => onEditSlide?.(index + 1, field, value)} />}{index === Math.min(1, sections.length - 1) && portfolioImages.length > 0 && <PortfolioSection images={portfolioImages} brand={brand} height={height} primaryColor={primaryColor} secondaryColor={secondaryColor} />}</Fragment>)}
+    {sections.map((section, index) => <Fragment key={`${section.type}-${index}`}>{section.type === 'investment' ? <InvestmentSection id={`${idPrefix}-section-${index + 1}`} theme={theme} section={section} proposal={proposal} height={height} accentColor={secondaryColor} editable={editable} selected={selectedSlide === index + 1} onSelect={() => onSelectSlide?.(index + 1)} onEdit={(field, value) => onEditSlide?.(index + 1, field, value)} /> : <NarrativeSection id={`${idPrefix}-section-${index + 1}`} theme={theme} section={section} index={index} height={height} accentColor={secondaryColor} visualImage={sectionImages[index]} editable={editable} selected={selectedSlide === index + 1} onSelect={() => onSelectSlide?.(index + 1)} onEdit={(field, value) => onEditSlide?.(index + 1, field, value)} />}{index === Math.min(1, sections.length - 1) && portfolioImages.length > 0 && <PortfolioSection images={portfolioImages} brand={brand} height={height} primaryColor={primaryColor} secondaryColor={secondaryColor} />}</Fragment>)}
 
     <section id={`${idPrefix}-section-${sections.length + 1}`} onClick={() => onSelectSlide?.(slides.length - 1)} style={customSurface(closing.backgroundColor || primaryColor)} className={`relative flex ${closingHeight} items-center justify-center overflow-hidden px-[7vw] py-[12vw] text-center ${palette.closing} ${editable && selectedSlide === slides.length - 1 ? 'ring-4 ring-[#5b7fff] ring-inset' : ''}`}>
       {!closing.backgroundColor && !validColor(primaryColor) && <ClosingBackground theme={theme} />}
@@ -80,14 +83,27 @@ function PortfolioSection({ images, brand, height, primaryColor, secondaryColor 
   return <section style={customSurface(primaryColor)} className={`relative flex ${height} flex-col justify-center overflow-hidden bg-[#172A25] px-[6vw] py-[9vw] text-white`}><div className="mb-9 flex flex-col gap-5 border-b border-current/15 pb-6 sm:flex-row sm:items-end sm:justify-between"><div><p style={validColor(secondaryColor) ? { color: secondaryColor } : undefined} className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#E7AA69]">Portfólio selecionado</p><h2 className="mt-4 max-w-3xl text-[clamp(42px,6.5vw,96px)] font-semibold leading-[1.04] tracking-[-0.07em]">Experiência que se torna evidência.</h2></div><p className="max-w-xs text-[11px] leading-5 opacity-50">Uma seleção de projetos e imagens da {brand} conectada a esta proposta.</p></div><div className={`grid gap-3 ${visible.length > 3 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>{visible.map((image, index) => <figure key={`${image.url}-${index}`} className={`group relative overflow-hidden rounded-[24px] bg-white/8 ${index === 0 && visible.length > 3 ? 'sm:col-span-2 lg:col-span-1' : ''}`}><img src={image.url} alt={image.caption || image.name} className="aspect-[4/3] h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.025]" /><figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-5 pb-4 pt-12"><span className="text-[9px] uppercase tracking-[0.16em] text-white/55">Projeto {String(index + 1).padStart(2, '0')}</span><strong className="mt-1 block text-[12px] font-medium text-white">{image.caption || image.name.replace(/\.[^.]+$/, '')}</strong></figcaption></figure>)}</div></section>;
 }
 
-function NarrativeSection({ id, theme, section, index, height, accentColor, editable = false, selected = false, onSelect, onEdit }: { id: string; theme: ProposalTemplateId; section: ProposalSlideContent; index: number; height: string; accentColor?: string; editable?: boolean; selected?: boolean; onSelect?: () => void; onEdit?: (field: 'eyebrow' | 'title' | 'body' | 'bullets', value: string | string[]) => void }) {
+type ProposalVisualImage = { url: string; name: string; caption: string };
+
+function NoirImagePanel({ image, index, accentColor, light }: { image?: ProposalVisualImage; index: number; accentColor?: string; light: boolean }) {
+  const accentStyle = validColor(accentColor) ? { backgroundColor: accentColor } : undefined;
+  return <div className="relative z-10 min-h-[320px] overflow-hidden rounded-[34px] border border-current/10 bg-current/[0.04] shadow-2xl shadow-black/10">
+    {image ? <img src={image.url} alt={image.caption || image.name} className={`h-full min-h-[320px] w-full object-cover ${light ? 'grayscale-[18%] contrast-110' : 'grayscale contrast-125'}`} /> : <GridLines dark={!light} />}
+    <div className={`absolute inset-0 ${light ? 'bg-gradient-to-tr from-[#F0EEE8]/55 via-transparent to-black/10' : 'bg-gradient-to-tr from-black/70 via-black/15 to-transparent'}`} />
+    <span className={`absolute left-[8%] top-[8%] text-[clamp(72px,13vw,210px)] font-black leading-[0.75] tracking-[-0.1em] ${light ? 'text-black/[0.08]' : 'text-white/[0.09]'}`}>0{index + 1}</span>
+    <span style={accentStyle} className="absolute bottom-[8%] left-[8%] h-2 w-24 bg-[#D7FF38]" />
+    <span className={`absolute bottom-[8%] right-[8%] max-w-[48%] text-right text-[9px] uppercase tracking-[0.18em] ${light ? 'text-black/40' : 'text-white/42'}`}>{image?.caption || image?.name || 'Imagem da proposta'}</span>
+  </div>;
+}
+
+function NarrativeSection({ id, theme, section, index, height, accentColor, visualImage, editable = false, selected = false, onSelect, onEdit }: { id: string; theme: ProposalTemplateId; section: ProposalSlideContent; index: number; height: string; accentColor?: string; visualImage?: ProposalVisualImage; editable?: boolean; selected?: boolean; onSelect?: () => void; onEdit?: (field: 'eyebrow' | 'title' | 'body' | 'bullets', value: string | string[]) => void }) {
   const palette = getPalette(theme);
   const even = index % 2 === 0;
   const style = customSurface(section.backgroundColor);
   const selectedClass = editable && selected ? 'ring-4 ring-[#5b7fff] ring-inset' : '';
   if (theme === 'editorial' && index === 0 && !section.backgroundColor) return <section id={id} onClick={onSelect} className={`grid ${height} lg:grid-cols-[0.78fr_1.22fr] ${selectedClass}`}><div className="relative min-h-[420px] overflow-hidden"><div className="absolute inset-0 scale-105 bg-[url('/proposal/editorial-cover.png')] bg-cover bg-[72%_center]" /><div style={validColor(accentColor) ? { backgroundColor: accentColor } : undefined} className="absolute inset-0 bg-[#7A3F25]/20 opacity-25 mix-blend-multiply" /><span className="absolute bottom-[7%] left-[9%] font-serif text-[clamp(72px,11vw,170px)] italic text-white/82">01</span></div><div className={`flex flex-col justify-center px-[8vw] py-[12vw] ${palette.section}`}><div style={scaleStyle(section)}><EditableText editable={editable} value={section.eyebrow} onChange={(value) => onEdit?.('eyebrow', value)} style={validColor(accentColor) ? { color: accentColor } : undefined} className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#B86538]" /><EditableText as="h2" editable={editable} value={section.title} onChange={(value) => onEdit?.('title', value)} className="mt-7 max-w-[820px] font-serif text-[clamp(48px,6.6vw,100px)] font-normal leading-[1.04] tracking-[-0.065em]" /><EditableText editable={editable} value={section.body} onChange={(value) => onEdit?.('body', value)} className={`mt-8 max-w-2xl text-[clamp(15px,1.35vw,20px)] leading-[1.75] ${palette.body}`} /><EditableBullets editable={editable} theme={theme} bullets={section.bullets} onChange={(bullets) => onEdit?.('bullets', bullets)} /></div></div></section>;
 
-  if (theme === 'noir') return <section id={id} onClick={onSelect} style={style} className={`relative grid ${height} overflow-hidden px-[6vw] py-[10vw] lg:grid-cols-[0.88fr_1.12fr] lg:gap-[8vw] ${even ? 'bg-[#F0EEE8] text-[#0B0B0C]' : 'bg-[#0B0B0C] text-white'} ${selectedClass}`}><GridLines dark={!even} /><div className="relative z-10"><span className={`text-[clamp(90px,18vw,270px)] font-black leading-[0.7] tracking-[-0.1em] ${even ? 'text-black/[0.055]' : 'text-white/[0.055]'}`}>0{index + 1}</span><div className="mt-12"><EditableText editable={editable} value={section.eyebrow} onChange={(value) => onEdit?.('eyebrow', value)} style={validColor(accentColor) ? { color: accentColor } : undefined} className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#97B819]" /></div></div><div style={scaleStyle(section)} className="relative z-10 flex flex-col justify-center"><EditableText as="h2" editable={editable} value={section.title} onChange={(value) => onEdit?.('title', value)} className="text-[clamp(48px,7vw,108px)] font-black uppercase leading-[1.02] tracking-[-0.078em]" /><EditableText editable={editable} value={section.body} onChange={(value) => onEdit?.('body', value)} className={`mt-9 max-w-2xl text-[clamp(15px,1.35vw,20px)] leading-[1.75] ${even ? 'text-black/52' : 'text-white/48'}`} /><EditableBullets editable={editable} theme={theme} bullets={section.bullets} invert={!even} onChange={(bullets) => onEdit?.('bullets', bullets)} /></div><span style={validColor(accentColor) ? { backgroundColor: accentColor } : undefined} className="absolute right-0 top-0 h-full w-3 bg-[#D7FF38]" /></section>;
+  if (theme === 'noir') return <section id={id} onClick={onSelect} style={style} className={`relative grid ${height} overflow-hidden px-[6vw] py-[10vw] lg:grid-cols-[0.78fr_1.22fr] lg:gap-[7vw] ${even ? 'bg-[#F0EEE8] text-[#0B0B0C]' : 'bg-[#0B0B0C] text-white'} ${selectedClass}`}><GridLines dark={!even} /><NoirImagePanel image={visualImage} index={index} accentColor={accentColor} light={even} /><div style={scaleStyle(section)} className="relative z-10 flex flex-col justify-center"><EditableText editable={editable} value={section.eyebrow} onChange={(value) => onEdit?.('eyebrow', value)} style={validColor(accentColor) ? { color: accentColor } : undefined} className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#97B819]" /><EditableText as="h2" editable={editable} value={section.title} onChange={(value) => onEdit?.('title', value)} className="mt-8 text-[clamp(48px,7vw,108px)] font-black uppercase leading-[1.02] tracking-[-0.078em]" /><EditableText editable={editable} value={section.body} onChange={(value) => onEdit?.('body', value)} className={`mt-9 max-w-2xl text-[clamp(15px,1.35vw,20px)] leading-[1.75] ${even ? 'text-black/52' : 'text-white/48'}`} /><EditableBullets editable={editable} theme={theme} bullets={section.bullets} invert={!even} onChange={(bullets) => onEdit?.('bullets', bullets)} /></div><span style={validColor(accentColor) ? { backgroundColor: accentColor } : undefined} className="absolute right-0 top-0 h-full w-3 bg-[#D7FF38]" /></section>;
 
   if (theme === 'prisma') return <section id={id} onClick={onSelect} style={style} className={`relative ${height} overflow-hidden px-[6vw] py-[10vw] ${even ? 'bg-[#F5F2EB] text-[#17171B]' : 'bg-[#3434D8] text-white'} ${selectedClass}`}><span style={validColor(accentColor) && even ? { color: accentColor } : undefined} className={`absolute right-[2vw] top-[2vw] text-[clamp(120px,24vw,360px)] font-semibold leading-none tracking-[-0.11em] opacity-[0.055] ${even ? 'text-[#3434D8]' : 'text-white'}`}>0{index + 1}</span><div style={scaleStyle(section)} className="relative z-10 grid lg:grid-cols-[1.1fr_0.9fr] lg:gap-[9vw]"><div><EditableText editable={editable} value={section.eyebrow} onChange={(value) => onEdit?.('eyebrow', value)} style={validColor(accentColor) ? { color: accentColor } : undefined} className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#5B46E8]" /><EditableText as="h2" editable={editable} value={section.title} onChange={(value) => onEdit?.('title', value)} className="mt-7 text-[clamp(48px,7vw,106px)] font-semibold leading-[1.04] tracking-[-0.075em]" /><EditableText editable={editable} value={section.body} onChange={(value) => onEdit?.('body', value)} className={`mt-8 max-w-2xl text-[clamp(15px,1.35vw,20px)] leading-[1.7] ${even ? 'text-black/52' : 'text-white/52'}`} /></div><EditablePrismaCards editable={editable} bullets={section.bullets} onChange={(bullets) => onEdit?.('bullets', bullets)} /></div></section>;
 
@@ -183,6 +199,42 @@ function shortLabel(item: ProposalSlideContent, index: number) { const label = i
 function formatValidity(value?: string) { if (!value) return '15 dias'; const parsed = new Date(`${value}T12:00:00`); return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('pt-BR'); }
 function customSurface(color?: string) { if (!color || !/^#[0-9a-f]{6}$/i.test(color)) return undefined; const red = Number.parseInt(color.slice(1, 3), 16); const green = Number.parseInt(color.slice(3, 5), 16); const blue = Number.parseInt(color.slice(5, 7), 16); const light = (red * 299 + green * 587 + blue * 114) / 1000 > 150; return { backgroundColor: color, color: light ? '#17171B' : '#FFFFFF' }; }
 function validColor(color?: string) { return Boolean(color && /^#[0-9a-f]{6}$/i.test(color)); }
+
+function proposalVisualImages(proposal: ArtworkProposal): ProposalVisualImage[] {
+  const template = getProposalTemplate(proposal.template);
+  const defaults: Record<string, ProposalVisualImage[]> = {
+    Arquitetura: [
+      { url: '/proposal/architecture-cover.png', name: 'Arquitetura', caption: 'Atmosfera do projeto' },
+      { url: '/proposal/editorial-cover.png', name: 'Materialidade', caption: 'Matéria e luz' },
+      { url: '/proposal/chrome-cover.png', name: 'Detalhe técnico', caption: 'Precisão visual' },
+    ],
+    Marketing: [
+      { url: '/proposal/campaign-cover.png', name: 'Campanha', caption: 'Movimento de marca' },
+      { url: '/proposal/chrome-cover.png', name: 'Performance', caption: 'Sinal e tecnologia' },
+      { url: '/proposal/editorial-cover.png', name: 'Narrativa', caption: 'Direção editorial' },
+    ],
+    Design: [
+      { url: '/proposal/chrome-cover.png', name: 'Sistema visual', caption: 'Linguagem e forma' },
+      { url: '/proposal/campaign-cover.png', name: 'Aplicação', caption: 'Presença de marca' },
+      { url: '/proposal/editorial-cover.png', name: 'Composição', caption: 'Ritmo editorial' },
+    ],
+    Consultoria: [
+      { url: '/proposal/chrome-cover.png', name: 'Estratégia', caption: 'Clareza executiva' },
+      { url: '/proposal/campaign-cover.png', name: 'Movimento', caption: 'Plano em ação' },
+      { url: '/proposal/architecture-cover.png', name: 'Estrutura', caption: 'Sistema de decisão' },
+    ],
+  };
+  const provided = [
+    proposal.content?.hero_image_url ? { url: proposal.content.hero_image_url, name: 'Imagem de capa', caption: 'Imagem principal' } : undefined,
+    ...(proposal.content?.portfolio_images || []),
+  ].filter(Boolean) as ProposalVisualImage[];
+  const used = new Set<string>();
+  return [...provided, ...(defaults[template.niche] || defaults.Consultoria)].filter((image) => {
+    if (!image.url || used.has(image.url)) return false;
+    used.add(image.url);
+    return true;
+  });
+}
 
 export function createFallbackProposalSections(proposal: ArtworkProposal): ProposalSlideContent[] {
   return [

@@ -59,7 +59,7 @@ export function ProposalThumbnail({ template, index = 0 }: { template?: string; 
   if (design && example) return <CollectionCover compact design={design} proposal={example} />;
   const resolved = resolveProposalTemplate(template);
   const swatches = getProposalTemplate(template).swatches;
-  if (resolved === 'noir') return <div className="relative h-full w-full overflow-hidden" style={{ backgroundColor: swatches[0] }}><span className="absolute left-[9%] top-[14%] h-[8%] w-[22%]" style={{ backgroundColor: swatches[1] }} /><span className="absolute bottom-[18%] left-[9%] h-[11%] w-[72%] bg-white" /><span className="absolute bottom-[8%] left-[9%] h-[5%] w-[35%] bg-white/30" /><i className="absolute -right-[18%] top-[10%] size-[68%] rounded-full border" style={{ borderColor: swatches[1] }} /></div>;
+  if (resolved === 'noir') return <div className="relative h-full w-full overflow-hidden" style={{ backgroundColor: swatches[0] }}><div className="absolute inset-0 bg-[url('/proposal/chrome-cover.png')] bg-cover bg-center opacity-45 grayscale" /><div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" /><span className="absolute left-[9%] top-[14%] h-[8%] w-[22%]" style={{ backgroundColor: swatches[1] }} /><span className="absolute bottom-[18%] left-[9%] h-[11%] w-[72%] bg-white" /><span className="absolute bottom-[8%] left-[9%] h-[5%] w-[35%] bg-white/30" /><i className="absolute -right-[18%] top-[10%] size-[68%] rounded-full border" style={{ borderColor: swatches[1] }} />{index > 0 && <i className="absolute right-[8%] top-[10%] text-[18px] not-italic text-white/60">0{index + 1}</i>}</div>;
   if (resolved === 'prisma') return <div className="relative h-full w-full overflow-hidden" style={{ backgroundColor: swatches[0] }}><i className="absolute -right-[12%] -top-[30%] size-[78%] rounded-full blur-[4px]" style={{ backgroundColor: swatches[1] }} /><i className="absolute -bottom-[42%] left-[12%] size-[76%] rounded-full blur-[5px]" style={{ backgroundColor: swatches[2] }} /><span className="absolute bottom-[16%] left-[9%] h-[10%] w-[66%] bg-white" /><span className="absolute bottom-[7%] left-[9%] h-[4%] w-[28%] bg-white/45" /></div>;
   return <div className="relative h-full w-full overflow-hidden" style={{ backgroundColor: swatches[0] }}><div className="absolute inset-0 bg-[url('/proposal/editorial-cover.png')] bg-cover bg-center opacity-65" /><div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/20 to-transparent" /><span className="absolute bottom-[18%] left-[9%] h-[10%] w-[64%]" style={{ backgroundColor: swatches[2] }} /><span className="absolute bottom-[7%] left-[9%] h-[4%] w-[28%]" style={{ backgroundColor: swatches[1] }} />{index > 0 && <i className="absolute right-[8%] top-[10%] text-[18px] not-italic text-white/60">0{index + 1}</i>}</div>;
 }
@@ -75,10 +75,11 @@ function EditorialSlide({ index, proposal, accepted, accepting, onAccept }: Slid
 
 function NoirSlide({ index, proposal, accepted, accepting, onAccept }: SlideProps) {
   const data = getSlideData(index, proposal);
-  if (index === 0) return <div className="relative h-full overflow-hidden bg-[#0B0B0C] p-[5.5%] text-white"><GridLines /><Brand name={data.brand} light /><div className="absolute left-[5.5%] right-[5.5%] top-[24%] z-10"><p className="text-[clamp(6px,0.72cqw,11px)] uppercase tracking-[0.3em] text-[#D7FF38]">{data.eyebrow} / {proposal.code}</p><h1 style={{ fontSize: coverTitleSize(data.title, 'noir') }} className="mt-[2.5%] max-w-[78%] font-black uppercase leading-[0.82] tracking-[-0.07em] [overflow-wrap:anywhere]">{data.title}</h1></div><div className="absolute bottom-[6%] left-[5.5%] right-[5.5%] flex items-end justify-between border-t border-white/18 pt-[1.7%]"><p className="max-w-[48%] text-[clamp(6px,0.82cqw,13px)] leading-[1.5] text-white/50">{data.subtitle}</p><strong className="max-w-[38%] truncate rounded-full bg-[#D7FF38] px-[2.2%] py-[1%] text-[clamp(6px,0.76cqw,11px)] uppercase tracking-[0.16em] text-black">{proposal.client}</strong></div><i className="absolute -right-[9%] top-[8%] size-[45%] rounded-full border border-[#D7FF38]/35" /><i className="absolute right-[2%] top-[19%] size-[22%] rounded-full bg-[#D7FF38] blur-[90px] opacity-10" /></div>;
+  const image = proposalVisualImages(proposal)[index];
+  if (index === 0) return <div className="relative h-full overflow-hidden bg-[#0B0B0C] p-[5.5%] text-white"><NoirBackdrop image={image} /><GridLines /><Brand name={data.brand} light /><div className="absolute left-[5.5%] right-[5.5%] top-[24%] z-10"><p className="text-[clamp(6px,0.72cqw,11px)] uppercase tracking-[0.3em] text-[#D7FF38]">{data.eyebrow} / {proposal.code}</p><h1 style={{ fontSize: coverTitleSize(data.title, 'noir') }} className="mt-[2.5%] max-w-[78%] font-black uppercase leading-[0.82] tracking-[-0.07em] [overflow-wrap:anywhere]">{data.title}</h1></div><div className="absolute bottom-[6%] left-[5.5%] right-[5.5%] flex items-end justify-between border-t border-white/18 pt-[1.7%]"><p className="max-w-[48%] text-[clamp(6px,0.82cqw,13px)] leading-[1.5] text-white/50">{data.subtitle}</p><strong className="max-w-[38%] truncate rounded-full bg-[#D7FF38] px-[2.2%] py-[1%] text-[clamp(6px,0.76cqw,11px)] uppercase tracking-[0.16em] text-black">{proposal.client}</strong></div></div>;
   if (data.closing) return <Closing theme="noir" data={data} proposal={proposal} accepted={accepted} accepting={accepting} onAccept={onAccept} />;
   if (data.investment) return <div className="grid h-full grid-cols-[0.9fr_1.1fr] bg-[#D7FF38] text-black"><div className="flex flex-col justify-between border-r border-black/20 p-[8%]"><Brand name={data.brand} /><div><p className="text-[clamp(6px,0.72cqw,11px)] uppercase tracking-[0.28em]">{data.eyebrow}</p><h2 className="mt-[5%] text-[clamp(34px,6.2cqw,94px)] font-black uppercase leading-[0.8] tracking-[-0.075em]">Valor<br />em ação.</h2></div></div><div className="flex flex-col justify-center bg-[#0B0B0C] p-[10%] text-white"><p className="text-[clamp(6px,0.72cqw,11px)] uppercase tracking-[0.26em] text-[#D7FF38]">Investimento total</p><strong className="mt-[5%] text-[clamp(34px,5.8cqw,88px)] font-black tracking-[-0.07em]">{data.money}</strong><p className="mt-[4%] max-w-[74%] text-[clamp(6px,0.8cqw,12px)] leading-[1.6] text-white/45">{data.body}</p><div className="mt-[8%] flex gap-[2%]">{data.bullets.slice(0, 3).map((bullet) => <span key={bullet} className="rounded-full border border-white/18 px-[2.6%] py-[1.2%] text-[clamp(5px,0.65cqw,10px)] uppercase tracking-[0.1em] text-white/65">{bullet}</span>)}</div></div></div>;
-  return <div className="relative h-full overflow-hidden bg-[#F1EEE7] p-[5.5%] text-[#0D0D0D]"><div className="absolute right-0 top-0 h-full w-[9%] bg-[#D7FF38]" /><div className="flex items-start justify-between pr-[9%]"><Brand name={data.brand} /><span className="text-[clamp(7px,1cqw,15px)] font-black">0{index}</span></div><div className="mt-[7%] grid grid-cols-[0.9fr_1.1fr] gap-[8%] pr-[9%]"><div><p className="text-[clamp(6px,0.72cqw,11px)] font-bold uppercase tracking-[0.28em]">{data.eyebrow}</p><h2 className="mt-[4%] text-[clamp(30px,5.5cqw,84px)] font-black uppercase leading-[0.82] tracking-[-0.07em]">{data.title}</h2></div><div className="pt-[2%]"><p className="max-w-[90%] text-[clamp(8px,1.05cqw,16px)] leading-[1.65] text-black/58">{data.body}</p><div className="mt-[7%] divide-y divide-black/20 border-y border-black/20">{data.bullets.slice(0, 4).map((bullet, itemIndex) => <div key={bullet} className="flex items-center gap-[5%] py-[3%] text-[clamp(7px,0.9cqw,14px)] font-medium"><span className="grid size-[1.7em] place-items-center bg-[#D7FF38] text-[0.72em] font-black">{itemIndex + 1}</span>{bullet}</div>)}</div></div></div></div>;
+  return <div className="relative grid h-full grid-cols-[0.42fr_0.58fr] overflow-hidden bg-[#F1EEE7] text-[#0D0D0D]"><div className="relative min-w-0 overflow-hidden"><img src={image.url} alt={image.caption || image.name} className="h-full w-full object-cover grayscale-[20%] contrast-110" /><div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" /><span className="absolute bottom-[8%] left-[10%] text-[clamp(34px,6.5cqw,96px)] font-black leading-none tracking-[-0.09em] text-white/85">0{index}</span></div><div className="relative p-[7%]"><div className="absolute right-0 top-0 h-full w-[9%] bg-[#D7FF38]" /><div className="flex items-start justify-between pr-[9%]"><Brand name={data.brand} /><span className="text-[clamp(7px,1cqw,15px)] font-black">0{index}</span></div><div className="mt-[9%] pr-[9%]"><p className="text-[clamp(6px,0.72cqw,11px)] font-bold uppercase tracking-[0.28em]">{data.eyebrow}</p><h2 className="mt-[4%] text-[clamp(30px,5.5cqw,84px)] font-black uppercase leading-[0.82] tracking-[-0.07em]">{data.title}</h2><p className="mt-[6%] max-w-[90%] text-[clamp(8px,1.05cqw,16px)] leading-[1.65] text-black/58">{data.body}</p><div className="mt-[7%] divide-y divide-black/20 border-y border-black/20">{data.bullets.slice(0, 4).map((bullet, itemIndex) => <div key={bullet} className="flex items-center gap-[5%] py-[3%] text-[clamp(7px,0.9cqw,14px)] font-medium"><span className="grid size-[1.7em] place-items-center bg-[#D7FF38] text-[0.72em] font-black">{itemIndex + 1}</span>{bullet}</div>)}</div></div></div></div>;
 }
 
 function PrismaSlide({ index, proposal, accepted, accepting, onAccept }: SlideProps) {
@@ -97,6 +98,11 @@ function Closing({ theme, data, proposal, accepted, accepting, onAccept }: { the
 
 type SlideProps = { index: number; proposal: ArtworkProposal; accepted: boolean; accepting: boolean; onAccept?: () => void };
 type SlideData = { brand: string; eyebrow: string; title: string; body: string; subtitle: string; bullets: string[]; money: string; investment: boolean; closing: boolean };
+type ProposalVisualImage = { url: string; name: string; caption: string };
+
+function NoirBackdrop({ image }: { image: ProposalVisualImage }) {
+  return <><img src={image.url} alt={image.caption || image.name} className="absolute inset-0 h-full w-full object-cover opacity-55 grayscale contrast-125" /><div className="absolute inset-0 bg-gradient-to-r from-black/88 via-black/62 to-black/18" /><div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/25" /><i className="absolute -right-[9%] top-[8%] size-[45%] rounded-full border border-[#D7FF38]/35" /><i className="absolute right-[2%] top-[19%] size-[22%] rounded-full bg-[#D7FF38] blur-[90px] opacity-10" /></>;
+}
 
 function coverTitleSize(title: string, theme: ProposalTemplateId) {
   const length = title.trim().length;
@@ -131,6 +137,43 @@ function getSlideData(index: number, proposal: ArtworkProposal): SlideData {
     investment: generated?.type === 'investment' || (!generated && index === last - 1),
     closing: generated?.type === 'closing' || index === last,
   };
+}
+
+function proposalVisualImages(proposal: ArtworkProposal): ProposalVisualImage[] {
+  const template = getProposalTemplate(proposal.template);
+  const defaults: Record<string, ProposalVisualImage[]> = {
+    Arquitetura: [
+      { url: '/proposal/architecture-cover.png', name: 'Arquitetura', caption: 'Atmosfera do projeto' },
+      { url: '/proposal/editorial-cover.png', name: 'Materialidade', caption: 'Matéria e luz' },
+      { url: '/proposal/chrome-cover.png', name: 'Detalhe técnico', caption: 'Precisão visual' },
+    ],
+    Marketing: [
+      { url: '/proposal/campaign-cover.png', name: 'Campanha', caption: 'Movimento de marca' },
+      { url: '/proposal/chrome-cover.png', name: 'Performance', caption: 'Sinal e tecnologia' },
+      { url: '/proposal/editorial-cover.png', name: 'Narrativa', caption: 'Direção editorial' },
+    ],
+    Design: [
+      { url: '/proposal/chrome-cover.png', name: 'Sistema visual', caption: 'Linguagem e forma' },
+      { url: '/proposal/campaign-cover.png', name: 'Aplicação', caption: 'Presença de marca' },
+      { url: '/proposal/editorial-cover.png', name: 'Composição', caption: 'Ritmo editorial' },
+    ],
+    Consultoria: [
+      { url: '/proposal/chrome-cover.png', name: 'Estratégia', caption: 'Clareza executiva' },
+      { url: '/proposal/campaign-cover.png', name: 'Movimento', caption: 'Plano em ação' },
+      { url: '/proposal/architecture-cover.png', name: 'Estrutura', caption: 'Sistema de decisão' },
+    ],
+  };
+  const provided = [
+    proposal.content?.hero_image_url ? { url: proposal.content.hero_image_url, name: 'Imagem de capa', caption: 'Imagem principal' } : undefined,
+    ...(proposal.content?.portfolio_images || []),
+  ].filter(Boolean) as ProposalVisualImage[];
+  const used = new Set<string>();
+  const unique = [...provided, ...(defaults[template.niche] || defaults.Consultoria)].filter((image) => {
+    if (!image.url || used.has(image.url)) return false;
+    used.add(image.url);
+    return true;
+  });
+  return unique.length ? unique : defaults.Consultoria;
 }
 
 function Brand({ name, light, className = '' }: { name: string; light?: boolean; className?: string }) { return <div className={`flex items-center gap-[0.7em] text-[clamp(6px,0.72cqw,11px)] font-semibold uppercase tracking-[0.22em] ${className}`}><span className={`grid size-[2.1em] place-items-center rounded-full border text-[0.72em] ${light ? 'border-white/35 text-white' : 'border-black/25 text-black'}`}>{name.slice(0, 1)}</span>{name}</div>; }
