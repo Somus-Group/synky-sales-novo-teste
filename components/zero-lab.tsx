@@ -161,6 +161,44 @@ function download(content: string, name: string, type: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+function previewExample(supplier: string): ZeroDraft {
+  return {
+    ...emptyZeroDraft(supplier || 'Synky Sales'),
+    client: 'Cliente exemplo',
+    title: 'Site moderno + campanha de lançamento',
+    objective:
+      'Apresentar uma proposta visual, clara e pronta para enviar, com escopo, investimento e próximos passos bem definidos.',
+    months: 6,
+    validity: '15 dias',
+    design: 'contrast',
+    accent: '#176bed',
+    cover: '/proposal/campaign-cover.png',
+    timeline:
+      'Semana 1: alinhamento e direção visual\nSemanas 2-4: produção do site e campanha\nSemana 5: revisão, ajustes e preparação da entrega',
+    terms: 'Condições comerciais definidas após aprovação do escopo.',
+    exclusions: 'Verba de mídia, hospedagem e ferramentas de terceiros.',
+    services: [
+      {
+        id: 'preview-site',
+        title: 'Site institucional',
+        description:
+          'Arquitetura das páginas\nLayout responsivo\nPublicação da versão final',
+        quantity: 1,
+        unitCents: 400000,
+        billing: 'once',
+      },
+      {
+        id: 'preview-launch',
+        title: 'Campanha de lançamento',
+        description:
+          'Plano de divulgação\nPeças para redes sociais\nAcompanhamento dos primeiros resultados',
+        quantity: 1,
+        unitCents: 250000,
+        billing: 'monthly',
+      },
+    ],
+  };
+}
 
 export function ZeroLab({
   profile,
@@ -209,13 +247,22 @@ export function ZeroLab({
   const draftText = JSON.stringify(draft);
   const dirty = touched.current && draftText !== saved;
   const totals = zeroTotals(draft);
+  const hasUserProposal = !!(
+    draft.services.length ||
+    draft.client ||
+    draft.briefing.trim()
+  );
   const missing = [
     ...zeroReadiness(draft),
     ...(needsCompose ? ['Pedido ainda não aplicado'] : []),
   ];
   const html = useMemo(
-    () => renderZeroProposal(draft, origin),
-    [draft, origin],
+    () =>
+      renderZeroProposal(
+        hasUserProposal ? draft : previewExample(profile.businessName),
+        origin,
+      ),
+    [draft, hasUserProposal, origin, profile.businessName],
   );
   useEffect(() => {
     onDirtyChange(dirty);
@@ -767,8 +814,17 @@ export function ZeroLab({
               className={`${styles.fields} ${styles.composer}`}
               disabled={busy}
             >
+              <section className={styles.composerHero}>
+                <span>Modo gratuito</span>
+                <h2>Proposta bonita sem gastar crédito</h2>
+                <div>
+                  <small>Visual pronto</small>
+                  <small>Escopo organizado</small>
+                  <small>Sem chamada de IA</small>
+                </div>
+              </section>
               <div className={styles.sectionTitle}>
-                <h2>Escreva como você pediria no WhatsApp</h2>
+                <h2>Escreva o pedido em uma mensagem</h2>
                 <PenLine size={20} aria-hidden="true" />
               </div>
               <div className={styles.promptBox}>
@@ -874,7 +930,7 @@ export function ZeroLab({
                     <details open>
                       <summary>
                         {composition.unresolved.length} trecho(s) ainda não
-                        transformado(s) em serviço
+                        viraram item de escopo
                       </summary>
                       <ul>
                         {composition.unresolved.map((part, index) => (
@@ -1541,7 +1597,9 @@ export function ZeroLab({
         </section>
         <section className={styles.preview} data-pane={pane}>
           <div className={styles.previewToolbar}>
-            <span className={styles.previewLabel}>Prévia da proposta</span>
+            <span className={styles.previewLabel}>
+              {hasUserProposal ? 'Prévia da proposta' : 'Exemplo visual'}
+            </span>
             <div className={styles.devices}>
               <Icon
                 label="Prévia para computador"
@@ -1604,7 +1662,9 @@ export function ZeroLab({
             />
           </div>
           <footer className={styles.previewFooter}>
-            {missing.length ? (
+            {!hasUserProposal ? (
+              <span>Exemplo visual do Proposta Zero</span>
+            ) : missing.length ? (
               <span>Pendente: {missing.join(' · ')}</span>
             ) : (
               <span>
