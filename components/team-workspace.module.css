@@ -6,12 +6,12 @@
   background-image:
     linear-gradient(
       90deg,
-      rgb(4 25 51 / 95%) 0%,
-      rgb(5 31 62 / 86%) 42%,
-      rgb(5 30 57 / 44%) 100%
+      rgb(4 25 51 / 86%) 0%,
+      rgb(5 31 62 / 70%) 42%,
+      rgb(5 30 57 / 18%) 100%
     ),
     url('/team/organization-office.png');
-  background-position: center;
+  background-position: center right;
   background-size: cover;
 }
 
