@@ -1,5 +1,6 @@
 {
   "name": "synky-sales",
+  "account_id": "43e163bd63a85e6980982098c3a05ccb",
   "main": "dist/server/index.js",
   "workers_dev": true,
   "preview_urls": true,
@@ -18,13 +19,13 @@
     {
       "binding": "DB",
       "database_name": "synky-sales-db",
-      "database_id": "e3a5ec9a-45af-4fa7-89dc-598ff4fa573b"
+      "database_id": "ec775672-711c-40d2-872b-47a426d8ff6c"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "FILES",
-      "id": "16bc7d1d2f3a45dba5057e00418f1975"
+      "id": "d2b23a05886a4237b18577e0ea09b879"
     }
   ],
   "vars": {
