@@ -511,12 +511,23 @@ export function renderZeroProposal(
   ]
     .map(([id, text]) => '<a href="#' + id + '">' + text + '</a>')
     .join('');
+  const heroServices = d.services.length
+    ? '<div class="hero-services">' +
+      d.services
+        .slice(0, 3)
+        .map(
+          (service) =>
+            '<span>' + escape(service.title) + '<i aria-hidden="true"></i></span>',
+        )
+        .join('') +
+      '</div>'
+    : '';
   const hero =
     '<section class="hero"><img class="hero-media" src="' +
     escape(cover) +
     '" alt="' +
     escape(coverAlt) +
-    '" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-content"><span class="eyebrow">Proposta comercial' +
+    '" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-content"><div class="hero-copy"><span class="eyebrow">Proposta online' +
     (d.supplier ? ' / ' + escape(d.supplier) : '') +
     '</span><h1' +
     (client.length > 42 ? ' class="long-title"' : '') +
@@ -525,15 +536,15 @@ export function renderZeroProposal(
     '</h1>' +
     (subject ? '<p class="hero-subject">' + subject + '</p>' : '') +
     (d.services.length
-      ? '<a class="hero-link" href="#escopo">Explorar proposta <span aria-hidden="true">&#8599;</span></a>'
+      ? '<a class="hero-link" href="#escopo">Ver escopo <span aria-hidden="true">&#8599;</span></a>'
       : '') +
-    '</div><div class="hero-bottom wrap"><span>' +
-    (d.validity ? 'Válida por ' + escape(d.validity) : escape(d.supplier)) +
-    '</span>' +
+    '</div><aside class="hero-panel"><span>Visão do projeto</span><strong>' +
     (d.services.length
-      ? '<a href="#investimento">Ver investimento <span aria-hidden="true">&#8595;</span></a>'
-      : '') +
-    '</div></section>';
+      ? String(d.services.length).padStart(2, '0') + ' frentes propostas'
+      : 'Proposta sob medida') +
+    '</strong>' +
+    heroServices +
+    '<a href="#investimento">Investimento <span aria-hidden="true">&#8595;</span></a></aside></div></section>';
   const context = d.objective
     ? '<section id="objetivo" class="section context"><div class="wrap context-grid">' +
       sectionHead('01 / O projeto', 'O que vamos construir.') +
@@ -599,7 +610,7 @@ export function renderZeroProposal(
     .join('');
   const scope = d.services.length
     ? '<section id="escopo" class="section scope"><div class="wrap">' +
-      sectionHead('02 / Escopo', 'Cada entrega, em detalhe.') +
+      sectionHead('02 / Escopo', 'O que entra no projeto.') +
       (d.design === 'compact'
         ? '<ol class="scope-ledger">' + serviceRows + '</ol>'
         : '<div class="' +
@@ -611,7 +622,7 @@ export function renderZeroProposal(
     : '';
   const process = steps.length
     ? '<section id="cronograma" class="section schedule"><div class="wrap">' +
-      sectionHead('03 / Execução', 'Do início à entrega.') +
+      sectionHead('03 / Execução', 'Como o projeto avança.') +
       '<ol class="process' +
       (steps.length === 1 ? ' single' : '') +
       '">' +
