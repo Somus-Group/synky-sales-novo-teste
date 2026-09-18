@@ -18,7 +18,25 @@ const monthly =
   /(?:por\s+m[eê]s|ao\s+m[eê]s|mensal(?:mente)?|mensais|\/\s*m[eê]s)/i;
 const once = /(?:[uú]nico|[uú]nica|pontual|uma\s+vez|pagamento\s+[uú]nico)/i;
 const knownService =
-  /\b(?:bpo|gest[aã]o\s+(?:de\s+)?tr[aá]fego|tr[aá]fego\s+pago|redes\s+sociais|social\s+media|consultoria|site|landing\s+page|identidade\s+visual|fotografia|arquitetura|opera[cç][aã]o\s+comercial|conte[uú]do|design|marketing)\b/i;
+  /\b(?:bpo|gest[aã]o\s+(?:de\s+)?tr[aá]fego|tr[aá]fego\s+pago|redes\s+sociais|social\s+media|consultoria|site|landing\s+page|identidade\s+visual|fotografia|arquitetura|opera[cç][aã]o\s+comercial|comercial|conte[uú]do|design|marketing)\b/i;
+
+const naturalServices = [
+  ['tr[aá]fego(?:\s+pago)?', 'Gestão de tráfego pago', 'monthly'],
+  ['opera[cç][aã]o\s+comercial|comercial', 'Operação comercial', 'monthly'],
+  ['bpo\s+financeiro|bpo', 'BPO financeiro', 'monthly'],
+  ['redes\s+sociais|social\s+media', 'Conteúdo e redes sociais', 'monthly'],
+  ['landing\s+page', 'Landing page', 'once'],
+  ['site|presen[cç]a\s+digital', 'Site e presença digital', 'once'],
+  ['consultoria', 'Consultoria', 'once'],
+] as const;
+
+const titleCase = (value: string) =>
+  value
+    .trim()
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map((word) => word[0].toLocaleUpperCase('pt-BR') + word.slice(1))
+    .join(' ');
 
 export type ZeroComposition = {
   draft: ZeroDraft;
@@ -86,6 +104,26 @@ export function composeZeroBrief(
   };
   const addService = (raw: string, explicit = false) => {
     const found = amounts(raw);
+    if (!found.length && !explicit) {
+      const matches = naturalServices.filter(([pattern]) =>
+        new RegExp('\\b(?:' + pattern + ')\\b', 'i').test(raw),
+      );
+      if (matches.length) {
+        for (const [, title, billing] of matches) {
+          if (draft.services.some((service) => fold(service.title) === fold(title)))
+            continue;
+          draft.services.push({
+            id: crypto.randomUUID(),
+            title,
+            description: '',
+            quantity: 1,
+            unitCents: null,
+            billing,
+          });
+        }
+        return;
+      }
+    }
     const commercialTitle = (found.length ? raw.slice(0, found[0].index) : raw)
       .replace(/^(?:[-*•]\s*|\d+[.)]\s*)/, '')
       .replace(
@@ -182,6 +220,24 @@ export function composeZeroBrief(
     draft.services.push(service);
   };
 
+  // A single conversational sentence is enough. Infer the sender, recipient and
+  // familiar services before splitting it into commercial clauses.
+  const supplier = text.match(
+    /\bproposta\s+d(?:a|o)\s+([\p{L}\d][\p{L}\d &'’-]{1,80}?)(?=\s*(?:,|\.|;|\b(?:para|pra|que|ela|com|sobre)\b|$))/iu,
+  );
+  if (supplier && !draft.supplier)
+    put('supplier', titleCase(supplier[1]), 240);
+  const recipient = text.match(
+    /\b(?:para|pra)\s+(?:a|o|as|os)?\s*([\p{L}][\p{L}\d &'’-]{2,80}?)(?=\s*(?:,|\.|;|\b(?:que|com|onde|e|fa[cç]a|crie|inclui|por|no valor)\b|$))/iu,
+  );
+  if (
+    recipient &&
+    !/\bproposta(?:\s+comercial)?\s+(?:para|pra)\b/i.test(text) &&
+    !/^(?:ajudar|criar|fazer|vender|aumentar|melhorar|os|as)\b/i.test(
+      recipient[1].trim(),
+    )
+  )
+    put('client', titleCase(recipient[1]), 240);
   // Split prose at sentence boundaries, not at decimal commas or dots inside URLs.
   const clauses = text.split(
     /[.!?]\s+|[\n;]+|,\s*(?=(?:contrato|validade|objetivo|sem incluir|n[aã]o inclui)\b)/i,
@@ -378,8 +434,6 @@ export function composeZeroBrief(
     )
   )
     draft.design = 'compact';
-  if (!draft.client) warnings.push('Falta o nome do cliente.');
-  if (!draft.supplier) warnings.push('Falta o nome da sua empresa.');
   if (!draft.services.length) warnings.push('Nenhum serviço identificado.');
   if (draft.services.some((service) => service.unitCents === null))
     warnings.push('Há serviços com preço a definir.');

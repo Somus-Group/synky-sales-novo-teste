@@ -324,8 +324,6 @@ export const zeroMoney = (cents: number) =>
 
 export function zeroReadiness(draft: ZeroDraft) {
   const missing = [];
-  if (!draft.client.trim()) missing.push('Cliente');
-  if (!draft.supplier.trim()) missing.push('Fornecedor');
   if (!draft.title.trim()) missing.push('Título');
   if (!draft.services.length) missing.push('Pelo menos um serviço');
   if (draft.services.some((s) => !s.title.trim()))

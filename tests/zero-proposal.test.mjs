@@ -211,6 +211,21 @@ test('all deliverables survive web expansion and unspecified prices never look f
   }
 });
 
+test('one conversational request finds supplier, client and familiar services without form labels', () => {
+  const result = composeZeroBrief(
+    'Vamos criar uma proposta da Somus. Ela ajuda arquitetos e quer fazer uma proposta de tráfego pago e comercial para a Lie Arquitetas. Faça uma proposta bem legal.',
+    zero.emptyZeroDraft(),
+  );
+  assert.equal(result.draft.supplier, 'Somus');
+  assert.equal(result.draft.client, 'Lie Arquitetas');
+  assert.deepEqual(
+    result.draft.services.map((service) => service.title),
+    ['Gestão de tráfego pago', 'Operação comercial'],
+  );
+  assert.ok(result.draft.services.every((service) => service.unitCents === null));
+  assert.doesNotMatch(result.warnings.join(' '), /nome do cliente|nome da sua empresa/i);
+});
+
 test('bullet scope and exclusions stay separate, and an explicit visual wins over sector defaults', () => {
   const { draft, unresolved } = composeZeroBrief('Proposta para Aurora.\nSite por R$ 4.000, pagamento único.\n- Página inicial\n- Formulário de contato\n- Não inclui hospedagem\nVisual: editorial', zero.emptyZeroDraft('Synky'));
   assert.equal(draft.services[0].description, 'Página inicial\nFormulário de contato');
@@ -429,7 +444,7 @@ test('unknown prices remain pending and differ from explicitly free services', (
     false,
   );
   assert.deepEqual(zero.zeroReadiness(draft()), []);
-  assert.ok(zero.zeroReadiness(zero.emptyZeroDraft()).length >= 3);
+  assert.ok(zero.zeroReadiness(zero.emptyZeroDraft()).length >= 1);
 });
 
 test('briefing imports explicit labels only and never invents price or discards long terms', () => {
