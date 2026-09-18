@@ -223,7 +223,7 @@ export function composeZeroBrief(
   // A single conversational sentence is enough. Infer the sender, recipient and
   // familiar services before splitting it into commercial clauses.
   const supplier = text.match(
-    /\bproposta\s+d(?:a|o)\s+([\p{L}\d][\p{L}\d &'’-]{1,80}?)(?=\s*(?:,|\.|;|\b(?:para|pra|que|ela|com|sobre)\b|$))/iu,
+    /\bp(?:ro|or)posta\w*\s+d(?:a|o)\s+([\p{L}\d][\p{L}\d &'’-]{1,80}?)(?=\s*(?:,|\.|;|\b(?:para|pra|que|ela|com|sobre)\b|$))/iu,
   );
   if (supplier && !draft.supplier)
     put('supplier', titleCase(supplier[1]), 240);
@@ -242,7 +242,7 @@ export function composeZeroBrief(
     );
   if (
     recipient &&
-    !/\bproposta(?:\s+comercial)?\s+(?:para|pra)\b/i.test(text) &&
+    !/\bp(?:ro|or)posta\w*(?:\s+comercial)?\s+(?:para|pra)\b/i.test(text) &&
     recipient[1].trim()
   )
     put('client', titleCase(recipient[1]), 240);

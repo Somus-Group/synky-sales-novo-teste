@@ -213,7 +213,7 @@ test('all deliverables survive web expansion and unspecified prices never look f
 
 test('one conversational request finds supplier, client and familiar services without form labels', () => {
   const result = composeZeroBrief(
-    'vamos criar uma proposta da somus, ela é uma empresa voltada para ajudar os arquitetos, ela quer fazer uma proposta de trafego pago e comercial para a lie arquitetas, faça uma proposta bem legal',
+    'vamos criar uma proposta da somus, ela e uma empresa voltada para ajudar os arquitetos, ela quer fazere uma porposta de trafego pago e comercial para a lie arquitetas, faça uma porposta bem legal',
     zero.emptyZeroDraft(),
   );
   assert.equal(result.draft.supplier, 'Somus');
