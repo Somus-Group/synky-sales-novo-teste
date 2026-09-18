@@ -28,6 +28,7 @@ const worker = await build({
       }};`,
   },
   bundle: true,
+  external: ['cloudflare:workers'],
   format: 'esm',
   platform: 'browser',
   write: false,

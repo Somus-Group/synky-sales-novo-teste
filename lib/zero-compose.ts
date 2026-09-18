@@ -30,6 +30,7 @@ export type ZeroComposition = {
 export function composeZeroBrief(
   text: string,
   base: ZeroDraft,
+  preserveDesign = false,
 ): ZeroComposition {
   if (!text.trim()) throw new Error('Escreva o pedido da proposta.');
   if (text.length > 24000)
@@ -49,6 +50,7 @@ export function composeZeroBrief(
   };
   const warnings: string[] = [];
   const unresolved: string[] = [];
+  let explicitDesign = preserveDesign;
   const put = (
     key:
       | 'client'
@@ -187,6 +189,22 @@ export function composeZeroBrief(
   for (const original of clauses) {
     let part = original.trim().replace(/[.!;]+$/, '');
     if (!part) continue;
+    if (
+      /^[-*•]\s+/.test(part) &&
+      draft.services.length &&
+      !amounts(part).length &&
+      !/^(?:não|nao|sem|fora|exclu|prazo|validade|condi|pagamento|objetivo|cliente|contrato)/i.test(
+        part.replace(/^[-*•]\s+/, ''),
+      )
+    ) {
+      const last = draft.services[draft.services.length - 1];
+      const item = part.replace(/^[-*•]\s+/, '');
+      if (last.description.length + item.length + 1 <= 4000)
+        last.description = [last.description, item].filter(Boolean).join('\n');
+      else unresolved.push(part);
+      continue;
+    }
+    part = part.replace(/^[-*•]\s+/, '');
     const client =
       part.match(
         /^(?:eu\s+)?(?:(?:crie|fa[cç]a|quero|preciso de)\s+(?:uma\s+)?)?proposta(?:\s+comercial)?\s+(?:para|pra)\s+(?:a\s+|o\s+)?(.+?)(?=[:,]|\s+(?:com|incluindo|oferecendo)\s|$)/i,
@@ -296,6 +314,7 @@ export function composeZeroBrief(
       /^(?:visual|estilo)\s*:?\s*(editorial|est[uú]dio|executiv[ao])$/i,
     );
     if (design) {
+      explicitDesign = true;
       draft.design = /^est/i.test(design[1])
         ? 'contrast'
         : /^exec/i.test(design[1])
@@ -334,22 +353,26 @@ export function composeZeroBrief(
     const title = draft.services.map((s) => s.title).join(' + ');
     if (title.length <= 160) draft.title = title;
   }
-  if (!draft.objective && draft.services.length) {
-    const services = draft.services.map((s) => s.title);
-    draft.objective = `Estruturar ${services.length === 1 ? services[0] : services.slice(0, -1).join(', ') + ' e ' + services.at(-1)}${draft.client ? ` para ${draft.client}` : ''}, com escopo, investimento e próximos passos claros para aprovação.`;
-  }
   const visualSignal = fold(
     `${draft.title} ${draft.objective} ${draft.briefing} ${draft.services.map((s) => s.title).join(' ')}`,
   );
-  if (/arquitet|interior|decoracao|ambiente|obra/.test(visualSignal))
+  if (
+    !explicitDesign &&
+    !base.services.length &&
+    /arquitet|interior|decoracao|ambiente|obra/.test(visualSignal)
+  )
     draft.design = 'editorial';
   else if (
+    !explicitDesign &&
+    !base.services.length &&
     /site|sistema|software|app|automacao|tecnolog|trafego|marketing|conteudo|campanha|design/.test(
       visualSignal,
     )
   )
     draft.design = 'contrast';
   else if (
+    !explicitDesign &&
+    !base.services.length &&
     /financeir|bpo|crm|comercial|consultoria|operacao|processo/.test(
       visualSignal,
     )

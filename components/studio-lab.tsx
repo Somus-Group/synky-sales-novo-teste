@@ -63,7 +63,12 @@ import {
   studioStages,
   type StudioStage,
 } from '@/lib/studio-stream';
-import { studioSpendLimits } from '@/lib/studio-economy';
+import {
+  studioSpendLimits,
+  studioWebSpendLimit,
+  studioTask,
+} from '@/lib/studio-economy';
+import { studioMessageReference } from '@/lib/studio-design';
 import {
   StudioCanvas,
   type StudioSelection,
@@ -135,6 +140,13 @@ export function StudioLab() {
   const [quality, setQuality] = useState<'economy' | 'premium'>('economy');
   const [mode, setMode] = useState<StudioMode>('free');
   const [draft, setDraft] = useState<ContextDraft>(emptyContext);
+  const estimatedRequestBudget =
+    quality === 'economy' &&
+    !project?.html &&
+    !studioMessageReference(prompt, draft.referenceUrl) &&
+    studioTask(prompt, false, intent, false) === 'create'
+      ? studioWebSpendLimit
+      : studioSpendLimits[quality];
   const [briefFile, setBriefFile] = useState<File | null>(null);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -1705,12 +1717,12 @@ export function StudioLab() {
                     }
                   >
                     <option value="economy">Econômico</option>
-                    <option value="premium">Avançado</option>
+                    <option value="premium">Design livre · maior custo</option>
                   </select>
                 </label>
                 <span title="Orçamento estimado por envio. O valor faturado depende do consumo informado pela API; imagens e PDFs podem variar.">
                   Orçamento: US${' '}
-                  {studioSpendLimits[quality].toFixed(2).replace('.', ',')}
+                  {estimatedRequestBudget.toFixed(2).replace('.', ',')}
                 </span>
               </div>
               {(attachment || draft.referenceUrl || selection) && (

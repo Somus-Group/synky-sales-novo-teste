@@ -62,6 +62,7 @@ function serviceMocks(key) {
   } };
   return { writes, modules: {
     'cloudflare:workers': { env },
+    '@/lib/file-store': load('lib/file-store.ts', { 'cloudflare:workers': { env } }),
     '@/app/chatgpt-auth': { getChatGPTUser: async () => ({ userId: 'test-user' }) },
     '@/db': { getD1: () => db },
     '@/db/workspace': { getWorkspaceForUser: async () => 'test-workspace' },
@@ -130,6 +131,7 @@ test('one page: preserva todo o texto aprovado nos temas anteriores e na nova co
     '@/components/proposal-artwork': { resolveProposalTemplate: template => template },
     './proposal-collection': collectionComponents,
     '@/lib/proposal-collection': collection,
+    '@/lib/proposal-templates': load('lib/proposal-templates.ts', { './proposal-collection': collection }),
   });
   for (const template of ['editorial', 'noir', 'prisma', ...collection.collectionTemplates.map(item => item.value)]) {
     const html = renderToStaticMarkup(React.createElement(ProposalOnePage, { proposal: {

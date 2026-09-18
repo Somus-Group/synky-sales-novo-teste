@@ -2,7 +2,8 @@
 
 Available at `/zero` and in the **Proposta Zero** sidebar entry. This is an
 independent proposal composer, not a cheaper model or an automatic fallback to AI.
-Existing Estudio Lab, agent, clients and proposals remain unchanged.
+Estudio Lab reuses the web renderer for new economical proposals; its AI workflow
+and storage remain separate. The Zero workflow never calls a model.
 
 ## Cost Boundary
 
@@ -41,10 +42,10 @@ unico. Validade de 15 dias.`
 - Quantities, discounts, one-off fees, monthly fees and duration recalculate
   locally using integer cents. No tax is calculated or implied. Contract totals
   multiply only monthly fees by duration and add one-off fees once.
-- The three proposal compositions have different document structures, not just
+- The three proposal designs have different web structures, not just
   color variations. Editorial uses numbered service chapters; Estudio uses a bold
-  client cover and a visual service grid; Executiva starts with investment and
-  presents scope as a statement-of-work ledger. The client is the cover heading,
+  client cover and a visual service grid; Executiva presents scope as a
+  statement-of-work ledger, followed by investment. The client is the cover heading,
   the project title is supporting copy, and empty objective/timeline/conditions
   sections are omitted. No generic closing slogan or invented content is added.
 - Composition choices show actual scaled, inert, script-free previews of the
@@ -95,4 +96,20 @@ money calculations, missing prices, briefing limits, escaped HTML in all layouts
 authentication, workspace isolation, stale writes and mocked reference extraction.
 Also run `npx tsc --noEmit` and `npm run build`. Never run paid API generation to
 validate this prototype. Local route checks do not exercise real AI or production
-client data. Browser interaction/visual tests were not run for this change.
+client data. The web renderer was checked with Playwright at 1440, 768, 390 and
+320 pixels, including images, overflow, headings, anchors and investment
+expansion. The local app composer and fullscreen controls were exercised without
+saving client records or requesting AI generation.
+
+## Web Presentation (2026-09-18)
+
+The preview is edge-to-edge with a fullscreen control and Escape to exit.
+The generated proposal has a client-led visual opening, section navigation,
+expandable long scope and investment detail. Every supplied deliverable remains
+in the output, including items beyond the first five. No catalog deliverables,
+generic outcomes, methods or timeline promises are inserted automatically.
+Missing prices remain undefined, not zero; partial totals are labeled and monthly
+fees are never presented as a misleading combined starting price.
+Bulleted deliverables attach to the preceding service; exclusions stay separate.
+An explicit visual choice takes priority over automatic sector selection and
+rebuilding an existing draft preserves its chosen design.

@@ -36,11 +36,99 @@ function load(path, mocks = {}) {
   return mod.exports;
 }
 const studio = load('lib/studio.ts');
+const webContent = () => ({
+  title: 'Site e campanhas', message: 'Proposta organizada.', client: 'Clínica Aurora',
+  objective: 'Aumentar os agendamentos de consultas.', timeline: '30 dias: entrega do site',
+  terms: '50% na entrada, saldo na entrega.', exclusions: 'Verba de mídia não inclusa.',
+  validity: '15 dias', months: 6, discountPercent: 0, design: 'contrast', accent: '#175bd2',
+  serif: false, coverId: '', missing_information: [],
+  services: [
+    { title: 'Site', description: 'Página de serviços\nFormulário de contato', quantity: 1, unitCents: 400000, billing: 'once' },
+    { title: 'Gestão de tráfego', description: '4 campanhas\nRelatório mensal', quantity: 1, unitCents: 250000, billing: 'monthly' },
+  ],
+});
+
+test('web creation uses one compact content call, local layout and a smaller reservation', async () => {
+  const f = fixture({ web: true });
+  const previous = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (_url, options) => {
+    calls.push(JSON.parse(options.body));
+    return Response.json({ status: 'completed', output_text: JSON.stringify(webContent()),
+      usage: { input_tokens: 1200, output_tokens: 650 } });
+  };
+  try {
+    const { project } = await (await f.create({ briefing: 'Proposta para Clínica Aurora.' })).json();
+    const response = await f.messages.POST(request({ message: 'Criar site e campanhas.', revision: 0 }), context(project.id));
+    const result = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(result));
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].text.format.name, 'studio_web');
+    assert.equal(calls[0].text.format.schema.properties.html, undefined);
+    assert.equal(calls[0].model, 'gpt-5-mini');
+    assert.equal(calls[0].max_output_tokens, 6000);
+    assert.match(result.project.html, /<h1>Clínica Aurora<\/h1>/);
+    assert.match(result.project.html, /19\.000,00/);
+    assert.match(result.project.html, /Verba de mídia não inclusa/);
+    assert.match(result.project.html, /studio-asset:web-cover/);
+    assert.equal(result.versions.length, 1);
+    assert.equal(result.project.aiUsage.calls, 1);
+    assert.equal(studioEconomy.studioWebSpendLimit, 0.02);
+    assert.equal(f.sqlite.prepare('SELECT reserved_usd FROM studio_ai_requests').get().reserved_usd, 0.02);
+  } finally { globalThis.fetch = previous; f.sqlite.close(); }
+});
+
+test('web output validation rejects invented image IDs, bad money and blank services without paid repair', async () => {
+  for (const patch of [
+    { coverId: 'not-a-real-asset' },
+    { services: [] },
+    { services: [{ ...webContent().services[0], unitCents: -1 }] },
+    { accent: 'red;url(https://example.com)' },
+  ]) {
+    assert.throws(() => studioWeb.parseStudioWeb(JSON.stringify({ ...webContent(), ...patch }), null, []));
+  }
+  const f = fixture({ web: true });
+  const previous = globalThis.fetch;
+  let count = 0;
+  globalThis.fetch = async () => {
+    count++;
+    return Response.json({ status: 'completed', output_text: JSON.stringify({ ...webContent(), services: [] }),
+      usage: { input_tokens: 100, output_tokens: 100 } });
+  };
+  try {
+    const { project } = await (await f.create()).json();
+    const response = await f.messages.POST(request({ message: 'Crie a proposta.', revision: 0 }), context(project.id));
+    assert.equal(response.status, 422);
+    assert.equal(count, 1);
+    assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM studio_versions').get().n, 0);
+    assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM studio_ai_requests').get().n, 1);
+  } finally { globalThis.fetch = previous; f.sqlite.close(); }
+});
+
+test('reference-led, premium, existing and explicitly templated proposals keep their requested creation path', () => {
+  assert.equal(studioWeb.useStudioWeb('create', 'economy', false, 'none', false), true);
+  for (const args of [
+    ['create', 'economy', false, 'none', true],
+    ['create', 'premium', false, 'none', false],
+    ['create', 'economy', true, 'none', false],
+    ['create', 'economy', false, 'performance', false],
+    ['patch', 'economy', true, 'none', false],
+    ['chat', 'economy', false, 'none', false],
+  ]) assert.equal(studioWeb.useStudioWeb(...args), false);
+});
 const studioTemplates = load('lib/studio-templates.ts');
 const studioDesign = load('lib/studio-design.ts', { '@/lib/studio': studio });
 const studioStream = load('lib/studio-stream.ts');
 const studioEconomy = load('lib/studio-economy.ts', { '@/lib/studio': studio });
 const studioPatches = load('lib/studio-patches.ts', { '@/lib/studio': studio });
+const zero = load('lib/zero-proposal.ts', {
+  './zero-proposal-styles': load('lib/zero-proposal-styles.ts'),
+});
+const studioWeb = load('lib/studio-web.ts', {
+  './zero-proposal': zero,
+  './studio': studio,
+  './studio-web-covers': { studioWebCovers: Object.fromEntries(zero.zeroCovers.map((c) => [c.url, 'data:image/webp;base64,YQ=='])) },
+});
 const html =
   '<!doctype html><html><head><style>body{color:#123}</style></head><body><h1>Proposta teste</h1><p>Escopo confirmado</p></body></html>';
 const request = (payload, method = 'POST') =>
@@ -51,7 +139,7 @@ const request = (payload, method = 'POST') =>
   });
 const context = (id) => ({ params: Promise.resolve({ id }) });
 
-function fixture() {
+function fixture({ web = false } = {}) {
   const pipeline = {
     requests: [],
     design: {
@@ -121,6 +209,7 @@ function fixture() {
   };
   const files = new Map();
   const env = {
+    STUDIO_WEB_PROPOSALS: web ? 'true' : 'false',
     OPENAI_API_KEY: 'test-key-never-sent',
     FILES: {
       put: async (key, bytes) => {
@@ -169,6 +258,7 @@ function fixture() {
     '@/lib/studio-economy': studioEconomy,
     '@/lib/studio-patches': studioPatches,
     '@/lib/studio-templates': studioTemplates,
+    '@/lib/studio-web': studioWeb,
     '@/lib/studio-media': {
       prepareStudioMedia: async (
         _db,
@@ -221,6 +311,7 @@ function fixture() {
         value.replace('Proposta teste', edit.text),
     },
   };
+  modules['@/lib/file-store'] = load('lib/file-store.ts', { 'cloudflare:workers': { env } });
   modules['@/db/studio-usage'] = load('db/studio-usage.ts', modules);
   const database = load('db/studio.ts', modules);
   modules['@/db/studio'] = database;
@@ -469,7 +560,7 @@ test('full briefing and inline reference reach all stages, and the reference is 
   }
 });
 
-test('one economical call receives all commercial conditions and records measured usage', async () => {
+test('economical custom HTML call receives all commercial conditions and records measured usage', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
   const calls = [];

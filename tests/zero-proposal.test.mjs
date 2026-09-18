@@ -78,7 +78,7 @@ test('new composer opens with one visible text input and optional details, no fo
     0,
   );
   assert.equal(nodes.filter((n) => n.tagName === 'select').length, 0);
-  assert.match(markup, /Gerar proposta bonita/);
+  assert.match(markup, /Criar proposta/);
   assert.match(markup, /Editar campos/);
   assert.doesNotMatch(markup, /Composição/);
   const visualModels = nodes.find((n) =>
@@ -192,11 +192,31 @@ test('scope text is separated from price wording without inventing deliverables'
   assert.equal(draft.services[1].unitCents, 400000);
   for (const design of ['editorial', 'contrast', 'compact']) {
     const html = zero.renderZeroProposal({ ...draft, design });
-    assert.match(html, /<h1>Gestão de tráfego \+ Site<\/h1>/);
-    assert.match(html, /<strong>Aurora<\/strong>/);
+    assert.match(html, /<h1>Aurora<\/h1>/);
+    assert.match(html, /<p class="hero-subject">Gestão de tráfego \+ Site<\/p>/);
     assert.match(html, /<li>4 campanhas<\/li>/);
     assert.doesNotMatch(html, /<li>[^<]*R\$/);
   }
+});
+
+test('all deliverables survive web expansion and unspecified prices never look free', () => {
+  const value = draft();
+  value.services = [{ ...value.services[0], unitCents: null, description: Array.from({ length: 14 }, (_, i) => 'Entrega confirmada ' + i).join('\n') }];
+  for (const design of ['editorial', 'contrast', 'compact']) {
+    const html = zero.renderZeroProposal({ ...value, design });
+    for (let i = 0; i < 14; i++) assert.ok(html.includes('Entrega confirmada ' + i));
+    assert.match(html, /<details class="scope-more">/);
+    assert.doesNotMatch(html, /R\$\s*0,00|A partir de/);
+    assert.doesNotMatch(html, /Relatório de desempenho|Ritmo de trabalho|roteiro inicial/);
+  }
+});
+
+test('bullet scope and exclusions stay separate, and an explicit visual wins over sector defaults', () => {
+  const { draft, unresolved } = composeZeroBrief('Proposta para Aurora.\nSite por R$ 4.000, pagamento único.\n- Página inicial\n- Formulário de contato\n- Não inclui hospedagem\nVisual: editorial', zero.emptyZeroDraft('Synky'));
+  assert.equal(draft.services[0].description, 'Página inicial\nFormulário de contato');
+  assert.equal(draft.exclusions, 'Não inclui hospedagem');
+  assert.equal(draft.design, 'editorial');
+  assert.deepEqual(unresolved, []);
 });
 
 test('three proposal compositions use distinct content structures with no empty boilerplate', () => {
@@ -226,18 +246,17 @@ test('three proposal compositions use distinct content structures with no empty 
       html,
       /Objetivo a definir|cliente a definir|Vamos alinhar os próximos passos|1 unidade/,
     );
-    assert.match(html, /id="objetivo"/);
-    assert.match(html, /id="metodo"/);
-    assert.match(html, /id="proximos-passos"/);
-    assert.match(html, /Leitura do projeto/);
-    assert.match(html, /Entregas que sustentam a proposta/);
+    assert.doesNotMatch(html, /id="objetivo"|id="metodo"|id="proximos-passos"/);
+    assert.match(html, /<h1>Aurora<\/h1>/);
+    assert.match(html, /Manual de marca/);
+    assert.match(html, /Arquivos finais/);
     assert.doesNotMatch(
       html,
       /id="cronograma"|id="condicoes"|id="referencias"/,
     );
     assert.equal(
       html.indexOf('id="investimento"') < html.indexOf('id="escopo"'),
-      design === 'compact',
+      false,
     );
   }
   const empty = zero.renderZeroProposal(zero.emptyZeroDraft());
@@ -335,7 +354,7 @@ test('rebuilding keeps identity and imagery, reuses service IDs, and removes sta
   assert.equal(draft.discountPercent, 0);
   for (const key of ['supplier', 'email', 'phone', 'logo', 'cover', 'gallery'])
     assert.deepEqual(draft[key], base[key]);
-  assert.equal(draft.design, 'contrast');
+  assert.equal(draft.design, base.design);
   assert.equal(draft.services[0].id, 'same-id');
   assert.equal(draft.services[0].unitCents, 200000);
   assert.equal(base.client, 'Antigo');
@@ -474,7 +493,7 @@ test('untrusted text stays text in all three layouts; no executable or external 
     assert.match(html, /@media\(max-width:600px\)/);
     assert.equal(
       html.indexOf('id="investimento"') < html.indexOf('id="escopo"'),
-      design === 'compact',
+      false,
     );
   }
 });
@@ -556,9 +575,7 @@ test('standalone output embeds cover and gallery, preserves full content, and ad
   assert.match(html, /<h3>Primeira etapa<\/h3><p>dados<\/p>/);
   assert.match(html, /<h3>Segunda etapa<\/h3><p>aprovação<\/p>/);
   const empty = zero.renderZeroProposal(draft());
-  assert.match(empty, /<ol class="process method"/);
-  assert.match(empty, /Ritmo de trabalho/);
-  assert.match(empty, /id="proximos-passos"/);
+  assert.doesNotMatch(empty, /<ol class="process method"|Ritmo de trabalho|id="proximos-passos"/);
   assert.doesNotMatch(empty, /<div class="portfolio/);
   assert.doesNotMatch(empty, /href="https:\/\/wa.me/);
 });

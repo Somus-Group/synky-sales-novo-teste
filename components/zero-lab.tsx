@@ -11,6 +11,8 @@ import {
   LayoutTemplate,
   Loader2,
   Monitor,
+  Maximize2,
+  Minimize2,
   Palette,
   Plus,
   PenLine,
@@ -164,10 +166,10 @@ function download(content: string, name: string, type: string) {
 function previewExample(supplier: string): ZeroDraft {
   return {
     ...emptyZeroDraft(supplier || 'Synky Sales'),
-    client: 'Cliente exemplo',
-    title: 'Site moderno + campanha de lançamento',
+    client: 'Aurora Studio',
+    title: 'Presença digital e campanha de lançamento',
     objective:
-      'Apresentar uma proposta visual, clara e pronta para enviar, com escopo, investimento e próximos passos bem definidos.',
+      'Apresentar a nova coleção da Aurora Studio em um site próprio e conectar a campanha de lançamento aos pedidos de orçamento da marca.',
     months: 6,
     validity: '15 dias',
     design: 'contrast',
@@ -228,6 +230,15 @@ export function ZeroLab({
   const [notice, setNotice] = useState('');
   const [mobile, setMobile] = useState(false);
   const [pane, setPane] = useState<'edit' | 'preview'>('edit');
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExpanded(false);
+    };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [expanded]);
   const [origin, setOrigin] = useState('');
   const [suggested, setSuggested] = useState<ReturnType<
     typeof readZeroBrief
@@ -243,6 +254,7 @@ export function ZeroLab({
   const imageFile = useRef<HTMLInputElement>(null);
   const gate = useRef(false);
   const touched = useRef(false);
+  const designChosen = useRef(false);
   const composedCommercial = useRef('');
   const draftText = JSON.stringify(draft);
   const dirty = touched.current && draftText !== saved;
@@ -304,6 +316,8 @@ export function ZeroLab({
 
   function change(next: Partial<ZeroDraft>) {
     touched.current = true;
+    if (next.design && Object.keys(next).length === 1)
+      designChosen.current = true;
     setDraft((d) => ({ ...d, ...next }));
     setNotice('');
     if (
@@ -347,7 +361,11 @@ export function ZeroLab({
     )
       return;
     try {
-      const result = composeZeroBrief(draft.briefing, draft);
+      const result = composeZeroBrief(
+        draft.briefing,
+        draft,
+        designChosen.current,
+      );
       change(result.draft);
       composedCommercial.current = commercialSnapshot(result.draft);
       setComposition(result);
@@ -417,6 +435,7 @@ export function ZeroLab({
     setId(crypto.randomUUID());
     setRevision(0);
     touched.current = false;
+    designChosen.current = false;
     setSuggested(null);
     setReference(null);
     setError('');
@@ -479,6 +498,7 @@ export function ZeroLab({
       setId(project.id);
       setRevision(project.revision);
       touched.current = true;
+      designChosen.current = true;
       setLibrary(false);
       setDetails(!project.draft.briefing);
       setComposition(null);
@@ -685,6 +705,7 @@ export function ZeroLab({
       })),
     } satisfies ZeroDraft;
     change(next);
+    designChosen.current = true;
     setNeedsCompose(false);
     composedCommercial.current = '';
     setId(crypto.randomUUID());
@@ -814,17 +835,8 @@ export function ZeroLab({
               className={`${styles.fields} ${styles.composer}`}
               disabled={busy}
             >
-              <section className={styles.composerHero}>
-                <span>Modo gratuito</span>
-                <h2>Proposta bonita sem gastar crédito</h2>
-                <div>
-                  <small>Visual pronto</small>
-                  <small>Escopo organizado</small>
-                  <small>Sem chamada de IA</small>
-                </div>
-              </section>
               <div className={styles.sectionTitle}>
-                <h2>Escreva o pedido em uma mensagem</h2>
+                <h2>Qual é o próximo projeto?</h2>
                 <PenLine size={20} aria-hidden="true" />
               </div>
               <div className={styles.promptBox}>
@@ -832,7 +844,9 @@ export function ZeroLab({
                   aria-label="Pedido da proposta"
                   rows={8}
                   maxLength={24000}
-                  placeholder="Ex.: proposta para Clínica Aurora. Fazer site moderno, gestão de tráfego mensal e campanha de lançamento. Site R$ 4.000 único, tráfego R$ 2.500 por mês, contrato 6 meses. Quero uma proposta bonita, clara e pronta para enviar."
+                  placeholder={
+                    'Proposta para Clínica Aurora.\nObjetivo: aumentar os agendamentos.\nSite com página de serviços e formulário por R$ 4.000, pagamento único.\nGestão de tráfego com campanhas no Google por R$ 2.500 por mês.\nContrato de 6 meses. Prazo: 30 dias.\nNão inclui verba de anúncios.'
+                  }
                   value={draft.briefing}
                   onChange={(e) => {
                     change({ briefing: e.target.value });
@@ -857,7 +871,7 @@ export function ZeroLab({
                   >
                     {draft.services.length
                       ? 'Refazer proposta'
-                      : 'Gerar proposta bonita'}
+                      : 'Criar proposta'}
                     <ArrowUp size={16} />
                   </Button>
                 </div>
@@ -1595,7 +1609,10 @@ export function ZeroLab({
             </footer>
           )}
         </section>
-        <section className={styles.preview} data-pane={pane}>
+        <section
+          className={`${styles.preview} ${expanded ? styles.expanded : ''}`}
+          data-pane={pane}
+        >
           <div className={styles.previewToolbar}>
             <span className={styles.previewLabel}>
               {hasUserProposal ? 'Prévia da proposta' : 'Exemplo visual'}
@@ -1617,6 +1634,15 @@ export function ZeroLab({
               </Icon>
             </div>
             <div className={styles.previewActions}>
+              <Icon
+                label={
+                  expanded ? 'Sair da tela cheia' : 'Ver proposta em tela cheia'
+                }
+                onClick={() => setExpanded(!expanded)}
+                pressed={expanded}
+              >
+                {expanded ? <Minimize2 /> : <Maximize2 />}
+              </Icon>
               <Icon
                 label="Importar cópia editável"
                 onClick={() => file.current?.click()}

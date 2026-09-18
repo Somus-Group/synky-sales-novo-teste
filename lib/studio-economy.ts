@@ -12,6 +12,7 @@ const rates: Record<string, { input: number; cached: number; output: number }> =
     'gpt-5.5': { input: 5, cached: 0.5, output: 30 },
   };
 export const studioSpendLimits = { economy: 0.05, premium: 0.6 };
+export const studioWebSpendLimit = 0.02;
 
 export type StudioTask = 'create' | 'patch' | 'chat';
 export function studioTask(
@@ -66,6 +67,7 @@ export function studioOutputBudget(
   text: string,
   images: number,
   pdf: boolean,
+  structured = false,
 ) {
   const rate = rates[model];
   if (!rate) throw new StudioError('Tarifa do modelo indisponível.', 503);
@@ -74,10 +76,20 @@ export function studioOutputBudget(
   const inputAllowance =
     new TextEncoder().encode(text).length + images * 4000 + (pdf ? 40000 : 0);
   const available =
-    studioSpendLimits[quality] - (inputAllowance * rate.input) / 1e6;
-  const max = task === 'chat' ? 1800 : task === 'patch' ? 4000 : 14000;
+    (structured && quality === 'economy'
+      ? studioWebSpendLimit
+      : studioSpendLimits[quality]) -
+    (inputAllowance * rate.input) / 1e6;
+  const max =
+    task === 'chat'
+      ? 1800
+      : task === 'patch'
+        ? 4000
+        : structured
+          ? 6000
+          : 14000;
   const tokens = Math.min(max, Math.floor((available * 1e6) / rate.output));
-  if (tokens < (task === 'create' ? 6000 : 1200))
+  if (tokens < (task === 'create' ? (structured ? 3000 : 6000) : 1200))
     throw new StudioError(
       'O conteúdo ultrapassa o orçamento estimado deste pedido. Selecione um trecho menor ou reduza os anexos antes de enviar.',
       422,

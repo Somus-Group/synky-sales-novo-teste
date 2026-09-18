@@ -28,6 +28,7 @@ export default {async fetch(request){
 }};`,
   },
   bundle: true,
+  external: ['cloudflare:workers'],
   format: 'esm',
   platform: 'browser',
   write: false,

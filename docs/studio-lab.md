@@ -16,6 +16,17 @@ Agente de propostas, Configurar agente e Propostas continuam disponíveis.
 
 ## Editor por conversa
 
+- Novas propostas no Econômico, sem referência e sem template explícito, recebem
+  conteúdo estruturado em uma única chamada. O sistema monta localmente a página
+  web, calcula investimento e incorpora imagens ilustrativas otimizadas.
+  A IA não escreve HTML/CSS nesse fluxo. O teto de saída é 6.000 tokens e o
+  orçamento estimado é US$ 0,02, com a mesma reserva atômica e registro de consumo.
+  Campos e imagens inválidos preservam a versão anterior sem repetição paga.
+  Referências, templates escolhidos, design livre e versões existentes mantêm
+  seus fluxos próprios; nenhuma proposta salva é reescrita automaticamente.
+  O servidor permite desativar o novo caminho com STUDIO_WEB_PROPOSALS=false.
+  Essa chave de compatibilidade não deve ser habilitada durante uso normal.
+
 - **Sob medida** é o padrão. Os templates só são usados quando escolhidos
   explicitamente. Uma referência visual tem prioridade sobre o template.
 - Links HTTPS enviados na conversa são lidos e salvos como referência junto com
@@ -70,7 +81,8 @@ STUDIO_AI_MODEL não selecionam mais modelos neste módulo. Modelos sem tarifa
 cadastrada são recusados, evitando estimativas incorretas. Nenhuma assinatura do
 ChatGPT ou da Lovable é usada como crédito de API.
 
-Orçamento estimado por envio: US$ 0,05 no Econômico e US$ 0,60 no Avançado.
+Orçamento estimado por envio: US$ 0,02 na criação estruturada Econômica, US$ 0,05
+nos demais envios Econômicos e US$ 0,60 no design livre Avançado.
 O limite diário padrão é US$ 1 por workspace, configurável no servidor por
 `STUDIO_DAILY_BUDGET_USD`; a janela reinicia às 00:00 UTC. Reservas atômicas incluem
 pedidos em outros projetos do mesmo workspace. São controles de aplicação, não
