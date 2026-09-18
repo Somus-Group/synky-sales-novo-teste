@@ -31,6 +31,7 @@ import {
   emptyZeroDraft,
   normalizeZeroDraft,
   readZeroBrief,
+  renderZeroEmptyState,
   renderZeroProposal,
   zeroCatalog,
   zeroCovers,
@@ -163,45 +164,6 @@ function download(content: string, name: string, type: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function previewExample(supplier: string): ZeroDraft {
-  return {
-    ...emptyZeroDraft(supplier || 'Synky Sales'),
-    client: 'Aurora Studio',
-    title: 'Presença digital e campanha de lançamento',
-    objective:
-      'Apresentar a nova coleção da Aurora Studio em um site próprio e conectar a campanha de lançamento aos pedidos de orçamento da marca.',
-    months: 6,
-    validity: '15 dias',
-    design: 'contrast',
-    accent: '#176bed',
-    cover: '/proposal/campaign-cover.png',
-    timeline:
-      'Semana 1: alinhamento e direção visual\nSemanas 2-4: produção do site e campanha\nSemana 5: revisão, ajustes e preparação da entrega',
-    terms: 'Condições comerciais definidas após aprovação do escopo.',
-    exclusions: 'Verba de mídia, hospedagem e ferramentas de terceiros.',
-    services: [
-      {
-        id: 'preview-site',
-        title: 'Site institucional',
-        description:
-          'Arquitetura das páginas\nLayout responsivo\nPublicação da versão final',
-        quantity: 1,
-        unitCents: 400000,
-        billing: 'once',
-      },
-      {
-        id: 'preview-launch',
-        title: 'Campanha de lançamento',
-        description:
-          'Plano de divulgação\nPeças para redes sociais\nAcompanhamento dos primeiros resultados',
-        quantity: 1,
-        unitCents: 250000,
-        billing: 'monthly',
-      },
-    ],
-  };
-}
-
 export function ZeroLab({
   profile,
   onDirtyChange,
@@ -259,10 +221,11 @@ export function ZeroLab({
   const draftText = JSON.stringify(draft);
   const dirty = touched.current && draftText !== saved;
   const totals = zeroTotals(draft);
+  // Typing a brief must not replace the canvas with an empty, generic proposal.
+  // A commercial document only appears after the local composer has found content.
   const hasUserProposal = !!(
     draft.services.length ||
-    draft.client ||
-    draft.briefing.trim()
+    (draft.client && draft.title !== 'Proposta comercial')
   );
   const missing = [
     ...zeroReadiness(draft),
@@ -270,10 +233,9 @@ export function ZeroLab({
   ];
   const html = useMemo(
     () =>
-      renderZeroProposal(
-        hasUserProposal ? draft : previewExample(profile.businessName),
-        origin,
-      ),
+      hasUserProposal
+        ? renderZeroProposal(draft, origin)
+        : renderZeroEmptyState(profile.businessName),
     [draft, hasUserProposal, origin, profile.businessName],
   );
   useEffect(() => {
@@ -836,7 +798,7 @@ export function ZeroLab({
               disabled={busy}
             >
               <div className={styles.sectionTitle}>
-                <h2>Qual é o próximo projeto?</h2>
+                <h2>Conte o que foi combinado.</h2>
                 <PenLine size={20} aria-hidden="true" />
               </div>
               <div className={styles.promptBox}>
@@ -845,7 +807,7 @@ export function ZeroLab({
                   rows={8}
                   maxLength={24000}
                   placeholder={
-                    'Proposta para Clínica Aurora.\nObjetivo: aumentar os agendamentos.\nSite com página de serviços e formulário por R$ 4.000, pagamento único.\nGestão de tráfego com campanhas no Google por R$ 2.500 por mês.\nContrato de 6 meses. Prazo: 30 dias.\nNão inclui verba de anúncios.'
+                    'Ex.: Proposta para Clínica Aurora. Site com página de serviços e formulário por R$ 4.000, pagamento único. Gestão de tráfego por R$ 2.500 por mês durante 6 meses. Objetivo: aumentar os agendamentos. Não inclui verba de anúncios.'
                   }
                   value={draft.briefing}
                   onChange={(e) => {

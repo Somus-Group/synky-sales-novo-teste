@@ -175,6 +175,12 @@ export function emptyZeroDraft(supplier = ''): ZeroDraft {
   };
 }
 
+/** A quiet canvas while the user is still describing the commercial request. */
+export function renderZeroEmptyState(supplier = ''): string {
+  const name = escape(supplier || 'Sua empresa');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{display:grid;place-items:center;background:#f4f7fb;color:#172033;font:16px/1.5 Arial,sans-serif}.empty{width:min(760px,84%);padding:44px 0}.mark{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:#176bed;color:#fff;font-size:24px;box-shadow:0 16px 36px #176bed33}.eyebrow{margin:28px 0 12px;color:#176bed;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.empty h1{max-width:560px;margin:0;font:700 clamp(34px,5vw,56px)/1.04 Arial,sans-serif;letter-spacing:0}.empty p{max-width:520px;margin:18px 0 0;color:#60708a;font-size:18px}.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:44px}.steps div{min-width:0;padding:16px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;color:#52627a;font-size:13px}.steps b{display:block;margin-bottom:6px;color:#172033;font-size:14px}@media(max-width:560px){.empty{padding:32px 0}.steps{grid-template-columns:1fr}.empty p{font-size:16px}}</style></head><body><main class="empty"><div class="mark">+</div><div class="eyebrow">${name}</div><h1>Uma proposta com a cara do projeto.</h1><p>Descreva o que foi combinado. A prévia aparece pronta para apresentar, sem texto inventado e sem uso de IA.</p><div class="steps"><div><b>Cliente</b>Para quem é a proposta.</div><div><b>Escopo</b>O que será entregue.</div><div><b>Valores</b>O que foi combinado.</div></div></main></body></html>`;
+}
+
 export function normalizeZeroDraft(value: unknown): ZeroDraft {
   if (!value || typeof value !== 'object')
     throw new Error('Revise os dados da proposta.');
@@ -457,8 +463,8 @@ export function renderZeroProposal(
   const coverAlt =
     zeroCovers.find((c) => c.url === zeroCover(d))?.alt ||
     'Imagem selecionada para a proposta';
-  const client = escape(d.client || d.title || 'Proposta comercial');
-  const subject = escape(d.title);
+  const client = escape(d.client || 'Cliente');
+  const subject = escape(d.title === 'Proposta comercial' ? '' : d.title);
   const num = (i: number) => String(i + 1).padStart(2, '0');
   const label = (value: string) =>
     '<span class="section-label">' + value + '</span>';
@@ -518,9 +524,8 @@ export function renderZeroProposal(
     (client.length > 42 ? ' class="long-title"' : '') +
     '>' +
     client +
-    '</h1><p class="hero-subject">' +
-    subject +
-    '</p>' +
+    '</h1>' +
+    (subject ? '<p class="hero-subject">' + subject + '</p>' : '') +
     (d.services.length
       ? '<a class="hero-link" href="#escopo">Explorar proposta <span aria-hidden="true">&#8599;</span></a>'
       : '') +
@@ -789,7 +794,7 @@ export function renderZeroProposal(
     (contact
       ? '<div class="closing-row"><div>' +
         label('Vamos conversar') +
-        '<h2>O próximo passo<br>começa aqui.</h2></div>' +
+        '<h2>Vamos seguir<br>com o projeto?</h2></div>' +
         contact +
         '</div>'
       : '') +
