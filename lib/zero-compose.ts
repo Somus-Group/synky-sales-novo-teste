@@ -227,15 +227,23 @@ export function composeZeroBrief(
   );
   if (supplier && !draft.supplier)
     put('supplier', titleCase(supplier[1]), 240);
-  const recipient = text.match(
-    /\b(?:para|pra)\s+(?:a|o|as|os)?\s*([\p{L}][\p{L}\d &'’-]{2,80}?)(?=\s*(?:,|\.|;|\b(?:que|com|onde|e|fa[cç]a|crie|inclui|por|no valor)\b|$))/iu,
-  );
+  const recipients = [
+    ...text.matchAll(
+      /\b(?:para|pra)\s+(?:(?:a|o|as|os)\s+)?([\p{L}][\p{L}\d &'’-]{2,80}?)(?=\s*(?:,|\.|;|\b(?:que|com|onde|e|fa[cç]a|crie|inclui|por|no valor)\b|$))/giu,
+    ),
+  ];
+  const recipient = recipients
+    .reverse()
+    .find(
+      (match) =>
+        !/^(?:ajudar|criar|fazer|vender|aumentar|melhorar|os|as)\b/i.test(
+          match[1].trim(),
+        ),
+    );
   if (
     recipient &&
     !/\bproposta(?:\s+comercial)?\s+(?:para|pra)\b/i.test(text) &&
-    !/^(?:ajudar|criar|fazer|vender|aumentar|melhorar|os|as)\b/i.test(
-      recipient[1].trim(),
-    )
+    recipient[1].trim()
   )
     put('client', titleCase(recipient[1]), 240);
   // Split prose at sentence boundaries, not at decimal commas or dots inside URLs.
