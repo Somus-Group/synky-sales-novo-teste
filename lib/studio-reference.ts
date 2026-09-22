@@ -66,6 +66,54 @@ async function safeReferenceTemplate(html: string) {
   return template;
 }
 
+function reactReferenceTemplate(structure: string) {
+  try {
+    const parsed = JSON.parse(structure) as {
+      elements?: Array<{
+        tag?: string;
+        attributes?: { className?: unknown; id?: unknown };
+        text?: unknown;
+      }>;
+    };
+    const text = (value: unknown) =>
+      String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    const entries = (parsed.elements || [])
+      .filter((item) => /^(h[1-6]|p|span|li|div|section|article|aside|header|footer)$/i.test(String(item.tag)))
+      .filter((item) => text(item.text).trim())
+      .slice(0, 420);
+    let html = '<!doctype html><html lang="pt-BR"><head></head><body><main class="synky-react-reference">';
+    let sectionOpen = false;
+    for (const item of entries) {
+      const tag = String(item.tag).toLowerCase();
+      if (/^h[12]$/.test(tag)) {
+        if (sectionOpen) html += '</section>';
+        html += '<section class="synky-reference-section">';
+        sectionOpen = true;
+      }
+      const className = text(item.attributes?.className).slice(0, 240);
+      const id = text(item.attributes?.id).slice(0, 120);
+      html +=
+        '<' +
+        tag +
+        (className ? ' class="' + className + '"' : '') +
+        (id ? ' id="' + id + '"' : '') +
+        '>' +
+        text(item.text).slice(0, 2500) +
+        '</' +
+        tag +
+        '>';
+    }
+    return html + (sectionOpen ? '</section>' : '') + '</main></body></html>';
+  } catch {
+    return '';
+  }
+}
+
 export function isPublicAddress(address: string) {
   if (address.includes(':'))
     return (
@@ -488,7 +536,10 @@ export async function readStudioReference(
       text: compact(text).slice(0, 24000),
       structure: structure.slice(0, 55000),
       styles: designStyles.styles,
-      template: await safeReferenceTemplate(page.text),
+      template:
+        method === 'react-source'
+          ? reactReferenceTemplate(structure)
+          : await safeReferenceTemplate(page.text),
       designEvidence: {
         colors: designStyles.colors,
         fonts: designStyles.fonts,

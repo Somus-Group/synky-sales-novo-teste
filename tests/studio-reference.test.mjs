@@ -102,6 +102,8 @@ test('reads Lovable/React shell through declared modules and static JSX, never e
   assert.equal(result.reference.method, 'react-source');
   assert.match(result.reference.text, /Plano de trabalho/);
   assert.match(result.reference.structure, /bg-white grid gap-12/);
+  assert.match(result.reference.template, /Plano de trabalho/);
+  assert.match(result.reference.template, /synky-react-reference/);
   assert.match(result.reference.structure, /Diagnóstico estratégico/);
   assert.doesNotMatch(result.reference.structure, /MUST_NOT_EXECUTE/);
 });

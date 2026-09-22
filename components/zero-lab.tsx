@@ -691,6 +691,7 @@ export function ZeroLab({
       accent: loaded.colors[0] || current.accent,
       serif: loaded.serif,
       design: loaded.design,
+      referenceBrand: loaded.title.split(/[-|]/)[0].trim(),
       referenceContent: loaded.content,
       referenceTemplate: loaded.template,
       referenceStyles: loaded.styles,
@@ -939,6 +940,7 @@ export function ZeroLab({
                   onChange={(e) => {
                     change({
                       referenceUrl: e.target.value,
+                      referenceBrand: '',
                       referenceContent: '',
                       referenceTemplate: '',
                       referenceStyles: '',

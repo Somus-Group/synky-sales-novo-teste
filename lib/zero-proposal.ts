@@ -30,6 +30,7 @@ export type ZeroDraft = {
   cover: string;
   gallery: Array<{ url: string; caption: string }>;
   referenceUrl: string;
+  referenceBrand: string;
   /** Visible text imported from a public proposal used as a deterministic base. */
   referenceContent: string;
   referenceTemplate: string;
@@ -176,6 +177,7 @@ export function emptyZeroDraft(supplier = ''): ZeroDraft {
     cover: 'auto',
     gallery: [],
     referenceUrl: '',
+    referenceBrand: '',
     referenceContent: '',
     referenceTemplate: '',
     referenceStyles: '',
@@ -325,6 +327,7 @@ export function normalizeZeroDraft(value: unknown): ZeroDraft {
     cover: cover as string,
     gallery: images,
     referenceUrl: text('referenceUrl', 4096),
+    referenceBrand: p.referenceBrand === undefined ? '' : text('referenceBrand', 240),
     referenceContent,
     referenceTemplate,
     referenceStyles,

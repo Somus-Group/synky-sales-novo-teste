@@ -65,6 +65,7 @@ export function composeZeroBrief(
     accent: base.accent,
     serif: base.serif,
     referenceUrl: base.referenceUrl,
+    referenceBrand: base.referenceBrand,
     referenceContent: base.referenceContent,
     referenceTemplate: base.referenceTemplate,
     referenceStyles: base.referenceStyles,
@@ -502,6 +503,26 @@ function adaptReferenceTemplate(
     );
   output = replaceAll(output, source.client, next.client);
   output = replaceAll(output, source.supplier, next.supplier);
+  const replacementBrand = next.client || next.supplier;
+  if (next.referenceBrand && replacementBrand) {
+    output = replaceAll(output, next.referenceBrand, replacementBrand);
+    output = replaceAll(
+      output,
+      next.referenceBrand.toUpperCase(),
+      replacementBrand,
+    );
+    output = replaceAll(
+      output,
+      next.referenceBrand.toLowerCase(),
+      replacementBrand,
+    );
+    const firstWord = next.referenceBrand.split(/\s+/)[0];
+    if (firstWord.length > 2) {
+      output = replaceAll(output, firstWord, replacementBrand);
+      output = replaceAll(output, firstWord.toUpperCase(), replacementBrand);
+      output = replaceAll(output, firstWord.toLowerCase(), replacementBrand);
+    }
+  }
   for (let index = 0; index < Math.min(source.services.length, next.services.length); index++)
     output = replaceAll(
       output,
@@ -564,6 +585,7 @@ export function composeZeroReferenceBrief(
     accent: preserveDesign ? base.accent : source.accent,
     serif: preserveDesign ? base.serif : source.serif,
     referenceUrl: base.referenceUrl,
+    referenceBrand: base.referenceBrand,
     referenceContent: base.referenceContent,
     referenceTemplate: base.referenceTemplate,
     referenceStyles: base.referenceStyles,
