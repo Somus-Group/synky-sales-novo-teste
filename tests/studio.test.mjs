@@ -96,7 +96,8 @@ test('web creation uses one compact content call, local layout and a smaller res
     assert.equal(calls[0].text.format.schema.properties.html, undefined);
     assert.equal(calls[0].model, 'gpt-5-mini');
     assert.equal(calls[0].max_output_tokens, 6000);
-    assert.match(result.project.html, /<h1>Clínica Aurora<\/h1>/);
+    assert.match(result.project.html, /<h1>Site e campanhas<\/h1>/);
+    assert.match(result.project.html, /Para Clínica Aurora/);
     assert.match(result.project.html, /19\.000,00/);
     assert.match(result.project.html, /Verba de mídia não inclusa/);
     assert.match(result.project.html, /studio-asset:web-cover/);

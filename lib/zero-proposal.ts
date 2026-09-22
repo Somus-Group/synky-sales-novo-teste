@@ -467,7 +467,11 @@ export function renderZeroProposal(
     zeroCovers.find((c) => c.url === zeroCover(d))?.alt ||
     'Imagem selecionada para a proposta';
   const client = escape(d.client || 'Cliente');
-  const subject = escape(d.title === 'Proposta comercial' ? '' : d.title);
+  const projectTitle =
+    d.title === 'Proposta comercial'
+      ? d.services.map((service) => service.title).join(' + ')
+      : d.title;
+  const subject = escape(projectTitle);
   const num = (i: number) => String(i + 1).padStart(2, '0');
   const label = (value: string) =>
     '<span class="section-label">' + value + '</span>';
@@ -496,14 +500,10 @@ export function renderZeroProposal(
   const showContract = hasMonthly && d.months > 0;
   const steps = descriptionItems(d.timeline);
   const facts = [
-    { name: 'Preparada por', value: d.supplier },
+    ...(d.client ? [{ name: 'Para', value: d.client }] : []),
+    ...(d.supplier ? [{ name: 'Por', value: d.supplier }] : []),
     ...(d.services.length
-      ? [
-          {
-            name: 'Frentes de trabalho',
-            value: String(d.services.length).padStart(2, '0'),
-          },
-        ]
+      ? [{ name: 'Escopo', value: d.services.length + ' entregas' }]
       : []),
     ...(d.months ? [{ name: 'Vigência', value: d.months + ' meses' }] : []),
     ...(d.validity ? [{ name: 'Validade', value: d.validity }] : []),
@@ -517,15 +517,19 @@ export function renderZeroProposal(
     .map(([id, text]) => '<a href="#' + id + '">' + text + '</a>')
     .join('');
   const heroServices = d.services.length
-    ? '<div class="hero-services">' +
+    ? '<ol class="hero-services">' +
       d.services
-        .slice(0, 3)
+        .slice(0, 4)
         .map(
-          (service) =>
-            '<span>' + escape(service.title) + '<i aria-hidden="true"></i></span>',
+          (service, index) =>
+            '<li><span>' +
+            num(index) +
+            '</span>' +
+            escape(service.title) +
+            '</li>',
         )
         .join('') +
-      '</div>'
+      '</ol>'
     : '';
   const hero =
     '<section class="hero">' +
@@ -536,27 +540,30 @@ export function renderZeroProposal(
         escape(coverAlt) +
         '" width="1536" height="1024" fetchpriority="high">'
       : '') +
-    '<div class="wrap hero-content"><div class="hero-copy"><span class="eyebrow">Proposta online' +
-    (d.supplier ? ' / ' + escape(d.supplier) : '') +
-    '</span><h1' +
-    (client.length > 42 ? ' class="long-title"' : '') +
+    '<div class="wrap hero-content"><div class="hero-copy"><span class="eyebrow">' +
+    (d.supplier ? escape(d.supplier) + ' apresenta' : 'Proposta comercial') +
+    '</span><p class="hero-client">' +
+    (d.client ? 'Para ' + client : 'Uma proposta sob medida') +
+    '</p><h1' +
+    (projectTitle.length > 42 ? ' class="long-title"' : '') +
     '>' +
-    client +
+    (subject || client) +
     '</h1>' +
-    (subject ? '<p class="hero-subject">' + subject + '</p>' : '') +
-    (d.services.length
-      ? '<a class="hero-link" href="#escopo">Ver escopo <span aria-hidden="true">&#8599;</span></a>'
+    (d.objective
+      ? '<div class="hero-subject">' + lines(d.objective) + '</div>'
       : '') +
-    '</div><aside class="hero-panel"><span>Visão do projeto</span><strong>' +
     (d.services.length
-      ? String(d.services.length).padStart(2, '0') + ' frentes propostas'
-      : 'Proposta sob medida') +
-    '</strong>' +
+      ? '<a class="hero-link" href="#escopo">Explorar proposta <span aria-hidden="true">&#8599;</span></a>'
+      : '') +
+    '</div><aside class="hero-panel"><span>Índice</span>' +
     heroServices +
-    '<a href="#investimento">Investimento <span aria-hidden="true">&#8595;</span></a></aside></div></section>';
+    (d.services.length
+      ? '<a href="#investimento">Ver investimento <span aria-hidden="true">&#8595;</span></a>'
+      : '') +
+    '</aside></div></section>';
   const context = d.objective
     ? '<section id="objetivo" class="section context"><div class="wrap context-grid">' +
-      sectionHead('01 / O projeto', 'O que vamos construir.') +
+      sectionHead('O ponto de partida', 'O que precisa mudar agora.') +
       '<div class="objective-copy' +
       (d.objective.length > 340 ? ' long-copy' : '') +
       '">' +
@@ -619,7 +626,12 @@ export function renderZeroProposal(
     .join('');
   const scope = d.services.length
     ? '<section id="escopo" class="section scope"><div class="wrap">' +
-      sectionHead('02 / Escopo', 'O que entra no projeto.') +
+      sectionHead(
+        'Escopo da proposta',
+        d.services.length === 1
+          ? escape(d.services[0].title) + ', em foco.'
+          : escape(projectTitle) + ', por partes.',
+      ) +
       (d.design === 'compact'
         ? '<ol class="scope-ledger">' + serviceRows + '</ol>'
         : '<div class="' +
@@ -631,7 +643,7 @@ export function renderZeroProposal(
     : '';
   const process = steps.length
     ? '<section id="cronograma" class="section schedule"><div class="wrap">' +
-      sectionHead('03 / Execução', 'Como o projeto avança.') +
+      sectionHead('Ritmo do projeto', 'O que acontece em cada etapa.') +
       '<ol class="process' +
       (steps.length === 1 ? ' single' : '') +
       '">' +
@@ -697,7 +709,10 @@ export function renderZeroProposal(
     '</small></div>';
   const investment = d.services.length
     ? '<section id="investimento" class="section investment"><div class="wrap"><div class="investment-heading">' +
-      sectionHead('04 / Investimento', 'Transparente.<br>Do começo ao fim.') +
+      sectionHead(
+        'Investimento',
+        d.client ? 'Para tirar ' + client + ' do papel.' : 'O combinado para começar.',
+      ) +
       (d.validity
         ? '<p>Condições válidas por<br><strong>' +
           escape(d.validity) +
@@ -766,7 +781,7 @@ export function renderZeroProposal(
   const conditions =
     d.terms || d.exclusions
       ? '<section id="condicoes" class="section agreements"><div class="wrap">' +
-        sectionHead('O combinado', 'Condições e limites.') +
+        sectionHead('O combinado', 'Tudo claro antes de avançar.') +
         '<div class="conditions">' +
         (d.terms
           ? '<div><h3>Condições comerciais</h3>' + lines(d.terms) + '</div>'
@@ -812,7 +827,7 @@ export function renderZeroProposal(
     (contact
       ? '<div class="closing-row"><div>' +
         label('Vamos conversar') +
-        '<h2>Vamos seguir<br>com o projeto?</h2></div>' +
+        '<h2>Quando fizer sentido,<br>a conversa continua.</h2></div>' +
         contact +
         '</div>'
       : '') +

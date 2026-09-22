@@ -192,8 +192,8 @@ test('scope text is separated from price wording without inventing deliverables'
   assert.equal(draft.services[1].unitCents, 400000);
   for (const design of ['editorial', 'contrast', 'compact']) {
     const html = zero.renderZeroProposal({ ...draft, design });
-    assert.match(html, /<h1>Aurora<\/h1>/);
-    assert.match(html, /<p class="hero-subject">Gestão de tráfego \+ Site<\/p>/);
+    assert.match(html, /<h1>Gestão de tráfego \+ Site<\/h1>/);
+    assert.match(html, /Para Aurora/);
     assert.match(html, /<li>4 campanhas<\/li>/);
     assert.doesNotMatch(html, /<li>[^<]*R\$/);
   }
@@ -262,7 +262,7 @@ test('three proposal compositions use distinct content structures with no empty 
       /Objetivo a definir|cliente a definir|Vamos alinhar os próximos passos|1 unidade/,
     );
     assert.doesNotMatch(html, /id="objetivo"|id="metodo"|id="proximos-passos"/);
-    assert.match(html, /<h1>Aurora<\/h1>/);
+    assert.match(html, /<h1>Projeto de marca<\/h1>/);
     assert.match(html, /Manual de marca/);
     assert.match(html, /Arquivos finais/);
     assert.doesNotMatch(
