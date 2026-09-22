@@ -25,6 +25,7 @@ export function extractReactReference(source: string) {
   let steps = 0;
   function literal(value: unknown, depth = 0): unknown {
     const item = node(value);
+    if (depth === 0) steps = 0;
     if (!item || depth > 8 || ++steps > 50000) return undefined;
     if (item.type === 'Literal')
       return typeof item.value === 'string'
