@@ -500,6 +500,27 @@ export function renderZeroProposal(
     '<h2>' +
     title +
     '</h2></div>';
+  const referenceKey = (section: string) => {
+    const value = section
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    if (/objetivo|context|sobre|inicio|abertura|apresent/.test(value))
+      return 'context';
+    if (/brief|detalhe|informac/.test(value)) return 'briefing';
+    if (/escopo|servic|entreg|soluc/.test(value)) return 'scope';
+    if (/referenc|portfol|galer|projetos/.test(value)) return 'gallery';
+    if (/etapa|process|cronogram|prazo|metodo/.test(value)) return 'process';
+    if (/invest|valor|preco|orcament/.test(value)) return 'investment';
+    if (/condic|termo|contrato|observac/.test(value)) return 'conditions';
+    return '';
+  };
+  const referenceTitle = (key: string, fallback: string) => {
+    const found = d.referenceContent.trim()
+      ? d.referenceSections.find((section) => referenceKey(section) === key)
+      : '';
+    return found ? escape(found) : fallback;
+  };
   const descriptionItems = (value: string) =>
     value
       .split(/\r?\n/)
@@ -528,13 +549,15 @@ export function renderZeroProposal(
     ...(d.validity ? [{ name: 'Validade', value: d.validity }] : []),
   ].filter((f) => f.value);
   const nav = [
-    ...(d.objective ? [['objetivo', 'Visão geral']] : []),
+    ...(d.objective ? [['objetivo', referenceTitle('context', 'Visão geral')]] : []),
     ...(d.briefing.trim().length > 160
       ? [['briefing', 'Briefing completo']]
       : []),
-    ...(d.services.length ? [['escopo', 'Entregas']] : []),
-    ...(steps.length ? [['cronograma', 'Prazos']] : []),
-    ...(d.services.length ? [['investimento', 'Investimento']] : []),
+    ...(d.services.length ? [['escopo', referenceTitle('scope', 'Entregas')]] : []),
+    ...(steps.length ? [['cronograma', referenceTitle('process', 'Prazos')]] : []),
+    ...(d.services.length
+      ? [['investimento', referenceTitle('investment', 'Investimento')]]
+      : []),
   ]
     .map(([id, text]) => '<a href="#' + id + '">' + text + '</a>')
     .join('');
@@ -563,7 +586,11 @@ export function renderZeroProposal(
         '" width="1536" height="1024" fetchpriority="high">'
       : '') +
     '<div class="wrap hero-content"><div class="hero-copy"><span class="eyebrow">' +
-    (d.supplier ? escape(d.supplier) + ' apresenta' : 'Proposta comercial') +
+    (d.supplier
+      ? escape(d.supplier) + ' apresenta'
+      : d.referenceContent.trim()
+        ? 'Proposta adaptada a partir da sua referência'
+        : 'Proposta comercial') +
     '</span><p class="hero-client">' +
     (d.client ? 'Para ' + client : 'Uma proposta sob medida') +
     '</p><h1' +
@@ -585,7 +612,7 @@ export function renderZeroProposal(
     '</aside></div></section>';
   const context = d.objective
     ? '<section id="objetivo" class="section context"><div class="wrap context-grid">' +
-      sectionHead('O ponto de partida', 'O que precisa mudar agora.') +
+      sectionHead('O ponto de partida', referenceTitle('context', 'O que precisa mudar agora.')) +
       '<div class="objective-copy' +
       (d.objective.length > 340 ? ' long-copy' : '') +
       '">' +
@@ -600,7 +627,7 @@ export function renderZeroProposal(
         sectionHead(
           d.referenceContent.trim() ? 'Ajustes solicitados' : 'Detalhes recebidos',
           d.referenceContent.trim()
-            ? 'O que muda nesta versão.'
+            ? referenceTitle('briefing', 'O que muda nesta versão.')
             : 'Informações que orientam este projeto.',
         ) +
         '<details open><summary>Ver informações completas <span aria-hidden="true">+</span></summary><div class="briefing-copy">' +
@@ -665,9 +692,12 @@ export function renderZeroProposal(
     ? '<section id="escopo" class="section scope"><div class="wrap">' +
       sectionHead(
         'Escopo da proposta',
-        d.services.length === 1
-          ? escape(d.services[0].title) + ', em foco.'
-          : escape(projectTitle) + ', por partes.',
+        referenceTitle(
+          'scope',
+          d.services.length === 1
+            ? escape(d.services[0].title) + ', em foco.'
+            : escape(projectTitle) + ', por partes.',
+        ),
       ) +
       (d.design === 'compact'
         ? '<ol class="scope-ledger">' + serviceRows + '</ol>'
@@ -680,7 +710,7 @@ export function renderZeroProposal(
     : '';
   const process = steps.length
     ? '<section id="cronograma" class="section schedule"><div class="wrap">' +
-      sectionHead('Ritmo do projeto', 'O que acontece em cada etapa.') +
+      sectionHead('Ritmo do projeto', referenceTitle('process', 'O que acontece em cada etapa.')) +
       '<ol class="process' +
       (steps.length === 1 ? ' single' : '') +
       '">' +
@@ -711,7 +741,7 @@ export function renderZeroProposal(
     : d.gallery.map((p) => ({ ...p, url: imageUrl(p.url) }));
   const gallery = pictures.length
     ? '<section id="referencias" class="section references"><div class="wrap">' +
-      sectionHead('Direção visual', 'Referências do projeto.') +
+      sectionHead('Direção visual', referenceTitle('gallery', 'Referências do projeto.')) +
       '<div class="portfolio">' +
       pictures
         .map(
@@ -748,7 +778,10 @@ export function renderZeroProposal(
     ? '<section id="investimento" class="section investment"><div class="wrap"><div class="investment-heading">' +
       sectionHead(
         'Investimento',
-        d.client ? 'Para tirar ' + client + ' do papel.' : 'O combinado para começar.',
+        referenceTitle(
+          'investment',
+          d.client ? 'Para tirar ' + client + ' do papel.' : 'O combinado para começar.',
+        ),
       ) +
       (d.validity
         ? '<p>Condições válidas por<br><strong>' +
@@ -818,7 +851,7 @@ export function renderZeroProposal(
   const conditions =
     d.terms || d.exclusions
       ? '<section id="condicoes" class="section agreements"><div class="wrap">' +
-        sectionHead('O combinado', 'Tudo claro antes de avançar.') +
+        sectionHead('O combinado', referenceTitle('conditions', 'Tudo claro antes de avançar.')) +
         '<div class="conditions">' +
         (d.terms
           ? '<div><h3>Condições comerciais</h3>' + lines(d.terms) + '</div>'
@@ -887,25 +920,10 @@ export function renderZeroProposal(
     d.design === 'compact'
       ? ['context', 'briefing', 'scope', 'investment', 'process', 'gallery', 'conditions']
       : ['context', 'briefing', 'scope', 'gallery', 'process', 'investment', 'conditions'];
-  const keyForReferenceSection = (section: string): ContentKey | '' => {
-    const value = section
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase();
-    if (/objetivo|context|sobre|inicio|abertura|apresent/.test(value))
-      return 'context';
-    if (/brief|detalhe|informac/.test(value)) return 'briefing';
-    if (/escopo|servic|entreg|soluc/.test(value)) return 'scope';
-    if (/referenc|portfol|galer|projetos/.test(value)) return 'gallery';
-    if (/etapa|process|cronogram|prazo|metodo/.test(value)) return 'process';
-    if (/invest|valor|preco|orcament/.test(value)) return 'investment';
-    if (/condic|termo|contrato|observac/.test(value)) return 'conditions';
-    return '';
-  };
   const referenceOrder = Array.from(
     new Set(
       d.referenceSections
-        .map(keyForReferenceSection)
+        .map(referenceKey)
         .filter((key): key is ContentKey => Boolean(key)),
     ),
   );
@@ -921,7 +939,7 @@ export function renderZeroProposal(
     '</title><style>' +
     zeroProposalStyles +
     '</style></head><body class="' +
-    d.design +
+    d.design + (d.referenceContent.trim() ? ' reference-mode' : '') +
     '" style="--accent:' +
     d.accent +
     ';--ink:' +

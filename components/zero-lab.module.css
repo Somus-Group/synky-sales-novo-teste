@@ -250,11 +250,6 @@
   background: #f6faff;
 }
 .referenceSummary > div { min-width: 0; }
-.referenceActions {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 6px;
-}
 .referenceSummary strong,
 .referenceSummary span { display: block; }
 .referenceSummary strong { color: #28313d; font-size: .8125rem; }

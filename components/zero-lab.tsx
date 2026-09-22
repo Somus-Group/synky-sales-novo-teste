@@ -351,8 +351,13 @@ export function ZeroLab({
       discountPercent: value.discountPercent,
     });
   }
-  function compose() {
-    if (busy || (!draft.briefing.trim() && !draft.referenceContent.trim()))
+  async function compose() {
+    if (
+      busy ||
+      (!draft.briefing.trim() &&
+        !draft.referenceContent.trim() &&
+        !draft.referenceUrl.trim())
+    )
       return;
     if (
       (draft.services.length || draft.client || draft.objective) &&
@@ -363,13 +368,20 @@ export function ZeroLab({
     )
       return;
     try {
-      const result = draft.referenceContent.trim()
+      setBusy(true);
+      let active = draft;
+      if (active.referenceUrl.trim() && !active.referenceContent.trim()) {
+        const loaded = await fetchReference(active.referenceUrl);
+        setReference(loaded);
+        active = referenceDraft(active, loaded);
+      }
+      const result = active.referenceContent.trim()
         ? composeZeroReferenceBrief(
-            draft.briefing,
-            draft,
+            active.briefing,
+            active,
             designChosen.current,
           )
-        : composeZeroBrief(draft.briefing, draft, designChosen.current);
+        : composeZeroBrief(active.briefing, active, designChosen.current);
       change(result.draft);
       composedCommercial.current = commercialSnapshot(result.draft);
       setComposition(result);
@@ -383,6 +395,8 @@ export function ZeroLab({
       setError(
         e instanceof Error ? e.message : 'Não foi possível montar a proposta.',
       );
+    } finally {
+      setBusy(false);
     }
   }
   function editService(serviceId: string, next: Partial<ZeroService>) {
@@ -662,18 +676,36 @@ export function ZeroLab({
       setBusy(false);
     }
   }
+  async function fetchReference(url: string): Promise<ZeroReferenceHint> {
+    return json('/api/zero/reference', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+  }
+  function referenceDraft(current: ZeroDraft, loaded: ZeroReferenceHint) {
+    return {
+      ...current,
+      accent: loaded.colors[0] || current.accent,
+      serif: loaded.serif,
+      design: loaded.design,
+      referenceContent: loaded.content,
+      referenceSections: loaded.sections,
+    };
+  }
   async function readReference() {
     if (gate.current || !draft.referenceUrl.trim()) return;
     gate.current = true;
     setBusy(true);
     setError('');
     try {
-      setReference(
-        await json('/api/zero/reference', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: draft.referenceUrl }),
-        }),
+      const loaded = await fetchReference(draft.referenceUrl);
+      setReference(loaded);
+      designChosen.current = true;
+      change(referenceDraft(draft, loaded));
+      setNeedsCompose(true);
+      setNotice(
+        `Link conectado. Ao criar, ${loaded.title || 'a proposta'} será usada como base automaticamente.`,
       );
     } catch (e) {
       setError(
@@ -683,34 +715,6 @@ export function ZeroLab({
       gate.current = false;
       setBusy(false);
     }
-  }
-  function applyReference() {
-    if (!reference) return;
-    designChosen.current = true;
-    change({
-      accent: reference.colors[0] || draft.accent,
-      serif: reference.serif,
-      design: reference.design,
-      referenceSections: reference.sections,
-    });
-    setNotice(
-      `Visual de ${reference.title || 'sua referência'} aplicado.`,
-    );
-  }
-  function useReferenceAsBase() {
-    if (!reference?.content.trim()) return;
-    designChosen.current = true;
-    change({
-      accent: reference.colors[0] || draft.accent,
-      serif: reference.serif,
-      design: reference.design,
-      referenceContent: reference.content,
-      referenceSections: reference.sections,
-    });
-    setNeedsCompose(true);
-    setNotice(
-      `A proposta ${reference.title || 'do link'} virou sua base. Escreva apenas o que muda e monte a nova versão.`,
-    );
   }
   function demo() {
     if (!discard()) return;
@@ -904,13 +908,16 @@ export function ZeroLab({
                   </span>
                   <Button
                     className={styles.composeButton}
-                    onClick={compose}
+                    onClick={() => void compose()}
                   disabled={
-                    !draft.briefing.trim() && !draft.referenceContent.trim()
+                    !draft.briefing.trim() &&
+                    !draft.referenceContent.trim() &&
+                    !draft.referenceUrl.trim()
                   }
                 >
-                    {draft.referenceContent.trim() && !draft.services.length
-                      ? 'Criar a partir do link'
+                    {(draft.referenceContent.trim() || draft.referenceUrl.trim()) &&
+                    !draft.services.length
+                      ? 'Criar usando o link'
                       : draft.services.length
                       ? 'Refazer proposta'
                       : 'Criar proposta'}
@@ -926,10 +933,14 @@ export function ZeroLab({
                   maxLength={4096}
                   value={draft.referenceUrl}
                   onChange={(e) => {
-                    change({ referenceUrl: e.target.value });
+                    change({
+                      referenceUrl: e.target.value,
+                      referenceContent: '',
+                      referenceSections: [],
+                    });
                     setReference(null);
                   }}
-                  placeholder="Cole o link de uma proposta que você quer usar como direção visual"
+                  placeholder="Cole o link da proposta base. Ele será aplicado automaticamente ao criar."
                 />
                 <Icon
                   label="Ler referência visual"
@@ -948,14 +959,6 @@ export function ZeroLab({
                         ? reference.sections.slice(0, 4).join(' · ')
                         : 'Cores, tipografia e composição disponíveis'}
                     </span>
-                  </div>
-                  <div className={styles.referenceActions}>
-                    <Button variant="outline" size="sm" onClick={applyReference}>
-                      Só visual
-                    </Button>
-                    <Button size="sm" onClick={useReferenceAsBase}>
-                      Usar como base
-                    </Button>
                   </div>
                 </div>
               )}
@@ -1645,7 +1648,7 @@ export function ZeroLab({
                       onClick={() => void readReference()}
                       disabled={!draft.referenceUrl.trim()}
                     >
-                      <Palette /> Ler direção visual
+                      <Palette /> Conectar proposta base
                     </Button>
                     {reference && (
                       <div className={styles.suggestions}>
@@ -1676,13 +1679,9 @@ export function ZeroLab({
                           Usar tipografia{' '}
                           {reference.serif ? 'com serifa' : 'sem serifa'}
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={applyReference}
-                        >
-                          Aplicar direção completa
-                        </Button>
+                        <p>
+                          Esta referência já será aplicada como base ao criar a proposta.
+                        </p>
                       </div>
                     )}
                   </>

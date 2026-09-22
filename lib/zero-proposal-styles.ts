@@ -199,6 +199,78 @@ th:last-child, td:last-child { text-align: right; white-space: nowrap; }
 .compact .totals { background: #21323d; }
 .compact .total { background: #c6e9e4; }
 
+/* A linked proposal switches to a separate, web-first composition. */
+.reference-mode { background: #f2f5ee; color: #17251f; }
+.reference-mode .brandbar { background: #f8faf5; border-bottom-color: #1a30251f; }
+.reference-mode .brand { color: #17251f; }
+.reference-mode .brandbar nav a { color: #52645a; }
+.reference-mode .brandbar nav a:hover { background: #dce8d9; color: #17251f; }
+.reference-mode .hero, .reference-mode.compact .hero { min-height: 760px; background: #14271f; }
+.reference-mode .hero:before { inset: 0; width: auto; background: #14271f; opacity: .72; }
+.reference-mode .hero:after { display: none; }
+.reference-mode .hero-media { inset: 0; width: 100%; height: 100%; opacity: .56; filter: none; }
+.reference-mode .hero-content, .reference-mode.compact .hero-content { grid-template-columns: 1fr; min-height: 760px; align-content: end; gap: 42px; padding: 120px 0 42px; }
+.reference-mode .hero-copy { max-width: 880px; }
+.reference-mode .hero-client { margin-top: 32px; color: #d4f0a4; }
+.reference-mode .hero h1 { max-width: 880px; font-family: var(--display); font-size: clamp(58px, 7vw, 104px); font-weight: var(--weight); }
+.reference-mode .hero-subject { max-width: 690px; color: #f0f5e9; }
+.reference-mode .hero-link { background: #d4f0a4; color: #16241e; }
+.reference-mode .hero-link span { background: #f8faf5; color: #16241e; }
+.reference-mode .hero-panel { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; align-items: end; gap: 24px; padding: 20px 0 0; border-top: 1px solid #ffffff75; border-left: 0; }
+.reference-mode .hero-panel > span { margin: 0; color: #d4f0a4; }
+.reference-mode .hero-services { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 20px; }
+.reference-mode .hero-services li { grid-template-columns: 22px 1fr; }
+.reference-mode .hero-panel > a { margin: 0; padding: 0 0 2px; border-top: 0; color: #d4f0a4; white-space: nowrap; }
+.reference-mode .project-strip { background: #f8faf5; color: #17251f; }
+.reference-mode .project-facts { border-color: #1a30251f; }
+.reference-mode .project-facts div { padding: 24px 0; border: 0; border-right: 1px solid #1a30251f; }
+.reference-mode .project-facts div:first-child { border-left: 0; }
+.reference-mode .project-facts dt { color: #65766b; }
+.reference-mode .project-facts dd { color: #17251f; }
+.reference-mode .context, .reference-mode .briefing { background: #f2f5ee; }
+.reference-mode .scope { background: #f8faf5; }
+.reference-mode .context-grid, .reference-mode .briefing-grid { gap: 72px; }
+.reference-mode .context .section-heading, .reference-mode .briefing-grid .section-heading { position: static; }
+.reference-mode .objective-copy { font-family: var(--display); font-size: 34px; line-height: 1.35; }
+.reference-mode .scope-chapters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 0; gap: 14px; }
+.reference-mode .scope-chapter, .reference-mode .scope-chapter:nth-child(even) { display: flex; min-height: 360px; flex-direction: column; gap: 28px; padding: 30px; border: 1px solid #cbd7ca; background: #edf3e9; }
+.reference-mode .scope-chapter:nth-child(3n + 2) { background: #dbe9d1; }
+.reference-mode .scope-chapter:nth-child(3n + 3) { background: #f4ead6; }
+.reference-mode .scope-grid { border: 0; gap: 14px; }
+.reference-mode .scope-tile, .reference-mode .scope-tile:nth-child(4n + 2), .reference-mode .scope-tile:nth-child(4n + 3) { min-height: 360px; padding: 30px; border: 1px solid #cbd7ca; background: #edf3e9; }
+.reference-mode .scope-tile:nth-child(3n + 2) { background: #dbe9d1; }
+.reference-mode .scope-tile:nth-child(3n + 3) { background: #f4ead6; }
+.reference-mode .scope-ledger { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 0; gap: 14px; }
+.reference-mode .scope-row { display: flex; min-height: 300px; flex-direction: column; gap: 22px; padding: 30px; border: 1px solid #cbd7ca; background: #edf3e9; }
+.reference-mode .scope-row:nth-child(even) { background: #dbe9d1; }
+.reference-mode .scope-row .scope-name { display: block; }
+.reference-mode .scope-row .scope-name h3 { margin-top: 17px; }
+.reference-mode .scope-row .scope-description { flex: 1; }
+.reference-mode .scope-row .service-price { margin-top: auto; text-align: left; }
+.reference-mode .scope-row .service-price > span { margin-left: 0; text-align: left; }
+.reference-mode .scope-name h3 { margin-top: 17px; font-family: var(--display); font-size: 34px; font-weight: var(--weight); }
+.reference-mode .chapter-content { flex: 1; }
+.reference-mode .service-number { background: #1a3025; color: #d4f0a4; }
+.reference-mode .schedule { background: #214439; }
+.reference-mode .investment { background: #d4f0a4; color: #17251f; }
+.reference-mode .totals { background: #17251f; }
+.reference-mode .total { background: #d4f0a4; }
+.reference-mode .closing { background: #17251f; }
+
+@media (max-width: 600px) {
+  .reference-mode .hero, .reference-mode .hero-content, .reference-mode.compact .hero, .reference-mode.compact .hero-content { min-height: 700px; }
+  .reference-mode .hero:before, .reference-mode .hero-media { inset: 0; width: 100%; height: 100%; }
+  .reference-mode .hero-content, .reference-mode.compact .hero-content { align-content: end; padding: 82px 0 28px; }
+  .reference-mode .hero h1 { font-size: 53px; }
+  .reference-mode .hero-panel { grid-template-columns: 1fr; gap: 14px; }
+  .reference-mode .hero-services { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .reference-mode .project-facts div { padding: 17px 12px; }
+  .reference-mode .scope-chapters { grid-template-columns: 1fr; }
+  .reference-mode .scope-ledger { grid-template-columns: 1fr; }
+  .reference-mode .scope-chapter, .reference-mode .scope-chapter:nth-child(even) { min-height: 0; padding: 24px; }
+  .reference-mode .objective-copy { font-size: 26px; }
+}
+
 @media (max-width: 920px) {
   h1 { font-size: 64px; }
   h1.long-title { font-size: 49px; }

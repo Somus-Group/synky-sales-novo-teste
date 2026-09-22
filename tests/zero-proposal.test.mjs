@@ -236,6 +236,8 @@ test('a public proposal can become a complete local base with only its changes a
   assert.match(html, /Clínica Aurora/);
   assert.match(html, /R\$\s?3\.000,00/);
   assert.match(html, /R\$\s?4\.000,00/);
+  assert.match(html, /class="editorial reference-mode"/);
+  assert.match(html, />Entregas<\/h2>/);
 });
 
 test('long briefings are preserved as readable proposal details', () => {
