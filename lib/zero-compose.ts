@@ -602,17 +602,34 @@ function adaptReferenceTemplate(
       'A verba de mídia e o valor da gestão serão apresentados separadamente.',
       'O escopo e as condições comerciais serão confirmados antes da execução.',
     ];
-    const headingCopy = [
+    const headingFor = (original: string, index: number) => {
+      const value = fold(original);
+      if (/problem|diagnost|oportunidade/.test(value)) return 'O objetivo do projeto';
+      if (/promess|time de gest|vertical|sinergia|estrateg/.test(value)) return 'Plano de campanhas';
+      if (/diferencial|inteligencia artificial|assessoria/.test(value)) return 'Gestão e otimização';
+      if (/autoridade|cases?|roi|estruturamos|confiam/.test(value)) return 'Acompanhamento de performance';
+      if (/investimento|parceria|multa|fidelidade|modelo recorrente/.test(value)) return 'Investimento e condições';
+      if (/transform|de um lado/.test(value)) return 'Evolução ao longo do contrato';
+      if (/perguntas|duvidas/.test(value)) return 'Alinhamentos finais';
+      if (/proximo passo|estrategia em movimento/.test(value)) return 'Próximos passos';
+      return ['Objetivo do projeto', 'Estratégia de mídia', 'Gestão e otimização', 'Acompanhamento', 'Investimento', 'Próximos passos'][index % 6];
+    };
+    const generatedHeadings = [
       'O objetivo do projeto',
       'Plano de campanhas',
-      'Estratégia e otimização',
+      'Gestão e otimização',
       'Acompanhamento de performance',
       'Investimento e condições',
+      'Evolução ao longo do contrato',
+      'Alinhamentos finais',
       'Próximos passos',
+      'Estratégia de mídia',
+      'Acompanhamento',
+      'Investimento',
     ];
     const isOutdated = (value: string) => {
       if (
-        [...paragraphs, ...headingCopy, 'Alinhar próximos passos'].some((copy) =>
+        [...paragraphs, ...generatedHeadings, 'Alinhar próximos passos'].some((copy) =>
           fold(value).includes(fold(copy)),
         )
       )
@@ -626,7 +643,7 @@ function adaptReferenceTemplate(
           item.title.length >= 8 &&
           !fold(next.services[0].title).includes(fold(item.title)) &&
           !paragraphs.some((copy) => fold(copy).includes(fold(item.title))) &&
-          !headingCopy.some((copy) => fold(copy).includes(fold(item.title))) &&
+          !generatedHeadings.some((copy) => fold(copy).includes(fold(item.title))) &&
           new RegExp(
             `(^|[^\\p{L}\\p{N}])${item.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}\\p{N}])`,
             'iu',
@@ -639,18 +656,20 @@ function adaptReferenceTemplate(
     let paragraphIndex = 0;
     output = output.replace(
       /(<p\b[^>]*>)([\s\S]*?)(<\/p>)/gi,
-      (match, open, content, close) =>
-        isOutdated(content.replace(/<[^>]*>/g, ''))
-          ? open + escapeHtml(paragraphs[paragraphIndex++ % paragraphs.length]) + close
-          : match,
+      (match, open, _content, close) => {
+        if (paragraphIndex++ === 0) return match;
+        return open + escapeHtml(paragraphs[(paragraphIndex - 1) % paragraphs.length]) + close;
+      },
     );
     let headingIndex = 0;
     output = output.replace(
       /<(h[2-6])\b([^>]*)>([\s\S]*?)<\/\1>/gi,
       (match, tag, attributes, content) =>
-        isOutdated(content.replace(/<[^>]*>/g, ''))
-          ? `<${tag}${attributes}>${escapeHtml(headingCopy[headingIndex++ % headingCopy.length])}</${tag}>`
-          : match,
+        tag.toLowerCase() === 'h2'
+          ? `<${tag}${attributes}>${escapeHtml(headingFor(content.replace(/<[^>]*>/g, ''), headingIndex++))}</${tag}>`
+          : isOutdated(content.replace(/<[^>]*>/g, ''))
+            ? `<${tag}${attributes}>${escapeHtml('Próximos passos')}</${tag}>`
+            : match,
     );
     output = output.replace(/>([^<>]+)</g, (match, content) =>
       isOutdated(content)
