@@ -30,6 +30,7 @@ export type ZeroDraft = {
   cover: string;
   gallery: Array<{ url: string; caption: string }>;
   referenceUrl: string;
+  referenceSections: string[];
   services: ZeroService[];
 };
 export type ZeroSaved = {
@@ -171,6 +172,7 @@ export function emptyZeroDraft(supplier = ''): ZeroDraft {
     cover: 'auto',
     gallery: [],
     referenceUrl: '',
+    referenceSections: [],
     services: [],
   };
 }
@@ -231,6 +233,16 @@ export function normalizeZeroDraft(value: unknown): ZeroDraft {
       throw new Error('Imagem ou legenda inválida.');
     return { url: item.url, caption: item.caption.trim() };
   });
+  const referenceSections =
+    p.referenceSections === undefined ? [] : p.referenceSections;
+  if (
+    !Array.isArray(referenceSections) ||
+    referenceSections.length > 8 ||
+    referenceSections.some(
+      (section) => typeof section !== 'string' || section.length > 160,
+    )
+  )
+    throw new Error('Estrutura da referência inválida.');
   if (!Array.isArray(p.services) || p.services.length > 24)
     throw new Error('Use até 24 serviços.');
   const ids = new Set<string>();
@@ -279,7 +291,7 @@ export function normalizeZeroDraft(value: unknown): ZeroDraft {
     email: text('email'),
     phone: text('phone'),
     objective: text('objective', 8000),
-    briefing: text('briefing', 24000),
+    briefing: text('briefing', 60000),
     timeline: text('timeline', 4000),
     terms: text('terms', 6000),
     exclusions: text('exclusions', 4000),
@@ -293,6 +305,7 @@ export function normalizeZeroDraft(value: unknown): ZeroDraft {
     cover: cover as string,
     gallery: images,
     referenceUrl: text('referenceUrl', 4096),
+    referenceSections: referenceSections.map((section) => section.trim()),
     services,
   };
 }
@@ -510,6 +523,9 @@ export function renderZeroProposal(
   ].filter((f) => f.value);
   const nav = [
     ...(d.objective ? [['objetivo', 'Visão geral']] : []),
+    ...(d.briefing.trim().length > 480
+      ? [['briefing', 'Briefing completo']]
+      : []),
     ...(d.services.length ? [['escopo', 'Entregas']] : []),
     ...(steps.length ? [['cronograma', 'Prazos']] : []),
     ...(d.services.length ? [['investimento', 'Investimento']] : []),
@@ -570,6 +586,16 @@ export function renderZeroProposal(
       lines(d.objective) +
       '</div></div></section>'
     : '';
+  // Long commercial notes remain available in the final page instead of being
+  // silently reduced to the fields that the local parser can recognize.
+  const fullBriefing =
+    d.briefing.trim().length > 480
+      ? '<section id="briefing" class="section briefing"><div class="wrap briefing-grid">' +
+        sectionHead('Detalhes recebidos', 'Informações que orientam este projeto.') +
+        '<details open><summary>Ver briefing completo <span aria-hidden="true">+</span></summary><div class="briefing-copy">' +
+        lines(d.briefing) +
+        '</div></details></div></section>'
+      : '';
   const serviceRows = d.services
     .map((s, i) => {
       const items = descriptionItems(s.description);
@@ -836,10 +862,47 @@ export function renderZeroProposal(
     '</strong><span>' +
     (d.client ? 'Preparada para ' + client : 'Proposta comercial') +
     '</span><a href="#inicio">Voltar ao início &#8593;</a></div></div></footer>';
-  const content =
+  const contentByKey = {
+    context,
+    briefing: fullBriefing,
+    scope,
+    gallery,
+    process,
+    investment,
+    conditions,
+  };
+  type ContentKey = keyof typeof contentByKey;
+  const defaultOrder: ContentKey[] =
     d.design === 'compact'
-      ? context + scope + investment + process + gallery + conditions
-      : context + scope + gallery + process + investment + conditions;
+      ? ['context', 'briefing', 'scope', 'investment', 'process', 'gallery', 'conditions']
+      : ['context', 'briefing', 'scope', 'gallery', 'process', 'investment', 'conditions'];
+  const keyForReferenceSection = (section: string): ContentKey | '' => {
+    const value = section
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    if (/objetivo|context|sobre|inicio|abertura|apresent/.test(value))
+      return 'context';
+    if (/brief|detalhe|informac/.test(value)) return 'briefing';
+    if (/escopo|servic|entreg|soluc/.test(value)) return 'scope';
+    if (/referenc|portfol|galer|projetos/.test(value)) return 'gallery';
+    if (/etapa|process|cronogram|prazo|metodo/.test(value)) return 'process';
+    if (/invest|valor|preco|orcament/.test(value)) return 'investment';
+    if (/condic|termo|contrato|observac/.test(value)) return 'conditions';
+    return '';
+  };
+  const referenceOrder = Array.from(
+    new Set(
+      d.referenceSections
+        .map(keyForReferenceSection)
+        .filter((key): key is ContentKey => Boolean(key)),
+    ),
+  );
+  const order =
+    referenceOrder.length >= 2
+      ? [...referenceOrder, ...defaultOrder.filter((key) => !referenceOrder.includes(key))]
+      : defaultOrder;
+  const content = order.map((key) => contentByKey[key]).join('');
   return (
     "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'\"><meta name=\"synky-proposal\" content=\"web-v3\"><title>" +
     subject +

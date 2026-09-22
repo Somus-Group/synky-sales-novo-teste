@@ -9,6 +9,7 @@ import {
   FileText,
   FolderOpen,
   LayoutTemplate,
+  Link2,
   Loader2,
   Monitor,
   Maximize2,
@@ -54,6 +55,14 @@ type VisualAsset = {
   name: string;
   kind: string;
   caption?: string;
+};
+type ZeroReferenceHint = {
+  title: string;
+  colors: string[];
+  serif: boolean;
+  fonts: string[];
+  sections: string[];
+  design: ZeroDraft['design'];
 };
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -233,11 +242,7 @@ export function ZeroLab({
   const [suggested, setSuggested] = useState<ReturnType<
     typeof readZeroBrief
   > | null>(null);
-  const [reference, setReference] = useState<{
-    title: string;
-    colors: string[];
-    serif: boolean;
-  } | null>(null);
+  const [reference, setReference] = useState<ZeroReferenceHint | null>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const file = useRef<HTMLInputElement>(null);
   const briefFile = useRef<HTMLInputElement>(null);
@@ -321,6 +326,7 @@ export function ZeroLab({
             'logo',
             'gallery',
             'referenceUrl',
+            'referenceSections',
           ].includes(key),
       )
     )
@@ -670,6 +676,19 @@ export function ZeroLab({
       setBusy(false);
     }
   }
+  function applyReference() {
+    if (!reference) return;
+    designChosen.current = true;
+    change({
+      accent: reference.colors[0] || draft.accent,
+      serif: reference.serif,
+      design: reference.design,
+      referenceSections: reference.sections,
+    });
+    setNotice(
+      `Direção visual de ${reference.title || 'sua referência'} aplicada. O conteúdo continua sendo o seu.`,
+    );
+  }
   function demo() {
     if (!discard()) return;
     const next = {
@@ -833,7 +852,7 @@ export function ZeroLab({
                 <textarea
                   aria-label="Pedido da proposta"
                   rows={8}
-                  maxLength={24000}
+                  maxLength={60000}
                   placeholder={
                     'Ex.: Proposta para Clínica Aurora. Site com página de serviços e formulário por R$ 4.000, pagamento único. Gestão de tráfego por R$ 2.500 por mês durante 6 meses. Objetivo: aumentar os agendamentos. Não inclui verba de anúncios.'
                   }
@@ -852,7 +871,7 @@ export function ZeroLab({
                     <Upload size={18} />
                   </Icon>
                   <span title="Caracteres do pedido">
-                    {draft.briefing.length.toLocaleString('pt-BR')} / 24.000
+                    {draft.briefing.length.toLocaleString('pt-BR')} / 60.000
                   </span>
                   <Button
                     className={styles.composeButton}
@@ -866,6 +885,42 @@ export function ZeroLab({
                   </Button>
                 </div>
               </div>
+              <div className={styles.referenceInline}>
+                <Link2 size={16} aria-hidden="true" />
+                <Input
+                  aria-label="Link de referência visual"
+                  type="url"
+                  maxLength={4096}
+                  value={draft.referenceUrl}
+                  onChange={(e) => {
+                    change({ referenceUrl: e.target.value });
+                    setReference(null);
+                  }}
+                  placeholder="Cole o link de uma proposta que você quer usar como direção visual"
+                />
+                <Icon
+                  label="Ler referência visual"
+                  onClick={() => void readReference()}
+                  disabled={!draft.referenceUrl.trim()}
+                >
+                  <Palette size={17} />
+                </Icon>
+              </div>
+              {reference && (
+                <div className={styles.referenceSummary}>
+                  <div>
+                    <strong>{reference.title || 'Referência visual lida'}</strong>
+                    <span>
+                      {reference.sections.length
+                        ? reference.sections.slice(0, 4).join(' · ')
+                        : 'Cores, tipografia e composição disponíveis'}
+                    </span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={applyReference}>
+                    Aplicar direção
+                  </Button>
+                </div>
+              )}
               {needsCompose && (
                 <p className={styles.pendingBrief} role="status">
                   Texto alterado. Gere novamente para atualizar a proposta.
@@ -1017,7 +1072,7 @@ export function ZeroLab({
                     </div>
                     <textarea
                       aria-label="Briefing original"
-                      maxLength={24000}
+                      maxLength={60000}
                       rows={7}
                       placeholder={
                         'Cliente:\nProjeto:\nObjetivo:\nPrazo:\nCondições:'
@@ -1552,11 +1607,14 @@ export function ZeroLab({
                       onClick={() => void readReference()}
                       disabled={!draft.referenceUrl.trim()}
                     >
-                      <Palette /> Ler cores e tipografia
+                      <Palette /> Ler direção visual
                     </Button>
                     {reference && (
                       <div className={styles.suggestions}>
                         <h3>{reference.title || 'Referência lida'}</h3>
+                        {reference.sections.length > 0 && (
+                          <p>{reference.sections.slice(0, 6).join(' · ')}</p>
+                        )}
                         <div className={styles.swatches}>
                           {reference.colors.map((color) => (
                             <button
@@ -1579,6 +1637,13 @@ export function ZeroLab({
                         >
                           Usar tipografia{' '}
                           {reference.serif ? 'com serifa' : 'sem serifa'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={applyReference}
+                        >
+                          Aplicar direção completa
                         </Button>
                       </div>
                     )}
@@ -1728,13 +1793,13 @@ export function ZeroLab({
           const selected = e.target.files?.[0];
           e.target.value = '';
           if (!selected) return;
-          if (selected.size > 96000) {
-            setError('Envie um briefing de até 24.000 caracteres.');
+          if (selected.size > 240000) {
+            setError('Envie um briefing de até 60.000 caracteres.');
             return;
           }
           const text = await selected.text();
-          if (text.length > 24000) {
-            setError('O briefing excede 24.000 caracteres.');
+          if (text.length > 60000) {
+            setError('O briefing excede 60.000 caracteres.');
             return;
           }
           change({ briefing: text });

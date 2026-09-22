@@ -3,6 +3,18 @@ import { referenceUrl, StudioError } from '@/lib/studio';
 import { readStudioReference } from '@/lib/studio-reference';
 import { limitedBody } from '@/lib/imported-template';
 
+function suggestedDesign(colors: string[], serif: boolean) {
+  if (serif) return 'editorial' as const;
+  const primary = colors[0];
+  if (!primary) return 'compact' as const;
+  const channels = primary.slice(1).match(/../g)?.map((value) => parseInt(value, 16));
+  const lightness = channels
+    ? (channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722) /
+      255
+    : 1;
+  return lightness < 0.55 ? ('contrast' as const) : ('compact' as const);
+}
+
 export async function POST(request: Request) {
   try {
     if (!(await getChatGPTUser()))
@@ -24,11 +36,18 @@ export async function POST(request: Request) {
       /georgia|times|playfair|cormorant|baskerville|lora|merriweather|\bserif\b/i.test(
         fonts.replace(/sans-serif/gi, ''),
       );
+    const sections = (reference.designEvidence.sectionOrder || [])
+      .filter((section) => typeof section === 'string')
+      .map((section) => section.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .slice(0, 8);
     return Response.json({
       title: reference.title,
       colors,
       serif,
       fonts: reference.designEvidence.fonts.slice(0, 6),
+      sections,
+      design: suggestedDesign(colors, serif),
     });
   } catch (error) {
     return Response.json(

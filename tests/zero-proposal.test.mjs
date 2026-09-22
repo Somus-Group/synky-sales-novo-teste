@@ -40,7 +40,7 @@ const { composeZeroBrief } = load('lib/zero-compose.ts', {
   './zero-proposal': zero,
 });
 
-test('new composer opens with one visible text input and optional details, no form wall', () => {
+test('new composer opens with one briefing and one optional reference, no form wall', () => {
   const { ZeroLab } = load('components/zero-lab.tsx', {
     react: React,
     'react/jsx-runtime': jsxRuntime,
@@ -75,9 +75,10 @@ test('new composer opens with one visible text input and optional details, no fo
     nodes.filter(
       (n) => n.tagName === 'input' && !n.attrs.some((a) => a.name === 'hidden'),
     ).length,
-    0,
+    1,
   );
   assert.equal(nodes.filter((n) => n.tagName === 'select').length, 0);
+  assert.match(markup, /Link de referência visual/);
   assert.match(markup, /Criar proposta/);
   assert.match(markup, /Editar campos/);
   assert.doesNotMatch(markup, /Composição/);
@@ -211,6 +212,19 @@ test('all deliverables survive web expansion and unspecified prices never look f
   }
 });
 
+test('long briefings are preserved as readable proposal details', () => {
+  const notes = Array.from(
+    { length: 120 },
+    (_, index) => `Detalhe comercial confirmado ${index + 1}: informação do briefing.`,
+  ).join('\n');
+  const value = { ...draft(), briefing: notes };
+  const html = zero.renderZeroProposal(value);
+  assert.match(html, /id="briefing"/);
+  assert.match(html, /Detalhe comercial confirmado 1/);
+  assert.match(html, /Detalhe comercial confirmado 120/);
+  assert.equal(zero.normalizeZeroDraft(value).briefing, notes);
+});
+
 test('one conversational request finds supplier, client and familiar services without form labels', () => {
   const result = composeZeroBrief(
     'vamos criar uma proposta da somus, ela e uma empresa voltada para ajudar os arquitetos, ela quer fazere uma porposta de trafego pago e comercial para a lie arquitetas, faça uma porposta bem legal',
@@ -297,6 +311,20 @@ test('three proposal compositions use distinct content structures with no empty 
   );
 });
 
+test('reference sections can reorder the proposal without changing its facts', () => {
+  const value = {
+    ...draft(),
+    objective: 'Aumentar conversas qualificadas.',
+    timeline: 'Etapa 1: alinhamento',
+    referenceSections: ['Investimento', 'Entregas', 'Contexto do projeto'],
+  };
+  const html = zero.renderZeroProposal(value);
+  assert.ok(html.indexOf('id="investimento"') < html.indexOf('id="escopo"'));
+  assert.ok(html.indexOf('id="escopo"') < html.indexOf('id="objetivo"'));
+  assert.match(html, /Aumentar conversas qualificadas/);
+  assert.match(html, /Serviço confirmado/);
+});
+
 test('packages stay together; shared totals, exclusions and vague instructions are not billed', () => {
   const result = composeZeroBrief(
     'Cliente: Aurora\nTráfego e conteúdo por R$ 3.000 por mês\nNão quero consultoria por R$ 5.000\nSem site\nInvestimento total R$ 9.000\nDeixe igual à referência https://example.com/proposta. Mantenha um tom bem direto.',
@@ -378,7 +406,7 @@ test('rebuilding keeps identity and imagery, reuses service IDs, and removes sta
 test('composer bounds input, retains unsupported and conflicting text, and keeps output escaped', () => {
   assert.throws(() => composeZeroBrief(' ', zero.emptyZeroDraft()));
   assert.throws(() =>
-    composeZeroBrief('x'.repeat(24001), zero.emptyZeroDraft()),
+    composeZeroBrief('x'.repeat(60001), zero.emptyZeroDraft()),
   );
   const text =
     'Cliente: Ana\nCliente: Bia\nContrato de 999 meses\nServiço: ' +
@@ -754,6 +782,7 @@ test('reference route returns only visual hints and never calls an AI dependency
           designEvidence: {
             colors: ['#123456', 'invalid'],
             fonts: ['Arial', 'sans-serif'],
+            sectionOrder: ['Abertura', 'Escopo', 'Investimento'],
           },
         };
       },
@@ -767,6 +796,8 @@ test('reference route returns only visual hints and never calls an AI dependency
   const result = await (await route.POST(request())).json();
   assert.deepEqual(result.colors, ['#123456']);
   assert.equal(result.serif, false);
+  assert.equal(result.design, 'contrast');
+  assert.deepEqual(result.sections, ['Abertura', 'Escopo', 'Investimento']);
   assert.equal(result.text, undefined);
   assert.equal(reads, 1);
   f.setUser(null);

@@ -51,8 +51,8 @@ export function composeZeroBrief(
   preserveDesign = false,
 ): ZeroComposition {
   if (!text.trim()) throw new Error('Escreva o pedido da proposta.');
-  if (text.length > 24000)
-    throw new Error('Use um pedido de até 24.000 caracteres.');
+  if (text.length > 60000)
+    throw new Error('Use um pedido de até 60.000 caracteres.');
   const draft: ZeroDraft = {
     ...emptyZeroDraft(base.supplier),
     email: base.email,
@@ -64,6 +64,7 @@ export function composeZeroBrief(
     accent: base.accent,
     serif: base.serif,
     referenceUrl: base.referenceUrl,
+    referenceSections: base.referenceSections,
     briefing: text,
   };
   const warnings: string[] = [];

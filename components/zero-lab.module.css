@@ -229,6 +229,38 @@
   color: #788292;
   opacity: 1;
 }
+.referenceInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 2px 0;
+  color: #697789;
+}
+.referenceInline > svg { flex: 0 0 auto; }
+.referenceInline input { min-width: 0; }
+.referenceSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid #d5e3f6;
+  border-radius: 10px;
+  background: #f6faff;
+}
+.referenceSummary > div { min-width: 0; }
+.referenceSummary strong,
+.referenceSummary span { display: block; }
+.referenceSummary strong { color: #28313d; font-size: .8125rem; }
+.referenceSummary span {
+  margin-top: 3px;
+  color: #667386;
+  font-size: .75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .composeAction {
   display: flex;
   align-items: center;
@@ -979,6 +1011,7 @@
   .zero.zero .composeButton {
     padding-inline: 12px;
   }
+  .referenceSummary { align-items: flex-start; flex-direction: column; }
   .entryMode {
     margin-top: 16px;
   }
