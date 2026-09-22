@@ -240,6 +240,29 @@ test('a public proposal can become a complete local base with only its changes a
   assert.match(html, />Entregas<\/h2>/);
 });
 
+test('a linked proposal keeps its own page composition while commercial phrases change', () => {
+  const reference =
+    'Proposta para Casa Lume. Gestão de tráfego por R$ 2.500 por mês. Objetivo: gerar novos projetos.';
+  const result = composeZeroReferenceBrief(
+    'Cliente: Clínica Aurora\nGestão de tráfego por R$ 3.000 por mês\nObjetivo: aumentar os agendamentos.',
+    {
+      ...zero.emptyZeroDraft('Synky'),
+      referenceContent: reference,
+      referenceTemplate:
+        '<html><head></head><body><main class="original-layout"><h1>Proposta Casa Lume</h1><p>Gerar novos projetos.</p><section><h2>Escopo da Casa Lume</h2><p>Gestão de tráfego</p><strong>R$ 2.500,00</strong></section></main></body></html>',
+      referenceStyles: '.original-layout{padding:44px}h1{color:#123456}',
+    },
+  );
+  const html = zero.renderZeroProposal(result.draft);
+  assert.match(html, /original-layout/);
+  assert.match(html, /Clínica Aurora/);
+  assert.match(html, /aumentar os agendamentos/);
+  assert.match(html, /R\$\s?3\.000,00/);
+  assert.doesNotMatch(html, /Casa Lume/);
+  assert.match(html, /h1\{color:#123456\}/);
+  assert.match(html, /script-src 'none'/);
+});
+
 test('long briefings are preserved as readable proposal details', () => {
   const notes = Array.from(
     { length: 120 },

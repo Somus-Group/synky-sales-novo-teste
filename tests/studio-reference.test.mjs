@@ -70,6 +70,8 @@ test('reads page body, structure and external CSS, without executing scripts', a
   assert.match(result.reference.text, /diagnóstico/);
   assert.match(result.reference.styles, /#20b090/);
   assert.match(result.reference.structure, /scope/);
+  assert.match(result.reference.template, /Proposta comercial/);
+  assert.doesNotMatch(result.reference.template, /SECRET_NOT_CONTENT|<script|stylesheet/);
   assert.doesNotMatch(result.reference.text, /SECRET_NOT_CONTENT/);
   for (const call of result.visited.filter(
     (call) => !call.url.includes('dns-query'),

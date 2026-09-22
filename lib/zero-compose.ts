@@ -1,6 +1,7 @@
 import {
   emptyZeroDraft,
   normalizeZeroDraft,
+  zeroMoney,
   type ZeroDraft,
   type ZeroService,
 } from './zero-proposal';
@@ -65,6 +66,8 @@ export function composeZeroBrief(
     serif: base.serif,
     referenceUrl: base.referenceUrl,
     referenceContent: base.referenceContent,
+    referenceTemplate: base.referenceTemplate,
+    referenceStyles: base.referenceStyles,
     referenceSections: base.referenceSections,
     briefing: text,
   };
@@ -477,6 +480,52 @@ function mergeServices(source: ZeroService[], changes: ZeroService[]) {
   return merged.slice(0, 24);
 }
 
+function adaptReferenceTemplate(
+  template: string,
+  source: ZeroDraft,
+  next: ZeroDraft,
+) {
+  if (!template) return '';
+  const replaceAll = (markup: string, from: string, to: string) =>
+    from && to && from !== to
+      ? markup.split(from).join(to).split(escapeHtml(from)).join(escapeHtml(to))
+      : markup;
+  let output = template;
+  output = output.replace(
+    /(<h1\b[^>]*>)[\s\S]*?(<\/h1>)/i,
+    '$1' + escapeHtml(next.title) + '$2',
+  );
+  if (next.objective)
+    output = output.replace(
+      /(<p\b[^>]*>)[\s\S]*?(<\/p>)/i,
+      '$1' + escapeHtml(next.objective) + '$2',
+    );
+  output = replaceAll(output, source.client, next.client);
+  output = replaceAll(output, source.supplier, next.supplier);
+  for (let index = 0; index < Math.min(source.services.length, next.services.length); index++)
+    output = replaceAll(
+      output,
+      source.services[index].title,
+      next.services[index].title,
+    );
+  let priceIndex = 0;
+  output = output.replace(/R\$\s?[\d.]+(?:,\d{2})?/g, (value) => {
+    const service = next.services[priceIndex++];
+    return service?.unitCents === null || !service
+      ? value
+      : zeroMoney(service.unitCents * service.quantity);
+  });
+  return output;
+}
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 /**
  * Applies a short list of changes to a public proposal imported as a base.
  * Both passes are local and deterministic: the reference supplies the shape,
@@ -504,7 +553,7 @@ export function composeZeroReferenceBrief(
   );
   const source = reference.draft;
   const patch = update.draft;
-  const merged = normalizeZeroDraft({
+  const combined = {
     ...source,
     email: base.email,
     phone: base.phone,
@@ -516,6 +565,8 @@ export function composeZeroReferenceBrief(
     serif: preserveDesign ? base.serif : source.serif,
     referenceUrl: base.referenceUrl,
     referenceContent: base.referenceContent,
+    referenceTemplate: base.referenceTemplate,
+    referenceStyles: base.referenceStyles,
     referenceSections: base.referenceSections,
     briefing: changes,
     client: patch.client || source.client,
@@ -529,6 +580,14 @@ export function composeZeroReferenceBrief(
     months: patch.months || source.months,
     discountPercent: patch.discountPercent || source.discountPercent,
     services: mergeServices(source.services, patch.services),
+  } satisfies ZeroDraft;
+  const merged = normalizeZeroDraft({
+    ...combined,
+    referenceTemplate: adaptReferenceTemplate(
+      base.referenceTemplate,
+      source,
+      combined,
+    ),
   });
   return {
     draft: merged,

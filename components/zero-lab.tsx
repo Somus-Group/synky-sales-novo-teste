@@ -63,6 +63,8 @@ type VisualAsset = {
 type ZeroReferenceHint = {
   title: string;
   content: string;
+  template: string;
+  styles: string;
   colors: string[];
   serif: boolean;
   fonts: string[];
@@ -690,6 +692,8 @@ export function ZeroLab({
       serif: loaded.serif,
       design: loaded.design,
       referenceContent: loaded.content,
+      referenceTemplate: loaded.template,
+      referenceStyles: loaded.styles,
       referenceSections: loaded.sections,
     };
   }
@@ -936,6 +940,8 @@ export function ZeroLab({
                     change({
                       referenceUrl: e.target.value,
                       referenceContent: '',
+                      referenceTemplate: '',
+                      referenceStyles: '',
                       referenceSections: [],
                     });
                     setReference(null);

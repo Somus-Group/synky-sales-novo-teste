@@ -10,6 +10,7 @@ export type StudioReference = {
   text: string;
   structure: string;
   styles: string;
+  template: string;
   media: StudioMedia[];
   mediaWarnings: string[];
   designEvidence: {
@@ -22,6 +23,48 @@ export type StudioReference = {
 const unavailable = (message: string) =>
   new StudioError(message, 422, 'reference_unavailable');
 const compact = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+async function safeReferenceTemplate(html: string) {
+  const template = await new HTMLRewriter()
+    .on('script,style,noscript,template,iframe,object,embed,form,input,button,textarea,select,link,base,meta', {
+      element(element) {
+        element.remove();
+      },
+    })
+    .on('img', {
+      element(element) {
+        element.removeAttribute('src');
+        element.removeAttribute('srcset');
+      },
+    })
+    .on('a', {
+      element(element) {
+        element.removeAttribute('href');
+        element.removeAttribute('target');
+      },
+    })
+    .on('*', {
+      element(element) {
+        element.removeAttribute('style');
+        for (const event of [
+          'onclick',
+          'onload',
+          'onerror',
+          'onmouseover',
+          'onfocus',
+          'oninput',
+          'onsubmit',
+          'onanimationstart',
+        ])
+          element.removeAttribute(event);
+      },
+    })
+    .transform(new Response(html))
+    .text();
+  if (template.length > 64000)
+    throw unavailable('A página de referência é grande demais para ser usada como base.');
+  return template;
+}
 
 export function isPublicAddress(address: string) {
   if (address.includes(':'))
@@ -445,6 +488,7 @@ export async function readStudioReference(
       text: compact(text).slice(0, 24000),
       structure: structure.slice(0, 55000),
       styles: designStyles.styles,
+      template: await safeReferenceTemplate(page.text),
       designEvidence: {
         colors: designStyles.colors,
         fonts: designStyles.fonts,
