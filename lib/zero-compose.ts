@@ -38,6 +38,25 @@ const titleCase = (value: string) =>
     .split(' ')
     .map((word) => word[0].toLocaleUpperCase('pt-BR') + word.slice(1))
     .join(' ');
+const durationNumber = (value: string) => {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric;
+  const words: Record<string, number> = {
+    um: 1,
+    uma: 1,
+    dois: 2,
+    duas: 2,
+    tres: 3,
+    quatro: 4,
+    cinco: 5,
+    seis: 6,
+    sete: 7,
+    oito: 8,
+    nove: 9,
+    dez: 10,
+  };
+  return words[fold(value)] || 0;
+};
 
 export type ZeroComposition = {
   draft: ZeroDraft;
@@ -242,15 +261,11 @@ export function composeZeroBrief(
     .reverse()
     .find(
       (match) =>
-        !/^(?:ajudar|criar|fazer|vender|aumentar|melhorar|os|as)\b/i.test(
+        !/^(?:ajudar|criar|fazer|vender|aumentar|melhorar|os|as|eles|elas|ele|ela|voc[eê]s|cliente|empresa)\b/i.test(
           match[1].trim(),
         ),
     );
-  if (
-    recipient &&
-    !/\bp(?:ro|or)posta\w*(?:\s+comercial)?\s+(?:para|pra)\b/i.test(text) &&
-    recipient[1].trim()
-  )
+  if (recipient && recipient[1].trim())
     put('client', titleCase(recipient[1]), 240);
   // Split prose at sentence boundaries, not at decimal commas or dots inside URLs.
   const clauses = text.split(
@@ -259,6 +274,16 @@ export function composeZeroBrief(
   for (const original of clauses) {
     let part = original.trim().replace(/[.!;]+$/, '');
     if (!part) continue;
+    const durationMatch = part.match(
+      /\b(?:durante|por|contrato(?:\s+de)?|vig[eê]ncia(?:\s+de|\s+por)?|dura[cç][aã]o(?:\s+de|\s+por)?)\s+(\d+|um|uma|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez)\s+(anos?|meses?)\b/i,
+    );
+    if (durationMatch) {
+      const quantity = durationNumber(durationMatch[1]);
+      const months = /ano/i.test(durationMatch[2]) ? quantity * 12 : quantity;
+      if (months > 0 && months <= 120) draft.months = months;
+      part = (part.slice(0, durationMatch.index) + part.slice(durationMatch.index! + durationMatch[0].length)).trim();
+      if (!part) continue;
+    }
     if (
       /^[-*•]\s+/.test(part) &&
       draft.services.length &&
@@ -487,14 +512,35 @@ function adaptReferenceTemplate(
   next: ZeroDraft,
 ) {
   if (!template) return '';
-  const replaceAll = (markup: string, from: string, to: string) =>
-    from && to && from !== to
-      ? markup.split(from).join(to).split(escapeHtml(from)).join(escapeHtml(to))
-      : markup;
+  const replaceAll = (markup: string, from: string, to: string) => {
+    if (!from || !to || fold(from) === fold(to)) return markup;
+    const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const raw = new RegExp(escapePattern(from), 'gi');
+    const encoded = new RegExp(escapePattern(escapeHtml(from)), 'gi');
+    return markup
+      .split(/(<[^>]*>)/g)
+      .map((part, index) =>
+        index % 2
+          ? part
+          : part
+              .replace(raw, escapeHtml(to))
+              .replace(encoded, escapeHtml(to)),
+      )
+      .join('');
+  };
   let output = template;
-  output = output.replace(
-    /(<h1\b[^>]*>)[\s\S]*?(<\/h1>)/i,
-    '$1' + escapeHtml(next.title) + '$2',
+  const requestedScope =
+    /\b(?:mudar|trocar|substituir|refazer)\s+(?:(?:toda|a)\s+)?(?:a\s+)?(?:proposta|oferta|escopo|servi[cç]os?)\b/i.test(
+      next.briefing,
+    ) && next.services.length > 0;
+  const proposalHeading =
+    /^(?:t[ií]tulo|projeto)\s*:/im.test(next.briefing)
+      ? next.title
+      : requestedScope && next.client
+        ? `${next.services[0].title} para ${next.client}`
+        : next.title;
+  output = output.replace(/(<h1\b[^>]*>)[\s\S]*?(<\/h1>)/i, (_match, open, close) =>
+    open + escapeHtml(proposalHeading) + close,
   );
   if (next.objective)
     output = output.replace(
@@ -529,13 +575,39 @@ function adaptReferenceTemplate(
       source.services[index].title,
       next.services[index].title,
     );
-  let priceIndex = 0;
-  output = output.replace(/R\$\s?[\d.]+(?:,\d{2})?/g, (value) => {
-    const service = next.services[priceIndex++];
-    return service?.unitCents === null || !service
-      ? value
-      : zeroMoney(service.unitCents * service.quantity);
-  });
+  if (requestedScope && next.services[0])
+    for (const service of source.services)
+      output = replaceAll(output, service.title, next.services[0].title);
+  if (requestedScope && /arquitet/i.test(source.client)) {
+    output = replaceAll(output, 'voltar a fazer arquitetura', 'focar no crescimento do negócio');
+    output = replaceAll(output, 'volte a fazer arquitetura', 'foque no crescimento do negócio');
+    output = replaceAll(output, 'arquitetura', 'negócio');
+    output = replaceAll(output, 'escritórios', 'negócios');
+    output = replaceAll(output, 'escritório', 'negócio');
+  }
+  if (requestedScope && source.months > 0 && next.months > 0)
+    output = replaceAll(
+      output,
+      `${source.months} ${source.months === 1 ? 'mês' : 'meses'}`,
+      `${next.months} ${next.months === 1 ? 'mês' : 'meses'}`,
+    );
+  if (requestedScope) {
+    let priceIndex = 0;
+    output = output.replace(/R\$\s?[\d.,]+\s?(?:k|mil)?/gi, () => {
+      const service = next.services[priceIndex++];
+      return service?.unitCents === null || !service
+        ? 'Valor a definir'
+        : zeroMoney(service.unitCents * service.quantity);
+    });
+  } else {
+    let priceIndex = 0;
+    output = output.replace(/R\$\s?[\d.]+(?:,\d{2})?/g, (value) => {
+      const service = next.services[priceIndex++];
+      return service?.unitCents === null || !service
+        ? value
+        : zeroMoney(service.unitCents * service.quantity);
+    });
+  }
   return output;
 }
 
@@ -574,6 +646,23 @@ export function composeZeroReferenceBrief(
   );
   const source = reference.draft;
   const patch = update.draft;
+  const replaceScope =
+    /\b(?:mudar|trocar|substituir|refazer)\s+(?:(?:toda|a)\s+)?(?:a\s+)?(?:proposta|oferta|escopo|servi[cç]os?)\b/i.test(
+      changes,
+    ) && patch.services.length > 0;
+  const adaptedTitle =
+    /^(?:t[ií]tulo|projeto)\s*:/im.test(changes)
+      ? patch.title
+      : replaceScope && patch.client
+        ? `${patch.services[0].title} para ${patch.client}`
+        : !isDefaultTitle(patch.title)
+          ? patch.title
+          : source.title;
+  const adaptedObjective =
+    patch.objective ||
+    (replaceScope
+      ? `A proposta contempla ${patch.services[0].title.toLocaleLowerCase('pt-BR')} durante ${patch.months || source.months || 0} ${((patch.months || source.months || 0) === 1) ? 'mês' : 'meses'}.`
+      : source.objective);
   const combined = {
     ...source,
     email: base.email,
@@ -593,15 +682,15 @@ export function composeZeroReferenceBrief(
     briefing: changes,
     client: patch.client || source.client,
     supplier: patch.supplier || source.supplier,
-    title: !isDefaultTitle(patch.title) ? patch.title : source.title,
-    objective: patch.objective || source.objective,
+    title: adaptedTitle,
+    objective: adaptedObjective,
     timeline: patch.timeline || source.timeline,
     terms: patch.terms || source.terms,
     exclusions: patch.exclusions || source.exclusions,
     validity: patch.validity || source.validity,
     months: patch.months || source.months,
     discountPercent: patch.discountPercent || source.discountPercent,
-    services: mergeServices(source.services, patch.services),
+    services: mergeServices(replaceScope ? [] : source.services, patch.services),
   } satisfies ZeroDraft;
   const merged = normalizeZeroDraft({
     ...combined,
@@ -613,7 +702,7 @@ export function composeZeroReferenceBrief(
   });
   return {
     draft: merged,
-    warnings: [...new Set([...reference.warnings, ...update.warnings])],
-    unresolved: [...reference.unresolved, ...update.unresolved],
+    warnings: [...new Set(update.warnings)],
+    unresolved: update.unresolved,
   };
 }

@@ -133,7 +133,11 @@ export function extractReactReference(source: string) {
         .slice(2)
         .map((part) => textValue(literal(part)))
         .join(' ');
-    if (text || Object.keys(attributes).length)
+    const untrustedOrFallbackCopy =
+      /(?:n[aã]o tem mais nada a alterar|execute\s*\/\s*responda.{0,80}tarefa|ignore.{0,50}(?:instructions?|instru[cç][oõ]es)|page not found|oops!?|^404$)/i.test(
+        text,
+      );
+    if (!untrustedOrFallbackCopy && (text || Object.keys(attributes).length))
       elements.push({
         tag,
         attributes,
