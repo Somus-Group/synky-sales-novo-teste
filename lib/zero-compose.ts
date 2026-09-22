@@ -596,11 +596,16 @@ function adaptReferenceTemplate(
     const service = next.services[0].title.toLocaleLowerCase('pt-BR');
     const duration = `${next.months || 0} ${next.months === 1 ? 'mês' : 'meses'}`;
     const paragraphs = [
-      `${service} para ${client} durante ${duration}.`,
-      'Objetivos, canais e indicadores serão alinhados antes do início das campanhas.',
-      'O desempenho será acompanhado e as campanhas ajustadas ao longo do contrato.',
-      'A verba de mídia e o valor da gestão serão apresentados separadamente.',
-      'O escopo e as condições comerciais serão confirmados antes da execução.',
+      `A estratégia de ${service} será estruturada para as metas comerciais da ${client}.`,
+      'O planejamento inicial define públicos, canais, formatos e indicadores de acompanhamento.',
+      'A gestão cobre configuração, monitoramento e ajustes contínuos das campanhas.',
+      'Os resultados serão revistos em ciclos acordados, com decisões baseadas nos dados.',
+      `A vigência prevista é de ${duration}, com metas e revisões periódicas.`,
+      'Calendário, responsabilidades e entregas serão alinhados antes de cada etapa.',
+      'A verba investida nas plataformas fica separada dos honorários de gestão.',
+      'O valor mensal será definido conforme canais, investimento e volume de campanhas.',
+      'O início ocorre após a aprovação do escopo, do orçamento de mídia e das condições comerciais.',
+      'As campanhas poderão ser ajustadas conforme a performance e as prioridades aprovadas.',
     ];
     const headingFor = (original: string, index: number) => {
       const value = fold(original);
