@@ -99,6 +99,34 @@ function DesignChoices({
   draft: ZeroDraft;
   onChange: (design: ZeroDraft['design']) => void;
 }) {
+  const preview = draft.services.length
+    ? draft
+    : {
+        ...draft,
+        client: 'Casa Lume',
+        title: 'Presença digital e captação',
+        objective:
+          'Transformar a procura pelo escritório em conversas qualificadas e novos projetos.',
+        months: 6,
+        services: [
+          {
+            id: 'preview-site',
+            title: 'Site de captação',
+            description: 'Página principal\nFormulário de contato\nVersão para celular',
+            quantity: 1,
+            unitCents: 480000,
+            billing: 'once' as const,
+          },
+          {
+            id: 'preview-growth',
+            title: 'Gestão de tráfego',
+            description: 'Planejamento de campanhas\nAcompanhamento mensal',
+            quantity: 1,
+            unitCents: 290000,
+            billing: 'monthly' as const,
+          },
+        ],
+      };
   return (
     <div
       className={styles.designChoices}
@@ -115,7 +143,7 @@ function DesignChoices({
         <div key={design.key} className={styles.designOption}>
           <div className={styles.designThumb} aria-hidden="true">
             <iframe
-              srcDoc={renderZeroProposal({ ...draft, design: design.key })}
+              srcDoc={renderZeroProposal({ ...preview, design: design.key })}
               title={`Modelo ${design.label}`}
               sandbox="allow-same-origin"
               tabIndex={-1}
