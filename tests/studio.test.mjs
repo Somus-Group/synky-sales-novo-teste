@@ -48,6 +48,35 @@ const webContent = () => ({
   ],
 });
 
+test('instant local creation builds a proposal without an AI request', async () => {
+  const f = fixture();
+  try {
+    const { project } = await (
+      await f.create({ briefing: 'Proposta para Clínica Aurora.' })
+    ).json();
+    const response = await f.messages.POST(
+      request({
+        message:
+          'Gestão de tráfego por R$ 2.500 por mês e site por R$ 4.000, pagamento único. Objetivo: aumentar agendamentos.',
+        revision: 0,
+        quality: 'local',
+      }),
+      context(project.id),
+    );
+    const result = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(result));
+    assert.match(result.project.html, /Clínica Aurora/);
+    assert.match(result.project.html, /Gestão de tráfego/);
+    assert.equal(result.project.aiUsage.calls, 0);
+    assert.equal(
+      f.sqlite.prepare('SELECT COUNT(*) AS n FROM studio_ai_requests').get().n,
+      0,
+    );
+  } finally {
+    f.sqlite.close();
+  }
+});
+
 test('web creation uses one compact content call, local layout and a smaller reservation', async () => {
   const f = fixture({ web: true });
   const previous = globalThis.fetch;
@@ -123,6 +152,14 @@ const studioEconomy = load('lib/studio-economy.ts', { '@/lib/studio': studio });
 const studioPatches = load('lib/studio-patches.ts', { '@/lib/studio': studio });
 const zero = load('lib/zero-proposal.ts', {
   './zero-proposal-styles': load('lib/zero-proposal-styles.ts'),
+});
+const zeroCompose = load('lib/zero-compose.ts', {
+  './zero-proposal': zero,
+});
+const studioLocal = load('lib/studio-local.ts', {
+  './studio': studio,
+  './zero-compose': zeroCompose,
+  './zero-proposal': zero,
 });
 const studioWeb = load('lib/studio-web.ts', {
   './zero-proposal': zero,
@@ -256,6 +293,7 @@ function fixture({ web = false } = {}) {
     '@/lib/studio-design': studioDesign,
     '@/lib/studio-stream': studioStream,
     '@/lib/studio-economy': studioEconomy,
+    '@/lib/studio-local': studioLocal,
     '@/lib/studio-patches': studioPatches,
     '@/lib/studio-templates': studioTemplates,
     '@/lib/studio-web': studioWeb,

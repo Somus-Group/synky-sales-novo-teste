@@ -32,6 +32,7 @@ import {
   studioWebInstructions,
   parseStudioWeb,
 } from '@/lib/studio-web';
+import { renderStudioLocal } from '@/lib/studio-local';
 import { studioStages, type StudioStage } from '@/lib/studio-stream';
 import { getFile, putFile, type FileStore } from '@/lib/file-store';
 import {
@@ -231,6 +232,7 @@ async function runMessage(
       payload.message,
       project.referenceUrl,
     );
+    const localRequested = payload.quality === 'local';
     const lastReference = [...messages]
       .reverse()
       .find((m) => m.reference)?.reference;
@@ -264,7 +266,11 @@ async function runMessage(
         phone?: string;
       }>();
     let referenceDocument: StudioReference | null = null;
-    if (reference && (task === 'create' || newReference || refreshReference)) {
+    if (
+      !localRequested &&
+      reference &&
+      (task === 'create' || newReference || refreshReference)
+    ) {
       const cacheKey =
         'studio-cache/' +
         workspaceId +
@@ -318,6 +324,12 @@ async function runMessage(
       !project.html &&
       project.templateId !== 'none' &&
       !referenceDocument;
+    const usingLocal =
+      task === 'create' &&
+      localRequested &&
+      !project.html &&
+      project.templateId === 'none' &&
+      !reference;
     const usingWeb = useStudioWeb(
       task,
       payload.quality,
@@ -326,6 +338,12 @@ async function runMessage(
       Boolean(referenceDocument),
       configuration.STUDIO_WEB_PROPOSALS,
     );
+    if (localRequested && !usingLocal)
+      throw new StudioError(
+        'O modo sem IA cria uma proposta nova a partir do texto. Para usar link, template ou alterar uma proposta já criada, escolha edição visual ou o modo assistido.',
+        422,
+        'local_mode_unavailable',
+      );
     let generated: ReturnType<typeof parseStudioOutput> | undefined;
     // Only an exact, unambiguous quoted text replacement bypasses AI.
     const direct =
@@ -371,6 +389,22 @@ async function runMessage(
         (await studioDigest(project.fileKey)) +
         '.json'
       : '';
+    if (!generated && usingLocal) {
+      progress('generating');
+      generated = renderStudioLocal(
+        payload.message,
+        project.briefing,
+        profile,
+        preferredLogo?.id,
+      );
+      usage = {
+        model: 'none',
+        inputTokens: 0,
+        outputTokens: 0,
+        cachedTokens: 0,
+        estimatedUsd: 0,
+      };
+    }
     if (!generated) {
       if (!configuration.OPENAI_API_KEY)
         throw new StudioError(
@@ -452,7 +486,12 @@ async function runMessage(
         });
       // Existing logos and attachments remain embedded locally, not re-analyzed
       // as image inputs on every edit.
-      const quality = task === 'chat' ? 'economy' : payload.quality;
+      const quality =
+        task === 'chat'
+          ? 'economy'
+          : payload.quality === 'premium'
+            ? 'premium'
+            : 'economy';
       const model = studioModel(task, quality, configuration);
       const baseSchema =
         task === 'patch'
@@ -662,7 +701,9 @@ async function runMessage(
       const cleanHtml = await sanitizeStudioHtml(withLogo);
       const embedded = await embedStudioMedia(cleanHtml, media.assets);
       const inspected = await reviewStudioHtml(embedded.html, {
-        strict: task === 'create',
+        // The deterministic composer has its own readiness check. Do not reject a
+        // concise zero-cost proposal just because it deliberately omits optional sections.
+        strict: task === 'create' && !usingLocal,
         hasReference: Boolean(referenceDocument),
       });
       if (!inspected.headings.length || embedded.unresolved.length)

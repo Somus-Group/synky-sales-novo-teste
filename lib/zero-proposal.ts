@@ -178,6 +178,8 @@ export function emptyZeroDraft(supplier = ''): ZeroDraft {
 /** A quiet canvas while the user is still describing the commercial request. */
 export function renderZeroEmptyState(supplier = ''): string {
   const name = escape(supplier || 'Sua empresa');
+  if (name)
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{background:#0d2341;color:#f7fbff;font:16px/1.45 Inter,Arial,sans-serif}.shell{min-height:100svh;padding:28px;overflow:hidden;position:relative}.shell:before,.shell:after{content:'';position:absolute;border:1px solid #ffffff24;border-radius:50%;pointer-events:none}.shell:before{width:58vw;height:58vw;right:-24vw;top:-23vw}.shell:after{width:34vw;height:34vw;left:-18vw;bottom:-17vw;box-shadow:0 0 0 45px #ffffff08}.bar{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:10px 13px 10px 16px;border:1px solid #ffffff3d;border-radius:15px;background:#ffffff10;backdrop-filter:blur(12px)}.brand{font-size:13px;font-weight:800}.status{padding:7px 10px;border-radius:8px;background:#9ef1cf;color:#0d2d30;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.content{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(250px,.9fr);align-items:center;gap:48px;max-width:1000px;min-height:calc(100svh - 84px);margin:auto}.tag{display:flex;gap:8px;align-items:center;margin-bottom:21px;color:#b9d9f0;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.tag i{width:8px;height:8px;border-radius:50%;background:#9ef1cf;box-shadow:0 0 0 5px #9ef1cf20}.copy h1{max-width:650px;margin:0;font-size:clamp(46px,6vw,82px);line-height:.96;letter-spacing:0}.copy p{max-width:520px;margin:22px 0 0;color:#c9d8e7;font-size:clamp(17px,2vw,21px);line-height:1.48}.note{display:inline-flex;align-items:center;gap:9px;margin-top:30px;padding:10px 12px;border-radius:10px;background:#ffffff10;color:#dfeaf5;font-size:12px}.note b{display:grid;place-items:center;width:20px;height:20px;border-radius:6px;background:#ffffff;color:#0d2341}.mock{padding:16px;border:1px solid #ffffff3b;border-radius:19px;background:#f8fbff;color:#132b49;box-shadow:0 28px 56px #06152c4d;transform:rotate(2deg)}.mock-top{display:flex;align-items:center;justify-content:space-between;padding:5px 4px 17px;border-bottom:1px solid #d9e4ee;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.dots{display:flex;gap:5px}.dots i{width:7px;height:7px;border-radius:50%;background:#bdd2e3}.dots i:nth-child(2){background:#9ef1cf}.dots i:nth-child(3){background:#f4bf68}.mock-hero{min-height:180px;margin-top:14px;padding:22px;border-radius:13px;background:#225d86;color:#fff;display:flex;flex-direction:column;justify-content:end}.mock-hero span{color:#c8e7fa;font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}.mock-hero strong{max-width:250px;margin-top:11px;font-size:28px;line-height:1.04}.mock-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}.mock-card{min-height:88px;padding:13px;border:1px solid #dce6ee;border-radius:10px;background:#fff}.mock-card b{display:block;width:28px;height:7px;border-radius:10px;background:#bfe8d8}.mock-card:nth-child(2) b{background:#f7ca84}.mock-card p{width:82%;height:7px;margin:13px 0 0;border-radius:10px;background:#dbe7f0}.mock-card p+p{width:58%;margin-top:7px}@media(max-width:680px){.shell{padding:16px}.content{grid-template-columns:1fr;gap:36px;padding:55px 10px}.copy h1{font-size:48px}.mock{max-width:440px;justify-self:center}.status{font-size:9px}}</style></head><body><main class="shell"><header class="bar"><span class="brand">${name}</span><span class="status">Proposta Zero</span></header><section class="content"><div class="copy"><div class="tag"><i></i> Espaço do projeto</div><h1>Uma ideia vira uma proposta que dá vontade de explorar.</h1><p>Escreva o que foi combinado. Nós organizamos o conteúdo em uma página viva, clara e pronta para ser compartilhada.</p><div class="note"><b>0</b> Nenhuma chamada de IA</div></div><div class="mock"><div class="mock-top"><span>visão do projeto</span><span class="dots"><i></i><i></i><i></i></span></div><div class="mock-hero"><span>proposta para</span><strong>Seu próximo cliente</strong></div><div class="mock-grid"><div class="mock-card"><b></b><p></p><p></p></div><div class="mock-card"><b></b><p></p><p></p></div></div></div></section></main></body></html>`;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{display:grid;place-items:center;background:#f4f7fb;color:#172033;font:16px/1.5 Arial,sans-serif}.empty{width:min(760px,84%);padding:44px 0}.mark{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:#176bed;color:#fff;font-size:24px;box-shadow:0 16px 36px #176bed33}.eyebrow{margin:28px 0 12px;color:#176bed;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.empty h1{max-width:560px;margin:0;font:700 clamp(34px,5vw,56px)/1.04 Arial,sans-serif;letter-spacing:0}.empty p{max-width:520px;margin:18px 0 0;color:#60708a;font-size:18px}.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:44px}.steps div{min-width:0;padding:16px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;color:#52627a;font-size:13px}.steps b{display:block;margin-bottom:6px;color:#172033;font-size:14px}@media(max-width:560px){.empty{padding:32px 0}.steps{grid-template-columns:1fr}.empty p{font-size:16px}}</style></head><body><main class="empty"><div class="mark">+</div><div class="eyebrow">${name}</div><h1>Uma proposta com a cara do projeto.</h1><p>Descreva o que foi combinado. A prévia aparece pronta para apresentar, sem texto inventado e sem uso de IA.</p><div class="steps"><div><b>Cliente</b>Para quem é a proposta.</div><div><b>Escopo</b>O que será entregue.</div><div><b>Valores</b>O que foi combinado.</div></div></main></body></html>`;
 }
 
@@ -431,6 +433,7 @@ export function renderZeroProposal(
   media?: {
     logo?: string;
     cover?: string;
+    hideCover?: boolean;
     gallery?: Array<{ url: string; caption: string }>;
   },
 ) {
@@ -457,7 +460,9 @@ export function renderZeroProposal(
   const logo =
     trustedMedia(media?.logo) ||
     (dataImage(embeddedLogo) ? embeddedLogo : d.logo ? imageUrl(d.logo) : '');
-  const cover = trustedMedia(media?.cover) || imageUrl(zeroCover(d));
+  const cover = media?.hideCover
+    ? ''
+    : trustedMedia(media?.cover) || imageUrl(zeroCover(d));
   const coverAlt =
     zeroCovers.find((c) => c.url === zeroCover(d))?.alt ||
     'Imagem selecionada para a proposta';
@@ -523,11 +528,15 @@ export function renderZeroProposal(
       '</div>'
     : '';
   const hero =
-    '<section class="hero"><img class="hero-media" src="' +
-    escape(cover) +
-    '" alt="' +
-    escape(coverAlt) +
-    '" width="1536" height="1024" fetchpriority="high"><div class="wrap hero-content"><div class="hero-copy"><span class="eyebrow">Proposta online' +
+    '<section class="hero">' +
+    (cover
+      ? '<img class="hero-media" src="' +
+        escape(cover) +
+        '" alt="' +
+        escape(coverAlt) +
+        '" width="1536" height="1024" fetchpriority="high">'
+      : '') +
+    '<div class="wrap hero-content"><div class="hero-copy"><span class="eyebrow">Proposta online' +
     (d.supplier ? ' / ' + escape(d.supplier) : '') +
     '</span><h1' +
     (client.length > 42 ? ' class="long-title"' : '') +

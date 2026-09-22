@@ -134,9 +134,9 @@ export function studioInput(value: unknown) {
     throw new StudioError('Escolha criar ou planejar.');
   if (
     p.quality !== undefined &&
-    !['economy', 'premium'].includes(String(p.quality))
+    !['local', 'economy', 'premium'].includes(String(p.quality))
   )
-    throw new StudioError('Escolha o processamento econômico ou avançado.');
+    throw new StudioError('Escolha uma forma válida de criar a proposta.');
   if (
     p.requestId !== undefined &&
     (typeof p.requestId !== 'string' || !/^[\w-]{16,80}$/.test(p.requestId))
@@ -154,7 +154,11 @@ export function studioInput(value: unknown) {
     intent: p.intent === 'plan' ? ('plan' as const) : ('edit' as const),
     selection: typeof p.selection === 'string' ? p.selection : '',
     quality:
-      p.quality === 'premium' ? ('premium' as const) : ('economy' as const),
+      p.quality === 'local'
+        ? ('local' as const)
+        : p.quality === 'premium'
+          ? ('premium' as const)
+          : ('economy' as const),
     requestId:
       typeof p.requestId === 'string' ? p.requestId : crypto.randomUUID(),
   };

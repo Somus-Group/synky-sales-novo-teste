@@ -137,16 +137,20 @@ export function StudioLab() {
   const [pending, setPending] = useState('');
   const [stage, setStage] = useState<StudioStage>('reading');
   const [intent, setIntent] = useState<'edit' | 'plan'>('edit');
-  const [quality, setQuality] = useState<'economy' | 'premium'>('economy');
+  const [quality, setQuality] = useState<'local' | 'economy' | 'premium'>(
+    'local',
+  );
   const [mode, setMode] = useState<StudioMode>('free');
   const [draft, setDraft] = useState<ContextDraft>(emptyContext);
   const estimatedRequestBudget =
-    quality === 'economy' &&
-    !project?.html &&
-    !studioMessageReference(prompt, draft.referenceUrl) &&
-    studioTask(prompt, false, intent, false) === 'create'
-      ? studioWebSpendLimit
-      : studioSpendLimits[quality];
+    quality === 'local'
+      ? 0
+      : quality === 'economy' &&
+          !project?.html &&
+          !studioMessageReference(prompt, draft.referenceUrl) &&
+          studioTask(prompt, false, intent, false) === 'create'
+        ? studioWebSpendLimit
+        : studioSpendLimits[quality];
   const [briefFile, setBriefFile] = useState<File | null>(null);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -509,7 +513,7 @@ export function StudioLab() {
       setBusy(false);
       gate.current = false;
       request.current = null;
-      setQuality('economy');
+      setQuality('local');
     }
   }
   async function viewVersion(revision: number) {
@@ -1707,22 +1711,27 @@ export function StudioLab() {
             <div className={styles.composer}>
               <div className={styles.costControls}>
                 <label>
-                  <span>Processamento</span>
+                  <span>Forma de criar</span>
                   <select
-                    aria-label="Processamento da IA"
+                    aria-label="Forma de criar proposta"
                     value={quality}
                     disabled={blocked}
                     onChange={(event) =>
-                      setQuality(event.target.value as 'economy' | 'premium')
+                      setQuality(
+                        event.target.value as 'local' | 'economy' | 'premium',
+                      )
                     }
                   >
-                    <option value="economy">Econômico</option>
+                    <option value="local">Instantâneo · sem IA</option>
+                    <option value="economy">Assistido · menor custo</option>
                     <option value="premium">Design livre · maior custo</option>
                   </select>
                 </label>
-                <span title="Orçamento estimado por envio. O valor faturado depende do consumo informado pela API; imagens e PDFs podem variar.">
-                  Orçamento: US${' '}
-                  {estimatedRequestBudget.toFixed(2).replace('.', ',')}
+                <span title="O modo instantâneo cria a proposta localmente. Os modos assistidos usam a API conforme o consumo informado.">
+                  {quality === 'local'
+                    ? 'Sem consumo de IA'
+                    : 'Orçamento: US$ ' +
+                      estimatedRequestBudget.toFixed(2).replace('.', ',')}
                 </span>
               </div>
               {(attachment || draft.referenceUrl || selection) && (
