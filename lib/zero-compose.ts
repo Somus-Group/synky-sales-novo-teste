@@ -603,7 +603,7 @@ function adaptReferenceTemplate(
       'O escopo e as condições comerciais serão confirmados antes da execução.',
     ];
     const isOutdated = (value: string) =>
-      /arquitet|escrit[oó]rio|\bBPO\b|financeir|\bSDR\b|\bRH\b|ROI|\b\d{2,}%|\+\s?\d{2,}|\bmais de \d{2,}|diagn[oó]stico gratuito|sem fidelidade|sem multa|condi[cç][aã]o promocional|\bcases?\b/i.test(
+      /arquitet|escrit[oó]rio|\bBPO\b|financeir|\bSDR\b|\bRH\b|ROI|\b\d{2,}%|\+\s?\d{2,}|\bmais de \d{2,}|diagn[oó]stico gratuito|sem fidelidade|sem multa|sem amarras|condi[cç][aã]o promocional|\bcases?\b|time de gest[aã]o|assessoria comum|verticais|edif[ií]cio|intelig[eê]ncia artificial|agentes de IA/i.test(
         value,
       ) ||
       source.services.some(
@@ -615,8 +615,15 @@ function adaptReferenceTemplate(
             `(^|[^\\p{L}\\p{N}])${item.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}\\p{N}])`,
             'iu',
           ).test(value),
-      );
+    );
+    output = replaceAll(output, 'Agendar diagnóstico gratuito', 'Alinhar próximos passos');
+    output = replaceAll(output, 'Quero meu diagnóstico gratuito', 'Alinhar próximos passos');
     let paragraphIndex = 0;
+    output = output.replace(/>([^<>]+)</g, (match, content) =>
+      isOutdated(content)
+        ? `>${escapeHtml(paragraphs[paragraphIndex++ % paragraphs.length])}<`
+        : match,
+    );
     output = output.replace(
       /(<p\b[^>]*>)([\s\S]*?)(<\/p>)/gi,
       (match, open, content, close) =>
@@ -639,13 +646,6 @@ function adaptReferenceTemplate(
         isOutdated(content.replace(/<[^>]*>/g, ''))
           ? `<${tag}${attributes}>${escapeHtml(headingCopy[headingIndex++ % headingCopy.length])}</${tag}>`
           : match,
-    );
-    output = replaceAll(output, 'Agendar diagnóstico gratuito', 'Alinhar próximos passos');
-    output = replaceAll(output, 'Quero meu diagnóstico gratuito', 'Alinhar próximos passos');
-    output = output.replace(/>([^<>]+)</g, (match, content) =>
-      isOutdated(content)
-        ? `>${escapeHtml(paragraphs[paragraphIndex++ % paragraphs.length])}<`
-        : match,
     );
   }
   if (requestedScope) {
