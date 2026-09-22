@@ -30,6 +30,8 @@ export type ZeroDraft = {
   cover: string;
   gallery: Array<{ url: string; caption: string }>;
   referenceUrl: string;
+  /** Visible text imported from a public proposal used as a deterministic base. */
+  referenceContent: string;
   referenceSections: string[];
   services: ZeroService[];
 };
@@ -172,6 +174,7 @@ export function emptyZeroDraft(supplier = ''): ZeroDraft {
     cover: 'auto',
     gallery: [],
     referenceUrl: '',
+    referenceContent: '',
     referenceSections: [],
     services: [],
   };
@@ -243,6 +246,8 @@ export function normalizeZeroDraft(value: unknown): ZeroDraft {
     )
   )
     throw new Error('Estrutura da referência inválida.');
+  const referenceContent =
+    p.referenceContent === undefined ? '' : text('referenceContent', 24000);
   if (!Array.isArray(p.services) || p.services.length > 24)
     throw new Error('Use até 24 serviços.');
   const ids = new Set<string>();
@@ -305,6 +310,7 @@ export function normalizeZeroDraft(value: unknown): ZeroDraft {
     cover: cover as string,
     gallery: images,
     referenceUrl: text('referenceUrl', 4096),
+    referenceContent,
     referenceSections: referenceSections.map((section) => section.trim()),
     services,
   };
@@ -523,7 +529,7 @@ export function renderZeroProposal(
   ].filter((f) => f.value);
   const nav = [
     ...(d.objective ? [['objetivo', 'Visão geral']] : []),
-    ...(d.briefing.trim().length > 480
+    ...(d.briefing.trim().length > 160
       ? [['briefing', 'Briefing completo']]
       : []),
     ...(d.services.length ? [['escopo', 'Entregas']] : []),
@@ -589,10 +595,15 @@ export function renderZeroProposal(
   // Long commercial notes remain available in the final page instead of being
   // silently reduced to the fields that the local parser can recognize.
   const fullBriefing =
-    d.briefing.trim().length > 480
+    d.briefing.trim().length > 160
       ? '<section id="briefing" class="section briefing"><div class="wrap briefing-grid">' +
-        sectionHead('Detalhes recebidos', 'Informações que orientam este projeto.') +
-        '<details open><summary>Ver briefing completo <span aria-hidden="true">+</span></summary><div class="briefing-copy">' +
+        sectionHead(
+          d.referenceContent.trim() ? 'Ajustes solicitados' : 'Detalhes recebidos',
+          d.referenceContent.trim()
+            ? 'O que muda nesta versão.'
+            : 'Informações que orientam este projeto.',
+        ) +
+        '<details open><summary>Ver informações completas <span aria-hidden="true">+</span></summary><div class="briefing-copy">' +
         lines(d.briefing) +
         '</div></details></div></section>'
       : '';

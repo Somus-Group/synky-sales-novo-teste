@@ -46,7 +46,11 @@ import {
   type ZeroService,
   type ZeroSummary,
 } from '@/lib/zero-proposal';
-import { composeZeroBrief, type ZeroComposition } from '@/lib/zero-compose';
+import {
+  composeZeroBrief,
+  composeZeroReferenceBrief,
+  type ZeroComposition,
+} from '@/lib/zero-compose';
 import type { AgentProfile } from './somus-app';
 import styles from './zero-lab.module.css';
 
@@ -58,6 +62,7 @@ type VisualAsset = {
 };
 type ZeroReferenceHint = {
   title: string;
+  content: string;
   colors: string[];
   serif: boolean;
   fonts: string[];
@@ -347,7 +352,8 @@ export function ZeroLab({
     });
   }
   function compose() {
-    if (busy || !draft.briefing.trim()) return;
+    if (busy || (!draft.briefing.trim() && !draft.referenceContent.trim()))
+      return;
     if (
       (draft.services.length || draft.client || draft.objective) &&
       commercialSnapshot(draft) !== composedCommercial.current &&
@@ -357,11 +363,13 @@ export function ZeroLab({
     )
       return;
     try {
-      const result = composeZeroBrief(
-        draft.briefing,
-        draft,
-        designChosen.current,
-      );
+      const result = draft.referenceContent.trim()
+        ? composeZeroReferenceBrief(
+            draft.briefing,
+            draft,
+            designChosen.current,
+          )
+        : composeZeroBrief(draft.briefing, draft, designChosen.current);
       change(result.draft);
       composedCommercial.current = commercialSnapshot(result.draft);
       setComposition(result);
@@ -686,7 +694,22 @@ export function ZeroLab({
       referenceSections: reference.sections,
     });
     setNotice(
-      `Direção visual de ${reference.title || 'sua referência'} aplicada. O conteúdo continua sendo o seu.`,
+      `Visual de ${reference.title || 'sua referência'} aplicado.`,
+    );
+  }
+  function useReferenceAsBase() {
+    if (!reference?.content.trim()) return;
+    designChosen.current = true;
+    change({
+      accent: reference.colors[0] || draft.accent,
+      serif: reference.serif,
+      design: reference.design,
+      referenceContent: reference.content,
+      referenceSections: reference.sections,
+    });
+    setNeedsCompose(true);
+    setNotice(
+      `A proposta ${reference.title || 'do link'} virou sua base. Escreva apenas o que muda e monte a nova versão.`,
     );
   }
   function demo() {
@@ -845,7 +868,11 @@ export function ZeroLab({
               disabled={busy}
             >
               <div className={styles.sectionTitle}>
-                <h2>Conte o que foi combinado.</h2>
+                <h2>
+                  {draft.referenceContent.trim()
+                    ? 'O que muda nesta proposta?'
+                    : 'Conte o que foi combinado.'}
+                </h2>
                 <PenLine size={20} aria-hidden="true" />
               </div>
               <div className={styles.promptBox}>
@@ -854,7 +881,9 @@ export function ZeroLab({
                   rows={8}
                   maxLength={60000}
                   placeholder={
-                    'Ex.: Proposta para Clínica Aurora. Site com página de serviços e formulário por R$ 4.000, pagamento único. Gestão de tráfego por R$ 2.500 por mês durante 6 meses. Objetivo: aumentar os agendamentos. Não inclui verba de anúncios.'
+                    draft.referenceContent.trim()
+                      ? 'Ex.: Troque o cliente para Clínica Aurora. Site por R$ 4.000, pagamento único. A gestão de tráfego será R$ 2.500 por mês durante 6 meses. Mantenha o restante.'
+                      : 'Ex.: Proposta para Clínica Aurora. Site com página de serviços e formulário por R$ 4.000, pagamento único. Gestão de tráfego por R$ 2.500 por mês durante 6 meses. Objetivo: aumentar os agendamentos. Não inclui verba de anúncios.'
                   }
                   value={draft.briefing}
                   onChange={(e) => {
@@ -876,9 +905,13 @@ export function ZeroLab({
                   <Button
                     className={styles.composeButton}
                     onClick={compose}
-                    disabled={!draft.briefing.trim()}
-                  >
-                    {draft.services.length
+                  disabled={
+                    !draft.briefing.trim() && !draft.referenceContent.trim()
+                  }
+                >
+                    {draft.referenceContent.trim() && !draft.services.length
+                      ? 'Criar a partir do link'
+                      : draft.services.length
                       ? 'Refazer proposta'
                       : 'Criar proposta'}
                     <ArrowUp size={16} />
@@ -916,9 +949,14 @@ export function ZeroLab({
                         : 'Cores, tipografia e composição disponíveis'}
                     </span>
                   </div>
-                  <Button variant="outline" size="sm" onClick={applyReference}>
-                    Aplicar direção
-                  </Button>
+                  <div className={styles.referenceActions}>
+                    <Button variant="outline" size="sm" onClick={applyReference}>
+                      Só visual
+                    </Button>
+                    <Button size="sm" onClick={useReferenceAsBase}>
+                      Usar como base
+                    </Button>
+                  </div>
                 </div>
               )}
               {needsCompose && (

@@ -36,7 +36,7 @@ function load(path, mocks = {}) {
 const zero = load('lib/zero-proposal.ts', {
   './zero-proposal-styles': load('lib/zero-proposal-styles.ts'),
 });
-const { composeZeroBrief } = load('lib/zero-compose.ts', {
+const { composeZeroBrief, composeZeroReferenceBrief } = load('lib/zero-compose.ts', {
   './zero-proposal': zero,
 });
 
@@ -53,7 +53,7 @@ test('new composer opens with one briefing and one optional reference, no form w
       Input: (props) => React.createElement('input', props),
     },
     '@/lib/zero-proposal': zero,
-    '@/lib/zero-compose': { composeZeroBrief },
+    '@/lib/zero-compose': { composeZeroBrief, composeZeroReferenceBrief },
     './zero-lab.module.css': {
       default: new Proxy({}, { get: (_, key) => String(key) }),
     },
@@ -210,6 +210,32 @@ test('all deliverables survive web expansion and unspecified prices never look f
     assert.doesNotMatch(html, /R\$\s*0,00|A partir de/);
     assert.doesNotMatch(html, /Relatório de desempenho|Ritmo de trabalho|roteiro inicial/);
   }
+});
+
+test('a public proposal can become a complete local base with only its changes applied', () => {
+  const reference =
+    'Proposta para Casa Lume. Gestão de tráfego por R$ 2.500 por mês. Site por R$ 4.000, pagamento único. Contrato de 6 meses. Objetivo: gerar novos projetos.';
+  const result = composeZeroReferenceBrief(
+    'Cliente: Clínica Aurora\nGestão de tráfego por R$ 3.000 por mês\nObjetivo: aumentar os agendamentos.',
+    {
+      ...zero.emptyZeroDraft('Synky'),
+      referenceUrl: 'https://example.com/proposta-casa-lume',
+      referenceContent: reference,
+      referenceSections: ['Apresentação', 'Entregas', 'Investimento'],
+    },
+  );
+  assert.equal(result.draft.client, 'Clínica Aurora');
+  assert.equal(result.draft.months, 6);
+  assert.equal(result.draft.services.length, 2);
+  assert.equal(result.draft.services[0].title, 'Gestão de tráfego');
+  assert.equal(result.draft.services[0].unitCents, 300000);
+  assert.equal(result.draft.services[1].unitCents, 400000);
+  assert.equal(result.draft.referenceContent, reference);
+  assert.match(result.draft.briefing, /aumentar os agendamentos/);
+  const html = zero.renderZeroProposal(result.draft);
+  assert.match(html, /Clínica Aurora/);
+  assert.match(html, /R\$\s?3\.000,00/);
+  assert.match(html, /R\$\s?4\.000,00/);
 });
 
 test('long briefings are preserved as readable proposal details', () => {
@@ -766,7 +792,7 @@ test('cover and gallery saves require ownership of every selected image', async 
   assert.equal(found.project.revision, 1);
 });
 
-test('reference route returns only visual hints and never calls an AI dependency', async (t) => {
+test('reference route returns a local proposal base without calling an AI dependency', async (t) => {
   const f = fixture();
   t.after(() => f.sqlite.close());
   let reads = 0;
@@ -798,7 +824,7 @@ test('reference route returns only visual hints and never calls an AI dependency
   assert.equal(result.serif, false);
   assert.equal(result.design, 'contrast');
   assert.deepEqual(result.sections, ['Abertura', 'Escopo', 'Investimento']);
-  assert.equal(result.text, undefined);
+  assert.equal(result.content, 'Do not import my prices');
   assert.equal(reads, 1);
   f.setUser(null);
   assert.equal((await route.POST(request())).status, 401);

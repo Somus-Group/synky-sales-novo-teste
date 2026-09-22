@@ -43,6 +43,9 @@ export async function POST(request: Request) {
       .slice(0, 8);
     return Response.json({
       title: reference.title,
+      // This is the public, script-free text collected from the reference.
+      // The Zero composer uses it as a local base instead of throwing it away.
+      content: reference.text,
       colors,
       serif,
       fonts: reference.designEvidence.fonts.slice(0, 6),

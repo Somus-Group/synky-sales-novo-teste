@@ -64,6 +64,7 @@ export function composeZeroBrief(
     accent: base.accent,
     serif: base.serif,
     referenceUrl: base.referenceUrl,
+    referenceContent: base.referenceContent,
     referenceSections: base.referenceSections,
     briefing: text,
   };
@@ -451,5 +452,87 @@ export function composeZeroBrief(
     draft: { ...normalized, briefing: text },
     warnings: [...new Set(warnings)],
     unresolved,
+  };
+}
+
+const isDefaultTitle = (value: string) =>
+  fold(value) === fold('Proposta comercial');
+
+function mergeServices(source: ZeroService[], changes: ZeroService[]) {
+  if (!changes.length) return source;
+  const used = new Set<number>();
+  const merged = source.map((service) => ({ ...service }));
+  for (const change of changes) {
+    const exact = merged.findIndex(
+      (service, index) => !used.has(index) && fold(service.title) === fold(change.title),
+    );
+    // A single new item is normally a correction to a single-item reference,
+    // even when its label changed together with its value.
+    const index = exact >= 0 ? exact : source.length === 1 && changes.length === 1 ? 0 : -1;
+    if (index >= 0) {
+      merged[index] = { ...change, id: source[index].id };
+      used.add(index);
+    } else merged.push(change);
+  }
+  return merged.slice(0, 24);
+}
+
+/**
+ * Applies a short list of changes to a public proposal imported as a base.
+ * Both passes are local and deterministic: the reference supplies the shape,
+ * while only explicitly stated commercial facts replace its values.
+ */
+export function composeZeroReferenceBrief(
+  changes: string,
+  base: ZeroDraft,
+  preserveDesign = false,
+): ZeroComposition {
+  if (!base.referenceContent.trim())
+    return composeZeroBrief(changes, base, preserveDesign);
+
+  const reference = composeZeroBrief(base.referenceContent, base, true);
+  if (!changes.trim())
+    return {
+      ...reference,
+      draft: { ...reference.draft, briefing: '' },
+    };
+
+  const update = composeZeroBrief(
+    changes,
+    { ...base, referenceContent: '' },
+    preserveDesign,
+  );
+  const source = reference.draft;
+  const patch = update.draft;
+  const merged = normalizeZeroDraft({
+    ...source,
+    email: base.email,
+    phone: base.phone,
+    logo: base.logo,
+    cover: base.cover,
+    gallery: base.gallery,
+    design: preserveDesign ? base.design : source.design,
+    accent: preserveDesign ? base.accent : source.accent,
+    serif: preserveDesign ? base.serif : source.serif,
+    referenceUrl: base.referenceUrl,
+    referenceContent: base.referenceContent,
+    referenceSections: base.referenceSections,
+    briefing: changes,
+    client: patch.client || source.client,
+    supplier: patch.supplier || source.supplier,
+    title: !isDefaultTitle(patch.title) ? patch.title : source.title,
+    objective: patch.objective || source.objective,
+    timeline: patch.timeline || source.timeline,
+    terms: patch.terms || source.terms,
+    exclusions: patch.exclusions || source.exclusions,
+    validity: patch.validity || source.validity,
+    months: patch.months || source.months,
+    discountPercent: patch.discountPercent || source.discountPercent,
+    services: mergeServices(source.services, patch.services),
+  });
+  return {
+    draft: merged,
+    warnings: [...new Set([...reference.warnings, ...update.warnings])],
+    unresolved: [...reference.unresolved, ...update.unresolved],
   };
 }
