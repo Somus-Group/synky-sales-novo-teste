@@ -757,7 +757,7 @@ export function composeZeroReferenceBrief(
     ),
   ];
   const focusedSection = serviceFocus
-    ? sectionMatches.find((match) => serviceFocus.test(match[1]))
+    ? [...sectionMatches].reverse().find((match) => serviceFocus.test(match[1]))
     : undefined;
   const focusMarkerIndex = focusedSection?.index ?? -1;
   let referenceScope = '';
@@ -786,6 +786,37 @@ export function composeZeroReferenceBrief(
         .slice(objectiveLabel + 'OBJETIVO'.length, focusMarkerIndex)
         .replace(/\bO QUE TRABALHAMOS EM\b[\s\S]*$/i, '')
         .trim();
+    const rawSections = [
+      ...base.referenceContent.matchAll(
+        /O QUE TRABALHAMOS EM\s+([^\r\n]{2,60})/giu,
+      ),
+    ];
+    const rawFocused = [...rawSections]
+      .reverse()
+      .find((match) => serviceFocus!.test(match[1]));
+    if (rawFocused) {
+      const rawStart = rawFocused.index! + rawFocused[0].length;
+      const rawNext = rawSections.find((match) => match.index! > rawStart);
+      const rawEnd = rawNext?.index ?? base.referenceContent.length;
+      referenceScope = base.referenceContent
+        .slice(rawStart, rawEnd)
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !/^\d{1,2}$/.test(line))
+        .slice(0, 12)
+        .join('\n');
+      const rawObjectiveLabel = base.referenceContent
+        .slice(0, rawFocused.index)
+        .toLocaleUpperCase('pt-BR')
+        .lastIndexOf('OBJETIVO');
+      if (rawObjectiveLabel >= 0)
+        referenceObjective = base.referenceContent
+          .slice(rawObjectiveLabel + 'OBJETIVO'.length, rawFocused.index)
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line && !/^\d{1,2}$/.test(line))
+          .slice(-1)[0] || referenceObjective;
+    }
   }
   const replaceFocusedScope =
     patch.services.length > 0 &&

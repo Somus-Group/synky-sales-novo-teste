@@ -90,6 +90,45 @@ export function extractReactReference(source: string) {
       : typeof value === 'string' || typeof value === 'number'
         ? String(value)
         : '';
+  const structuredCopy: string[] = [];
+  const collectStructuredCopy = (value: unknown, depth = 0) => {
+    if (depth > 8 || structuredCopy.length >= 120) return;
+    if (Array.isArray(value)) {
+      for (const entry of value) collectStructuredCopy(entry, depth + 1);
+      return;
+    }
+    if (!value || typeof value !== 'object') return;
+    const record = value as Record<string, unknown>;
+    const title = typeof record.title === 'string' ? record.title.trim() : '';
+    const floors = Array.isArray(record.floors) ? record.floors : [];
+    if (title && floors.length && typeof record.objective === 'string') {
+      const add = (text: unknown) => {
+        if (typeof text !== 'string') return;
+        const clean = text.trim();
+        if (
+          clean.length > 2 &&
+          !/(?:ignore.{0,50}(?:instructions?|instru[cç][oõ]es)|n[aã]o tem mais nada a alterar|execute\s*\/\s*responda.{0,80}tarefa)/i.test(clean)
+        )
+          structuredCopy.push(clean.slice(0, 2000));
+      };
+      add(title);
+      add(record.subtitle);
+      add(record.intro);
+      structuredCopy.push('OBJETIVO');
+      add(record.objective);
+      structuredCopy.push(`O QUE TRABALHAMOS EM ${title}`);
+      floors.slice(0, 12).forEach((floor, index) => {
+        if (!floor || typeof floor !== 'object') return;
+        const item = floor as Record<string, unknown>;
+        structuredCopy.push(String(index + 1).padStart(2, '0'));
+        add(item.name);
+        add(item.desc);
+      });
+      return;
+    }
+    for (const item of Object.values(record))
+      collectStructuredCopy(item, depth + 1);
+  };
   full(ast, (original) => {
     const item = original as Syntax;
     if (item.type === 'ImportDeclaration' || item.type === 'ImportExpression') {
@@ -167,6 +206,12 @@ export function extractReactReference(source: string) {
     text: useful
       .map((item) => item.text)
       .filter(Boolean)
+      .concat(
+        (() => {
+          repeated.forEach((value) => collectStructuredCopy(value));
+          return [...new Set(structuredCopy)];
+        })(),
+      )
       .join('\n')
       .slice(0, 24000),
     headings: useful.filter((item) => /^h[1-6]$/.test(item.tag) && item.text)
