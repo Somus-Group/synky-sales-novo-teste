@@ -750,39 +750,42 @@ export function composeZeroReferenceBrief(
         : /estrat[eé]gia|consultoria|governan[cç]a/i.test(changes)
           ? /estrat[eé]gia|consultoria|governan[cç]a/i
           : null;
-  const referenceLines = base.referenceContent
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const sectionMarker = /O QUE TRABALHAMOS EM\s+([\p{L}\s/&-]+)/iu;
-  const focusMarkerIndex = serviceFocus
-    ? referenceLines.findIndex((line) => {
-        const match = line.match(sectionMarker);
-        return Boolean(match && serviceFocus.test(match[1].trim()));
-      })
-    : -1;
+  const referenceFlat = base.referenceContent.replace(/\s+/g, ' ').trim();
+  const sectionMatches = [
+    ...referenceFlat.matchAll(
+      /O QUE TRABALHAMOS EM\s+(.{2,60}?)(?=\s+\d{1,2}\s|$)/giu,
+    ),
+  ];
+  const focusedSection = serviceFocus
+    ? sectionMatches.find((match) => serviceFocus.test(match[1]))
+    : undefined;
+  const focusMarkerIndex = focusedSection?.index ?? -1;
   let referenceScope = '';
   let referenceObjective = '';
-  if (focusMarkerIndex >= 0) {
-    const nextMarkerIndex = referenceLines.findIndex(
-      (line, index) =>
-        index > focusMarkerIndex &&
-        (sectionMarker.test(line) || /SINERGIA ESTRUTURAL|\d{2}\s*[·.-]\s*(?:DIFERENCIAL|AUTORIDADE|INVESTIMENTO|PERGUNTAS|TRANSFORMAÇÃO)/i.test(line)),
+  if (focusedSection) {
+    const scopeStart = focusedSection.index! + focusedSection[0].length;
+    const nextSection = sectionMatches.find((match) => match.index! > scopeStart);
+    const nextChapter = referenceFlat
+      .slice(scopeStart)
+      .search(/\b(?:SINERGIA ESTRUTURAL|\d{2}\s*[·.-]\s*(?:DIFERENCIAL|AUTORIDADE|INVESTIMENTO|PERGUNTAS|TRANSFORMAÇÃO))\b/i);
+    const scopeEnd = Math.min(
+      nextSection?.index ?? referenceFlat.length,
+      nextChapter < 0 ? referenceFlat.length : scopeStart + nextChapter,
     );
-    referenceScope = referenceLines
-      .slice(focusMarkerIndex + 1, nextMarkerIndex < 0 ? undefined : nextMarkerIndex)
-      .filter((line) => !/^\d{1,2}$/.test(line) && !/^O QUE TRABALHAMOS EM/i.test(line))
-      .slice(0, 12)
-      .join('\n');
-    const objectiveIndex = referenceLines
+    referenceScope = referenceFlat
+      .slice(scopeStart, scopeEnd)
+      .replace(/\s+(?=(?:0?[1-9])\s+[\p{Lu}])/gu, '\n')
+      .replace(/\n\s*\d{1,2}\s*\n/g, '\n')
+      .trim();
+    const objectiveLabel = referenceFlat
       .slice(0, focusMarkerIndex)
-      .findLastIndex((line) => /^OBJETIVO$/i.test(line));
-    if (objectiveIndex >= 0)
-      referenceObjective = referenceLines
-        .slice(objectiveIndex + 1, focusMarkerIndex)
-        .filter((line) => !/^\d{1,2}$/.test(line))
-        .slice(0, 2)
-        .join(' ');
+      .toLocaleUpperCase('pt-BR')
+      .lastIndexOf('OBJETIVO');
+    if (objectiveLabel >= 0)
+      referenceObjective = referenceFlat
+        .slice(objectiveLabel + 'OBJETIVO'.length, focusMarkerIndex)
+        .replace(/\bO QUE TRABALHAMOS EM\b[\s\S]*$/i, '')
+        .trim();
   }
   const replaceFocusedScope =
     patch.services.length > 0 &&
