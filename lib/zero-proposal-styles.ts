@@ -345,7 +345,7 @@ th:last-child, td:last-child { text-align: right; white-space: nowrap; }
 .reference-clean .hero, .reference-clean.editorial .hero, .reference-clean.contrast .hero, .reference-clean.compact .hero { min-height: 460px; background: #111112; }
 .reference-clean .hero:before, .reference-clean.editorial .hero:before, .reference-clean.contrast .hero:before, .reference-clean.compact .hero:before { width: 9px; background: var(--accent); }
 .reference-clean .hero:after { display: none; }
-.reference-clean .hero-content, .reference-clean.editorial .hero-content, .reference-clean.contrast .hero-content, .reference-clean.compact .hero-content { min-height: 460px; grid-template-columns: minmax(0, 1fr) minmax(220px, .48fr); align-items: end; padding: 68px 0 40px; }
+.reference-clean .hero-content, .reference-clean.editorial .hero-content, .reference-clean.contrast .hero-content, .reference-clean.compact .hero-content { min-height: 460px; grid-template-columns: minmax(0, 1fr) minmax(220px, .48fr); align-items: center; padding: 48px 0; }
 .reference-clean .hero-client, .reference-clean .section-label { color: var(--accent); }
 .reference-clean .hero h1, .reference-clean h1, .reference-clean h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; }
 .reference-clean h3 { font-family: Arial, Helvetica, sans-serif; font-weight: 700; }
