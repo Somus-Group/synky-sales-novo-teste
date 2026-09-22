@@ -84,6 +84,7 @@ export function extractReactReference(source: string) {
     end: number;
   }> = [];
   const repeated: unknown[] = [];
+  const structuredObjects: unknown[] = [];
   const imports: string[] = [];
   const textValue = (value: unknown): string =>
     Array.isArray(value)
@@ -132,6 +133,15 @@ export function extractReactReference(source: string) {
   };
   full(ast, (original) => {
     const item = original as Syntax;
+    if (item.type === 'ObjectExpression') {
+      const properties = nodes(item.properties).map((prop) => key(node(prop)?.key));
+      if (
+        properties.includes('floors') &&
+        properties.includes('title') &&
+        properties.includes('objective')
+      )
+        structuredObjects.push(literal(item));
+    }
     if (item.type === 'ImportDeclaration' || item.type === 'ImportExpression') {
       const path = literal(item.source);
       if (typeof path === 'string' && /^(\.?\.?\/).*\.m?js(?:\?|$)/.test(path))
@@ -209,7 +219,9 @@ export function extractReactReference(source: string) {
       .filter(Boolean)
       .concat(
         (() => {
-          repeated.forEach((value) => collectStructuredCopy(value));
+          [...structuredObjects, ...repeated].forEach((value) =>
+            collectStructuredCopy(value),
+          );
           return [...new Set(structuredCopy)];
         })(),
       )
