@@ -515,16 +515,22 @@ function adaptReferenceTemplate(
   const replaceAll = (markup: string, from: string, to: string) => {
     if (!from || !to || fold(from) === fold(to)) return markup;
     const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const raw = new RegExp(escapePattern(from), 'gi');
-    const encoded = new RegExp(escapePattern(escapeHtml(from)), 'gi');
+    const bounded = (value: string) =>
+      new RegExp(
+        `(^|[^\\p{L}\\p{N}])(${escapePattern(value)})(?=$|[^\\p{L}\\p{N}])`,
+        'giu',
+      );
+    const replaceText = (value: string, pattern: RegExp) =>
+      value.replace(pattern, (_match, before: string) => before + escapeHtml(to));
     return markup
       .split(/(<[^>]*>)/g)
       .map((part, index) =>
         index % 2
           ? part
-          : part
-              .replace(raw, escapeHtml(to))
-              .replace(encoded, escapeHtml(to)),
+          : replaceText(
+              replaceText(part, bounded(from)),
+              bounded(escapeHtml(from)),
+            ),
       )
       .join('');
   };
@@ -545,7 +551,7 @@ function adaptReferenceTemplate(
   if (next.objective)
     output = output.replace(
       /(<p\b[^>]*>)[\s\S]*?(<\/p>)/i,
-      '$1' + escapeHtml(next.objective) + '$2',
+      (_match, open, close) => open + escapeHtml(next.objective) + close,
     );
   output = replaceAll(output, source.client, next.client);
   output = replaceAll(output, source.supplier, next.supplier);
@@ -569,21 +575,19 @@ function adaptReferenceTemplate(
       output = replaceAll(output, firstWord.toLowerCase(), replacementBrand);
     }
   }
-  for (let index = 0; index < Math.min(source.services.length, next.services.length); index++)
-    output = replaceAll(
-      output,
-      source.services[index].title,
-      next.services[index].title,
-    );
-  if (requestedScope && next.services[0])
-    for (const service of source.services)
-      output = replaceAll(output, service.title, next.services[0].title);
+  if (!requestedScope)
+    for (let index = 0; index < Math.min(source.services.length, next.services.length); index++)
+      output = replaceAll(
+        output,
+        source.services[index].title,
+        next.services[index].title,
+      );
   if (requestedScope && /arquitet/i.test(source.client)) {
     output = replaceAll(output, 'voltar a fazer arquitetura', 'focar no crescimento do negócio');
     output = replaceAll(output, 'volte a fazer arquitetura', 'foque no crescimento do negócio');
-    output = replaceAll(output, 'arquitetura', 'negócio');
-    output = replaceAll(output, 'escritórios', 'negócios');
-    output = replaceAll(output, 'escritório', 'negócio');
+    output = replaceAll(output, 'escritórios de arquitetura', next.client);
+    output = replaceAll(output, 'escritório de arquitetura', next.client);
+    output = replaceAll(output, 'seu escritório', 'sua marca');
   }
   if (requestedScope && source.months > 0 && next.months > 0)
     output = replaceAll(
