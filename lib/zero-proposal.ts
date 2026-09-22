@@ -464,24 +464,6 @@ const lines = (value: string) =>
     .map((line) => `<p>${escape(line)}</p>`)
     .join('');
 
-function renderReferenceClone(draft: ZeroDraft) {
-  const protection =
-    "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'";
-  const localStyles =
-    'html{scroll-behavior:smooth}body{margin:0;overflow-wrap:anywhere}img:not([src]){display:none!important}a{cursor:default!important;text-decoration:none!important}';
-  const head =
-    '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' +
-    protection +
-    '"><style>' +
-    draft.referenceStyles +
-    localStyles +
-    '</style>';
-  const template = draft.referenceTemplate;
-  return /<head\b[^>]*>/i.test(template)
-    ? template.replace(/<head\b[^>]*>/i, head)
-    : '<!doctype html><html lang="pt-BR">' + head + '</head><body>' + template + '</body></html>';
-}
-
 export function renderZeroProposal(
   draft: ZeroDraft,
   assetOrigin = '',
@@ -495,7 +477,6 @@ export function renderZeroProposal(
   },
 ) {
   const d = normalizeZeroDraft(draft);
-  if (d.referenceTemplate.trim()) return renderReferenceClone(d);
   const totals = zeroTotals(d);
   const rgb = d.accent
     .slice(1)
@@ -978,7 +959,7 @@ export function renderZeroProposal(
     '</title><style>' +
     zeroProposalStyles +
     '</style></head><body class="' +
-    d.design + (d.referenceContent.trim() ? ' reference-mode' : '') +
+    d.design +
     '" style="--accent:' +
     d.accent +
     ';--ink:' +
