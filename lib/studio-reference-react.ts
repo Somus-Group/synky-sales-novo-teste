@@ -93,6 +93,7 @@ export function extractReactReference(source: string) {
         ? String(value)
         : '';
   const structuredCopy: string[] = [];
+  const structuredSections = new Set<string>();
   const collectStructuredCopy = (value: unknown, depth = 0) => {
     if (depth > 8 || structuredCopy.length >= 120) return;
     if (Array.isArray(value)) {
@@ -104,6 +105,8 @@ export function extractReactReference(source: string) {
     const title = typeof record.title === 'string' ? record.title.trim() : '';
     const floors = Array.isArray(record.floors) ? record.floors : [];
     if (title && floors.length && typeof record.objective === 'string') {
+      if (structuredSections.has(title.toLocaleLowerCase('pt-BR'))) return;
+      structuredSections.add(title.toLocaleLowerCase('pt-BR'));
       const add = (text: unknown) => {
         if (typeof text !== 'string') return;
         const clean = text.trim();
@@ -126,6 +129,7 @@ export function extractReactReference(source: string) {
         add(item.name);
         add(item.desc);
       });
+      structuredCopy.push(`FIM DO ESCOPO: ${title}`);
       return;
     }
     for (const item of Object.values(record))
@@ -222,7 +226,7 @@ export function extractReactReference(source: string) {
           [...structuredObjects, ...repeated].forEach((value) =>
             collectStructuredCopy(value),
           );
-          return [...new Set(structuredCopy)];
+          return structuredCopy;
         })(),
       )
       .join('\n')

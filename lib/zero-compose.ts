@@ -797,7 +797,14 @@ export function composeZeroReferenceBrief(
     if (rawFocused) {
       const rawStart = rawFocused.index! + rawFocused[0].length;
       const rawNext = rawSections.find((match) => match.index! > rawStart);
-      const rawEnd = rawNext?.index ?? base.referenceContent.length;
+      const structuredEnd = base.referenceContent.indexOf(
+        `FIM DO ESCOPO: ${rawFocused[1]}`,
+        rawStart,
+      );
+      const rawEnd =
+        structuredEnd >= 0
+          ? structuredEnd
+          : rawNext?.index ?? base.referenceContent.length;
       referenceScope = base.referenceContent
         .slice(rawStart, rawEnd)
         .split(/\r?\n/)
