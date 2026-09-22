@@ -342,15 +342,15 @@ th:last-child, td:last-child { text-align: right; white-space: nowrap; }
 .reference-clean { background: #f5f4f1; color: #191919; }
 .reference-clean .brandbar, .reference-clean .project-strip, .reference-clean .closing { background: #111112; color: #f6f5f2; }
 .reference-clean .brand { color: #f6f5f2; }
-.reference-clean .hero, .reference-clean.editorial .hero, .reference-clean.contrast .hero, .reference-clean.compact .hero { min-height: 620px; background: #111112; }
+.reference-clean .hero, .reference-clean.editorial .hero, .reference-clean.contrast .hero, .reference-clean.compact .hero { min-height: 460px; background: #111112; }
 .reference-clean .hero:before, .reference-clean.editorial .hero:before, .reference-clean.contrast .hero:before, .reference-clean.compact .hero:before { width: 9px; background: var(--accent); }
 .reference-clean .hero:after { display: none; }
-.reference-clean .hero-content, .reference-clean.editorial .hero-content, .reference-clean.contrast .hero-content, .reference-clean.compact .hero-content { min-height: 620px; grid-template-columns: minmax(0, 1fr) minmax(220px, .48fr); align-items: end; padding: 84px 0 48px; }
+.reference-clean .hero-content, .reference-clean.editorial .hero-content, .reference-clean.contrast .hero-content, .reference-clean.compact .hero-content { min-height: 460px; grid-template-columns: minmax(0, 1fr) minmax(220px, .48fr); align-items: end; padding: 68px 0 40px; }
 .reference-clean .hero-client, .reference-clean .section-label { color: var(--accent); }
 .reference-clean .hero h1, .reference-clean h1, .reference-clean h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; }
 .reference-clean h3 { font-family: Arial, Helvetica, sans-serif; font-weight: 700; }
-.reference-clean .hero h1 { max-width: 760px; font-size: clamp(54px, 6vw, 82px); }
-.reference-clean .hero-subject { max-width: 620px; font-size: 19px; }
+.reference-clean .hero h1 { max-width: 760px; font-size: clamp(44px, 5vw, 68px); }
+.reference-clean .hero-subject { max-width: 620px; font-size: 17px; }
 .reference-clean .hero-link { border-radius: 4px; background: var(--accent); color: var(--on-accent); }
 .reference-clean .hero-link span { background: #111112; color: #fff; }
 .reference-clean .hero-panel { border-color: #ffffff40; }
