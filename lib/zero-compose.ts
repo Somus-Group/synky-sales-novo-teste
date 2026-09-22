@@ -582,19 +582,72 @@ function adaptReferenceTemplate(
         source.services[index].title,
         next.services[index].title,
       );
-  if (requestedScope && /arquitet/i.test(source.client)) {
-    output = replaceAll(output, 'voltar a fazer arquitetura', 'focar no crescimento do negócio');
-    output = replaceAll(output, 'volte a fazer arquitetura', 'foque no crescimento do negócio');
-    output = replaceAll(output, 'escritórios de arquitetura', next.client);
-    output = replaceAll(output, 'escritório de arquitetura', next.client);
-    output = replaceAll(output, 'seu escritório', 'sua marca');
-  }
-  if (requestedScope && source.months > 0 && next.months > 0)
+  const originalMonths =
+    source.months ||
+    Number(source.referenceContent.match(/\b(\d{1,3})\s+meses?\b/i)?.[1] || 0);
+  if (requestedScope && originalMonths > 0 && next.months > 0)
     output = replaceAll(
       output,
-      `${source.months} ${source.months === 1 ? 'mês' : 'meses'}`,
+      `${originalMonths} ${originalMonths === 1 ? 'mês' : 'meses'}`,
       `${next.months} ${next.months === 1 ? 'mês' : 'meses'}`,
     );
+  if (requestedScope) {
+    const client = next.client || 'o cliente';
+    const service = next.services[0].title.toLocaleLowerCase('pt-BR');
+    const duration = `${next.months || 0} ${next.months === 1 ? 'mês' : 'meses'}`;
+    const paragraphs = [
+      `${service} para ${client} durante ${duration}.`,
+      'Objetivos, canais e indicadores serão alinhados antes do início das campanhas.',
+      'O desempenho será acompanhado e as campanhas ajustadas ao longo do contrato.',
+      'A verba de mídia e o valor da gestão serão apresentados separadamente.',
+      'O escopo e as condições comerciais serão confirmados antes da execução.',
+    ];
+    const isOutdated = (value: string) =>
+      /arquitet|escrit[oó]rio|\bBPO\b|financeir|\bSDR\b|\bRH\b|ROI|\b\d{2,}%|\+\s?\d{2,}|\bmais de \d{2,}|diagn[oó]stico gratuito|sem fidelidade|sem multa|condi[cç][aã]o promocional|\bcases?\b/i.test(
+        value,
+      ) ||
+      source.services.some(
+        (item) =>
+          item.title.length >= 8 &&
+          !fold(next.services[0].title).includes(fold(item.title)) &&
+          !paragraphs.some((copy) => fold(copy).includes(fold(item.title))) &&
+          new RegExp(
+            `(^|[^\\p{L}\\p{N}])${item.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}\\p{N}])`,
+            'iu',
+          ).test(value),
+      );
+    let paragraphIndex = 0;
+    output = output.replace(
+      /(<p\b[^>]*>)([\s\S]*?)(<\/p>)/gi,
+      (match, open, content, close) =>
+        isOutdated(content.replace(/<[^>]*>/g, ''))
+          ? open + escapeHtml(paragraphs[paragraphIndex++ % paragraphs.length]) + close
+          : match,
+    );
+    const headingCopy = [
+      'O objetivo do projeto',
+      'Plano de campanhas',
+      'Estratégia e otimização',
+      'Acompanhamento de performance',
+      'Investimento e condições',
+      'Próximos passos',
+    ];
+    let headingIndex = 0;
+    output = output.replace(
+      /<(h[2-6])\b([^>]*)>([\s\S]*?)<\/\1>/gi,
+      (match, tag, attributes, content) =>
+        isOutdated(content.replace(/<[^>]*>/g, ''))
+          ? `<${tag}${attributes}>${escapeHtml(headingCopy[headingIndex++ % headingCopy.length])}</${tag}>`
+          : match,
+    );
+    output = replaceAll(output, 'Agendar diagnóstico gratuito', 'Alinhar próximos passos');
+    output = replaceAll(output, 'Quero meu diagnóstico gratuito', 'Alinhar próximos passos');
+    output = output.replace(/>([^<>]+)</g, (match, content) =>
+      isOutdated(content)
+        ? `>${escapeHtml(paragraphs[paragraphIndex++ % paragraphs.length])}<`
+        : match,
+    );
+  }
   if (requestedScope) {
     let priceIndex = 0;
     output = output.replace(/R\$\s?[\d.,]+\s?(?:k|mil)?/gi, () => {
