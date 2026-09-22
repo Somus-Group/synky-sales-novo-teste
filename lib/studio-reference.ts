@@ -444,7 +444,11 @@ export async function readStudioReference(
       }
     }
     let method: StudioReference['method'] = 'html';
-    if (compact(text).length < 250 || headings < 2) {
+    if (scripts.length) {
+      const htmlText = text;
+      const htmlStructure = structure;
+      const htmlHeadings = headings;
+      const htmlSectionOrder = sectionOrder;
       const queue = [...new Set(scripts)].map(resolveAsset);
       const visited = new Set<string>();
       let appText = '';
@@ -476,12 +480,21 @@ export async function readStudioReference(
           /* Try the other declared application modules, within the same budget. */
         }
       }
-      if (compact(appText).length >= 250 && appHeadings >= 2) {
+      if (
+        compact(appText).length >= 250 &&
+        appHeadings >= 2 &&
+        compact(appText).length > compact(htmlText).length * 1.08
+      ) {
         text = appText;
         structure = appStructure;
         headings = appHeadings;
         method = 'react-source';
         sectionOrder = appSectionOrder;
+      } else {
+        text = htmlText;
+        structure = htmlStructure;
+        headings = htmlHeadings;
+        sectionOrder = htmlSectionOrder;
       }
     }
     if (compact(text).length < 250 || headings < 2)
