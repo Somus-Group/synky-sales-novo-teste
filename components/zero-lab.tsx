@@ -261,6 +261,17 @@ export function ZeroLab({
   const draftText = JSON.stringify(draft);
   const dirty = touched.current && draftText !== saved;
   const totals = zeroTotals(draft);
+  const footerAmount = (billing: ZeroService['billing']) => {
+    const services = draft.services.filter((service) => service.billing === billing);
+    const priced = services.filter((service) => service.unitCents !== null);
+    const amount = priced.reduce(
+      (sum, service) => sum + service.unitCents! * service.quantity,
+      0,
+    );
+    if (services.some((service) => service.unitCents === null))
+      return amount > 0 ? `${zeroMoney(amount)} + a definir` : 'A definir';
+    return zeroMoney(amount);
+  };
   // Typing a brief must not replace the canvas with an empty, generic proposal.
   // A commercial document only appears after the local composer has found content.
   const hasUserProposal = !!(
@@ -1699,13 +1710,17 @@ export function ZeroLab({
           )}
           {draft.services.length > 0 && (
             <footer className={styles.editorFooter}>
-              <span>
-                <strong>{zeroMoney(totals.monthly)}</strong>/mês
-              </span>
-              <span>
-                <strong>{zeroMoney(totals.once)}</strong> único
-              </span>
-              {totals.pending && <small>Há valores a definir</small>}
+              {draft.services.some((service) => service.billing === 'monthly') && (
+                <span>
+                  <strong>{footerAmount('monthly')}</strong>/mês
+                </span>
+              )}
+              {draft.services.some((service) => service.billing === 'once') && (
+                <span>
+                  <strong>{footerAmount('once')}</strong> único
+                </span>
+              )}
+              {totals.pending && <small>Valores pendentes</small>}
             </footer>
           )}
         </section>
