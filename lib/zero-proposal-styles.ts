@@ -339,6 +339,52 @@ th:last-child, td:last-child { text-align: right; white-space: nowrap; }
   .signature { flex-direction: column; }
   .closing { padding-top: 67px; }
 }
+.reference-clean { background: #f5f4f1; color: #191919; }
+.reference-clean .brandbar, .reference-clean .project-strip, .reference-clean .closing { background: #111112; color: #f6f5f2; }
+.reference-clean .brand { color: #f6f5f2; }
+.reference-clean .hero, .reference-clean.editorial .hero, .reference-clean.contrast .hero, .reference-clean.compact .hero { min-height: 620px; background: #111112; }
+.reference-clean .hero:before, .reference-clean.editorial .hero:before, .reference-clean.contrast .hero:before, .reference-clean.compact .hero:before { width: 9px; background: var(--accent); }
+.reference-clean .hero:after { display: none; }
+.reference-clean .hero-content, .reference-clean.editorial .hero-content, .reference-clean.contrast .hero-content, .reference-clean.compact .hero-content { min-height: 620px; grid-template-columns: minmax(0, 1fr) minmax(220px, .48fr); align-items: end; padding: 84px 0 48px; }
+.reference-clean .hero-client, .reference-clean .section-label { color: var(--accent); }
+.reference-clean .hero h1, .reference-clean h1, .reference-clean h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; }
+.reference-clean h3 { font-family: Arial, Helvetica, sans-serif; font-weight: 700; }
+.reference-clean .hero h1 { max-width: 760px; font-size: clamp(54px, 6vw, 82px); }
+.reference-clean .hero-subject { max-width: 620px; font-size: 19px; }
+.reference-clean .hero-link { border-radius: 4px; background: var(--accent); color: var(--on-accent); }
+.reference-clean .hero-link span { background: #111112; color: #fff; }
+.reference-clean .hero-panel { border-color: #ffffff40; }
+.reference-clean .hero-services li { border-color: #ffffff30; }
+.reference-clean .hero-panel > span { color: var(--accent); }
+.reference-clean .project-facts { border-color: #ffffff2b; }
+.reference-clean .project-facts div { border-color: #ffffff2b; }
+.reference-clean .project-facts dt { color: #aebbb3; }
+.reference-clean .context, .reference-clean .briefing, .reference-clean .references, .reference-clean .agreements { background: #f5f4f1; }
+.reference-clean .scope { background: #fff; }
+.reference-clean .scope-chapters { border-color: #d4ded7; }
+.reference-clean .scope-chapter, .reference-clean .scope-chapter:nth-child(even) { min-height: 0; grid-template-columns: 92px minmax(190px, .65fr) minmax(220px, 1.35fr); padding: 38px 0; border-color: #d4ded7; background: transparent; }
+.reference-clean .scope-name h3 { margin-top: 12px; font-size: 29px; }
+.reference-clean .service-number { background: #191919; color: var(--accent); }
+.reference-clean .deliverables li { border-color: #e5ebe6; }
+.reference-clean .schedule, .reference-clean.editorial .schedule, .reference-clean.contrast .schedule, .reference-clean.compact .schedule { background: #191919; color: #fff; }
+.reference-clean .schedule .section-label { color: var(--accent); }
+.reference-clean .investment, .reference-clean.editorial .investment, .reference-clean.contrast .investment, .reference-clean.compact .investment { background: #e9e6df; color: #191919; }
+.reference-clean .investment .section-label { color: #8e473a; opacity: 1; }
+.reference-clean .totals { gap: 12px; background: transparent; }
+.reference-clean .total, .reference-clean.editorial .total, .reference-clean.contrast .total, .reference-clean.compact .total { border: 1px solid #d4d0c9; border-top: 3px solid var(--accent); background: #f5f4f1; color: #191919; }
+.reference-clean .total strong { font-size: 34px; }
+.reference-clean .price-detail { border-color: #b9c9be; }
+.reference-clean .agreements .conditions { border-color: #d4ded7; }
+.reference-clean .closing { padding-top: 72px; }
+.reference-clean .closing .section-label { color: var(--accent); }
+@media (max-width: 760px) {
+  .reference-clean .hero, .reference-clean.editorial .hero, .reference-clean.contrast .hero, .reference-clean.compact .hero { min-height: 0; }
+  .reference-clean .hero-content, .reference-clean.editorial .hero-content, .reference-clean.contrast .hero-content, .reference-clean.compact .hero-content { min-height: 0; grid-template-columns: 1fr; gap: 38px; padding: 76px 0 34px; }
+  .reference-clean .hero h1 { font-size: 48px; }
+  .reference-clean .hero-panel { padding-left: 0; border-left: 0; }
+  .reference-clean .scope-chapter, .reference-clean .scope-chapter:nth-child(even) { grid-template-columns: 54px minmax(0, 1fr); gap: 17px; }
+  .reference-clean .scope-chapter .chapter-content { grid-column: 2; }
+}
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .hero-link { transition: none; } }
 @media print {
   @page { size: A4; margin: 12mm; }

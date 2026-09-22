@@ -741,6 +741,52 @@ export function composeZeroReferenceBrief(
     /\b(?:mudar|trocar|substituir|refazer)\s+(?:(?:toda|a)\s+)?(?:a\s+)?(?:proposta|oferta|escopo|servi[cç]os?)\b/i.test(
       changes,
     ) && patch.services.length > 0;
+  const serviceFocus = /tr[aá]fego|an[uú]ncios|marketing|ads/i.test(changes)
+    ? /marketing|tr[aá]fego|an[uú]ncios|campanha|criativos|otimiza[cç][aã]o/i
+    : /financeir|bpo/i.test(changes)
+      ? /financeir|bpo/i
+      : /comercial|vendas|sdr|crm/i.test(changes)
+        ? /comercial|vendas|sdr|crm/i
+        : /estrat[eé]gia|consultoria|governan[cç]a/i.test(changes)
+          ? /estrat[eé]gia|consultoria|governan[cç]a/i
+          : null;
+  const referenceLines = base.referenceContent
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const sectionMarker = /O QUE TRABALHAMOS EM\s+([\p{L}\s/&-]+)/iu;
+  const focusMarkerIndex = serviceFocus
+    ? referenceLines.findIndex((line) => {
+        const match = line.match(sectionMarker);
+        return Boolean(match && serviceFocus.test(match[1].trim()));
+      })
+    : -1;
+  let referenceScope = '';
+  let referenceObjective = '';
+  if (focusMarkerIndex >= 0) {
+    const nextMarkerIndex = referenceLines.findIndex(
+      (line, index) =>
+        index > focusMarkerIndex &&
+        (sectionMarker.test(line) || /SINERGIA ESTRUTURAL|\d{2}\s*[·.-]\s*(?:DIFERENCIAL|AUTORIDADE|INVESTIMENTO|PERGUNTAS|TRANSFORMAÇÃO)/i.test(line)),
+    );
+    referenceScope = referenceLines
+      .slice(focusMarkerIndex + 1, nextMarkerIndex < 0 ? undefined : nextMarkerIndex)
+      .filter((line) => !/^\d{1,2}$/.test(line) && !/^O QUE TRABALHAMOS EM/i.test(line))
+      .slice(0, 12)
+      .join('\n');
+    const objectiveIndex = referenceLines
+      .slice(0, focusMarkerIndex)
+      .findLastIndex((line) => /^OBJETIVO$/i.test(line));
+    if (objectiveIndex >= 0)
+      referenceObjective = referenceLines
+        .slice(objectiveIndex + 1, focusMarkerIndex)
+        .filter((line) => !/^\d{1,2}$/.test(line))
+        .slice(0, 2)
+        .join(' ');
+  }
+  const replaceFocusedScope =
+    patch.services.length > 0 &&
+    (replaceScope || Boolean(serviceFocus && focusMarkerIndex >= 0));
   const adaptedTitle =
     /^(?:t[ií]tulo|projeto)\s*:/im.test(changes)
       ? patch.title
@@ -751,7 +797,9 @@ export function composeZeroReferenceBrief(
           : source.title;
   const adaptedObjective =
     patch.objective ||
-    (replaceScope
+    (replaceFocusedScope && referenceObjective
+      ? referenceObjective
+      : replaceFocusedScope
       ? `A proposta contempla ${patch.services[0].title.toLocaleLowerCase('pt-BR')} durante ${patch.months || source.months || 0} ${((patch.months || source.months || 0) === 1) ? 'mês' : 'meses'}.`
       : source.objective);
   const combined = {
@@ -776,12 +824,18 @@ export function composeZeroReferenceBrief(
     title: adaptedTitle,
     objective: adaptedObjective,
     timeline: patch.timeline || source.timeline,
-    terms: patch.terms || (replaceScope ? '' : source.terms),
-    exclusions: patch.exclusions || (replaceScope ? '' : source.exclusions),
+    terms: patch.terms || (replaceFocusedScope ? '' : source.terms),
+    exclusions: patch.exclusions || (replaceFocusedScope ? '' : source.exclusions),
     validity: patch.validity || source.validity,
     months: patch.months || source.months,
     discountPercent: patch.discountPercent || source.discountPercent,
-    services: mergeServices(replaceScope ? [] : source.services, patch.services),
+    services: replaceFocusedScope
+      ? patch.services.map((service, index) => ({
+          ...service,
+          description:
+            index === 0 ? referenceScope || service.description : service.description,
+        }))
+      : mergeServices(replaceScope ? [] : source.services, patch.services),
   } satisfies ZeroDraft;
   const merged = normalizeZeroDraft({
     ...combined,

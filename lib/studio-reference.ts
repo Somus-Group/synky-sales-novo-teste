@@ -533,7 +533,12 @@ export async function readStudioReference(
       method,
       media,
       mediaWarnings,
-      text: compact(text).slice(0, 24000),
+      text: text
+        .replace(/[^\S\n]+/g, ' ')
+        .replace(/ *\n */g, '\n')
+        .replace(/\n{2,}/g, '\n')
+        .trim()
+        .slice(0, 24000),
       structure: structure.slice(0, 55000),
       styles: designStyles.styles,
       template:

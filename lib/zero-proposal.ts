@@ -501,7 +501,8 @@ export function renderZeroProposal(
     (dataImage(embeddedLogo) ? embeddedLogo : d.logo ? imageUrl(d.logo) : '');
   const cover = media?.hideCover
     ? ''
-    : trustedMedia(media?.cover) || imageUrl(zeroCover(d));
+    : trustedMedia(media?.cover) ||
+      (d.referenceContent.trim() ? '' : imageUrl(zeroCover(d)));
   const coverAlt =
     zeroCovers.find((c) => c.url === zeroCover(d))?.alt ||
     'Imagem selecionada para a proposta';
@@ -959,7 +960,7 @@ export function renderZeroProposal(
     '</title><style>' +
     zeroProposalStyles +
     '</style></head><body class="' +
-    d.design +
+    d.design + (d.referenceContent.trim() ? ' reference-clean' : '') +
     '" style="--accent:' +
     d.accent +
     ';--ink:' +
