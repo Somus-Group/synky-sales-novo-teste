@@ -377,11 +377,54 @@ th:last-child, td:last-child { text-align: right; white-space: nowrap; }
 .reference-clean .agreements .conditions { border-color: #d4ded7; }
 .reference-clean .closing { padding-top: 72px; }
 .reference-clean .closing .section-label { color: var(--accent); }
+.reference-clean .brandbar { position: relative; border: 0; }
+.reference-clean .brandbar-inner { min-height: 72px; }
+.reference-clean .brand { max-width: none; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.reference-clean .brandbar nav a { color: #d0d1cd; font-size: 10px; text-transform: uppercase; }
+.reference-clean .hero-client { margin-top: 28px; }
+.reference-clean .hero-subject { margin-top: 20px; }
+.reference-clean .hero-link { margin-top: 25px; }
+.reference-clean .hero-panel { padding-left: 22px; }
+.reference-clean .hero-services li { padding: 14px 0; }
+.reference-clean .project-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.reference-clean .project-facts div { padding: 20px 22px; }
+.reference-clean .project-facts dd { font-size: 14px; }
+.reference-clean .reference-scope { padding: 104px 0 116px; background: #f5f4f1; }
+.reference-clean .reference-scope .section-heading { max-width: 800px; margin-bottom: 52px; }
+.reference-clean .reference-scope .section-heading h2 { max-width: 680px; font-size: 48px; }
+.reference-deliverables { margin: 0; padding: 0; border-top: 1px solid #c9cbc5; list-style: none; }
+.reference-deliverables li { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 22px; padding: 27px 0 30px; border-bottom: 1px solid #c9cbc5; }
+.reference-number { padding-top: 5px; color: #9a594b; font-size: 12px; font-weight: 800; }
+.reference-deliverables h3 { font-size: 25px; line-height: 1.15; }
+.reference-deliverables p { max-width: 710px; margin-top: 8px; color: #5b5e59; font-size: 16px; line-height: 1.5; }
+.reference-clean .reference-investment { padding: 95px 0; background: #111112; color: #f6f5f2; }
+.reference-investment .wrap { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr); align-items: end; gap: 64px; }
+.reference-investment-copy .section-label { color: #d58b78; }
+.reference-investment-copy h2 { max-width: 640px; font-size: 50px; }
+.reference-investment-copy p { max-width: 580px; margin-top: 19px; color: #c4c5c1; font-size: 16px; }
+.reference-investment-value { padding: 21px 0 4px 25px; border-left: 1px solid #ffffff54; }
+.reference-investment-value span, .reference-investment-value small { display: block; color: #c4c5c1; font-size: 12px; }
+.reference-investment-value strong { display: block; margin: 10px 0; color: #fff; font: 400 40px/1.1 Georgia, 'Times New Roman', serif; }
+.reference-clean .reference-investment-value { border-color: #ffffff54; }
+.reference-clean .investment, .reference-clean.editorial .investment, .reference-clean.contrast .investment, .reference-clean.compact .investment { display: none; }
+.reference-clean .closing .signature { border-color: #ffffff40; }
 @media (max-width: 760px) {
   .reference-clean .hero, .reference-clean.editorial .hero, .reference-clean.contrast .hero, .reference-clean.compact .hero { min-height: 0; }
   .reference-clean .hero-content, .reference-clean.editorial .hero-content, .reference-clean.contrast .hero-content, .reference-clean.compact .hero-content { min-height: 0; grid-template-columns: 1fr; gap: 38px; padding: 76px 0 34px; }
   .reference-clean .hero h1 { font-size: 48px; }
+  .reference-clean .project-facts { grid-template-columns: 1fr; }
+  .reference-clean .project-facts div { padding: 15px 2px; border-right: 0; border-left: 0; }
+  .reference-clean .project-facts div:first-child { border-left: 0; }
   .reference-clean .hero-panel { padding-left: 0; border-left: 0; }
+  .reference-clean .reference-scope { padding: 70px 0; }
+  .reference-clean .reference-scope .section-heading { margin-bottom: 34px; }
+  .reference-clean .reference-scope .section-heading h2 { font-size: 38px; }
+  .reference-deliverables li { grid-template-columns: 40px minmax(0, 1fr); gap: 14px; padding: 23px 0; }
+  .reference-deliverables h3 { font-size: 22px; }
+  .reference-deliverables p { font-size: 15px; }
+  .reference-investment .wrap { grid-template-columns: 1fr; gap: 34px; }
+  .reference-investment-copy h2 { font-size: 38px; }
+  .reference-investment-value { padding-left: 18px; }
   .reference-clean .scope-chapter, .reference-clean .scope-chapter:nth-child(even) { grid-template-columns: 54px minmax(0, 1fr); gap: 17px; }
   .reference-clean .scope-chapter .chapter-content { grid-column: 2; }
 }

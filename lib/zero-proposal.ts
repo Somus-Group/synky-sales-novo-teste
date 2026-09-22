@@ -547,6 +547,17 @@ export function renderZeroProposal(
       .split(/\r?\n/)
       .map((s) => s.trim())
       .filter(Boolean);
+  const linked = Boolean(d.referenceContent.trim());
+  const linkedDeliverables: Array<{ title: string; description: string }> = [];
+  if (linked && d.services[0]) {
+    const lines = descriptionItems(d.services[0].description);
+    for (let i = 0; i < lines.length; i += 2)
+      linkedDeliverables.push({
+        title: lines[i],
+        description: lines[i + 1] || '',
+      });
+  }
+  const linkedHeroSummary = linkedDeliverables.find((item) => item.description)?.description || d.objective;
   const price = (s: ZeroService) =>
     s.unitCents === null ? 'A definir' : zeroMoney(s.unitCents * s.quantity);
   const hasMonthly = d.services.some((s) => s.billing === 'monthly');
@@ -560,15 +571,21 @@ export function renderZeroProposal(
   const anyPriced = d.services.some((s) => s.unitCents !== null);
   const showContract = hasMonthly && d.months > 0;
   const steps = descriptionItems(d.timeline);
-  const facts = [
-    ...(d.client ? [{ name: 'Para', value: d.client }] : []),
-    ...(d.supplier ? [{ name: 'Por', value: d.supplier }] : []),
-    ...(d.services.length
-      ? [{ name: 'Escopo', value: d.services.length + ' entregas' }]
-      : []),
-    ...(d.months ? [{ name: 'Vigência', value: d.months + ' meses' }] : []),
-    ...(d.validity ? [{ name: 'Validade', value: d.validity }] : []),
-  ].filter((f) => f.value);
+  const facts = linked
+    ? [
+        ...(d.client ? [{ name: 'Projeto', value: d.client }] : []),
+        ...(d.services[0] ? [{ name: 'Frente', value: d.services[0].title }] : []),
+        ...(d.months ? [{ name: 'Duração', value: d.months + ' meses' }] : []),
+      ]
+    : [
+        ...(d.client ? [{ name: 'Para', value: d.client }] : []),
+        ...(d.supplier ? [{ name: 'Por', value: d.supplier }] : []),
+        ...(d.services.length
+          ? [{ name: 'Escopo', value: d.services.length + ' serviços' }]
+          : []),
+        ...(d.months ? [{ name: 'Vigência', value: d.months + ' meses' }] : []),
+        ...(d.validity ? [{ name: 'Validade', value: d.validity }] : []),
+      ].filter((f) => f.value);
   const nav = [
     ...(d.objective ? [['objetivo', referenceTitle('context', 'Visão geral')]] : []),
     ...(d.briefing.trim().length > 160
@@ -584,16 +601,23 @@ export function renderZeroProposal(
     .join('');
   const heroServices = d.services.length
     ? '<ol class="hero-services">' +
-      d.services
-        .slice(0, 4)
-        .map(
-          (service, index) =>
+      (linkedDeliverables.length
+        ? linkedDeliverables.map(
+            (item, index) =>
             '<li><span>' +
             num(index) +
             '</span>' +
-            escape(service.title) +
+            escape(item.title) +
             '</li>',
-        )
+          )
+        : d.services.slice(0, 4).map(
+            (service, index) =>
+              '<li><span>' +
+              num(index) +
+              '</span>' +
+              escape(service.title) +
+              '</li>',
+          ))
         .join('') +
       '</ol>'
     : '';
@@ -620,7 +644,7 @@ export function renderZeroProposal(
     (subject || client) +
     '</h1>' +
     (d.objective
-      ? '<div class="hero-subject">' + lines(d.objective) + '</div>'
+      ? '<div class="hero-subject">' + lines(linked ? linkedHeroSummary : d.objective) + '</div>'
       : '') +
     (d.services.length
       ? '<a class="hero-link" href="#escopo">Explorar proposta <span aria-hidden="true">&#8599;</span></a>'
@@ -709,7 +733,27 @@ export function renderZeroProposal(
       );
     })
     .join('');
-  const scope = d.services.length
+  const scope = linked && linkedDeliverables.length
+    ? '<section id="escopo" class="section reference-scope"><div class="wrap">' +
+      sectionHead(
+        d.services[0].title,
+        linkedDeliverables.length + ' frentes, trabalhando juntas.',
+      ) +
+      '<ol class="reference-deliverables">' +
+      linkedDeliverables
+        .map(
+          (item, index) =>
+            '<li><span class="reference-number">' +
+            num(index) +
+            '</span><div><h3>' +
+            escape(item.title) +
+            '</h3>' +
+            (item.description ? '<p>' + escape(item.description) + '</p>' : '') +
+            '</div></li>',
+        )
+        .join('') +
+      '</ol></div></section>'
+    : d.services.length
     ? '<section id="escopo" class="section scope"><div class="wrap">' +
       sectionHead(
         'Escopo da proposta',
@@ -795,7 +839,17 @@ export function renderZeroProposal(
     '</strong><small>' +
     note +
     '</small></div>';
-  const investment = d.services.length
+  const investment = linked
+    ? '<section id="investimento" class="section reference-investment"><div class="wrap"><div class="reference-investment-copy">' +
+      label('Investimento') +
+      '<h2>Uma parceria de ' +
+      escape(d.months ? d.months + ' meses' : 'longo prazo') +
+      '.</h2><p>O valor mensal será definido antes da aprovação, com o escopo e a duração já alinhados.</p></div><div class="reference-investment-value"><span>Mensalidade</span><strong>' +
+      (monthlyPending || !anyPriced ? 'A definir' : zeroMoney(totals.monthly)) +
+      '</strong><small>' +
+      (d.months ? 'por mês · ' + d.months + ' meses' : 'por mês') +
+      '</small></div></div></section>'
+    : d.services.length
     ? '<section id="investimento" class="section investment"><div class="wrap"><div class="investment-heading">' +
       sectionHead(
         'Investimento',
@@ -915,7 +969,16 @@ export function renderZeroProposal(
       : '';
   const closing =
     '<footer id="contato" class="closing"><div class="wrap">' +
-    (contact
+    (linked
+      ? '<div class="closing-row"><div>' +
+        label('Próximo passo') +
+        '<h2>Vamos colocar essa estratégia em movimento?</h2><p>' +
+        escape(d.client || 'Seu projeto') +
+        (d.months ? ' · ' + d.months + ' meses' : '') +
+        '</p></div>' +
+        (contact || '<a class="hero-link" href="#investimento">Ver investimento <span aria-hidden="true">&#8599;</span></a>') +
+        '</div>'
+      : contact
       ? '<div class="closing-row"><div>' +
         label('Vamos conversar') +
         '<h2>Quando fizer sentido,<br>a conversa continua.</h2></div>' +
@@ -978,7 +1041,7 @@ export function renderZeroProposal(
         '" alt="' +
         escape(d.supplier || 'Fornecedor') +
         '">'
-      : escape(d.supplier || 'Proposta comercial')) +
+      : escape(d.supplier || (linked && d.client ? d.client : 'Proposta comercial'))) +
     '</div><nav aria-label="Seções da proposta">' +
     nav +
     '</nav></div></header><main>' +
