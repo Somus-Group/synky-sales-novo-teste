@@ -10,7 +10,7 @@ const key = (value: unknown) => {
   return String(item?.name || item?.value || '');
 };
 const tags =
-  /^(h[1-6]|p|span|a|button|li|ul|ol|section|main|header|footer|nav|div|img|article|aside|table|tr|td|th)$/;
+  /^(h[1-6]|p|span|li|ul|ol|section|main|header|footer|nav|div|article|aside|table|tr|td|th)$/;
 
 export function extractReactReference(source: string) {
   const ast = parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
@@ -80,6 +80,7 @@ export function extractReactReference(source: string) {
     attributes: Record<string, unknown>;
     text: string;
     position: number;
+    end: number;
   }> = [];
   const repeated: unknown[] = [];
   const imports: string[] = [];
@@ -138,13 +139,25 @@ export function extractReactReference(source: string) {
         attributes,
         text: text.slice(0, 2500),
         position: item.start,
+        end: item.end,
       });
   });
   elements.sort((a, b) => a.position - b.position);
   const useful = elements.slice(0, 650);
+  const hierarchy: number[] = [];
+  const nested = useful.map((element) => {
+    while (
+      hierarchy.length &&
+      useful[hierarchy[hierarchy.length - 1]].end <= element.position
+    )
+      hierarchy.pop();
+    const depth = hierarchy.length;
+    hierarchy.push(useful.indexOf(element));
+    return { ...element, depth };
+  });
   return {
     structure: JSON.stringify({
-      elements: useful.map(({ position: _position, ...element }) => element),
+      elements: nested.map(({ position: _position, end: _end, ...element }) => element),
       repeatedContent: repeated,
     }).slice(0, 55000),
     text: useful

@@ -73,6 +73,7 @@ function reactReferenceTemplate(structure: string) {
         tag?: string;
         attributes?: { className?: unknown; id?: unknown };
         text?: unknown;
+        depth?: number;
       }>;
     };
     const text = (value: unknown) =>
@@ -83,32 +84,31 @@ function reactReferenceTemplate(structure: string) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     const entries = (parsed.elements || [])
-      .filter((item) => /^(h[1-6]|p|span|li|div|section|article|aside|header|footer)$/i.test(String(item.tag)))
-      .filter((item) => text(item.text).trim())
-      .slice(0, 420);
+      .filter((item) => /^(h[1-6]|p|span|li|ul|ol|div|section|article|aside|header|footer|main|nav|table|tr|td|th)$/i.test(String(item.tag)))
+      .filter(
+        (item) =>
+          text(item.text).trim() ||
+          text(item.attributes?.className).trim() ||
+          text(item.attributes?.id).trim(),
+      )
+      .slice(0, 650);
     let html = '<!doctype html><html lang="pt-BR"><head></head><body><main class="synky-react-reference">';
-    let sectionOpen = false;
+    const opened: string[] = [];
     for (const item of entries) {
       const tag = String(item.tag).toLowerCase();
-      if (/^h[12]$/.test(tag)) {
-        if (sectionOpen) html += '</section>';
-        html += '<section class="synky-reference-section">';
-        sectionOpen = true;
-      }
+      const depth = Math.min(
+        Math.max(0, Number(item.depth) || 0),
+        opened.length,
+      );
+      while (opened.length > depth) html += `</${opened.pop()}>`;
       const className = text(item.attributes?.className).slice(0, 240);
       const id = text(item.attributes?.id).slice(0, 120);
-      html +=
-        '<' +
-        tag +
-        (className ? ' class="' + className + '"' : '') +
-        (id ? ' id="' + id + '"' : '') +
-        '>' +
-        text(item.text).slice(0, 2500) +
-        '</' +
-        tag +
-        '>';
+      html += '<' + tag + (className ? ' class="' + className + '"' : '') + (id ? ' id="' + id + '"' : '') + '>';
+      html += text(item.text).slice(0, 2500);
+      opened.push(tag);
     }
-    return html + (sectionOpen ? '</section>' : '') + '</main></body></html>';
+    while (opened.length) html += `</${opened.pop()}>`;
+    return html + '</main></body></html>';
   } catch {
     return '';
   }
