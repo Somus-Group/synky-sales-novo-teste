@@ -548,6 +548,10 @@ export function renderZeroProposal(
       .map((s) => s.trim())
       .filter(Boolean);
   const linked = Boolean(d.referenceContent.trim());
+  const linkedHeadline = d.objective.replace(
+    /\bseu time comercial\b/gi,
+    d.client ? 'time comercial da ' + d.client : 'time comercial',
+  );
   const linkedDeliverables: Array<{ title: string; description: string }> = [];
   if (linked && d.services[0]) {
     const lines = descriptionItems(d.services[0].description);
@@ -587,7 +591,7 @@ export function renderZeroProposal(
         ...(d.validity ? [{ name: 'Validade', value: d.validity }] : []),
       ].filter((f) => f.value);
   const nav = [
-    ...(d.objective ? [['objetivo', referenceTitle('context', 'Visão geral')]] : []),
+    ...(d.objective && !linked ? [['objetivo', referenceTitle('context', 'Visão geral')]] : []),
     ...(d.briefing.trim().length > 160
       ? [['briefing', 'Briefing completo']]
       : []),
@@ -631,17 +635,19 @@ export function renderZeroProposal(
         '" width="1536" height="1024" fetchpriority="high">'
       : '') +
     '<div class="wrap hero-content"><div class="hero-copy"><span class="eyebrow">' +
-    (d.supplier
+    (linked
+      ? 'Proposta · ' + (d.client ? client : escape(d.services[0]?.title || 'Projeto'))
+      : d.supplier
       ? escape(d.supplier) + ' apresenta'
-      : d.referenceContent.trim()
-        ? 'Proposta adaptada a partir da sua referência'
-        : 'Proposta comercial') +
-    '</span><p class="hero-client">' +
+      : 'Proposta comercial') +
+    '</span>' +
+    (linked ? '' : '<p class="hero-client">' +
     (d.client ? 'Para ' + client : 'Uma proposta sob medida') +
-    '</p><h1' +
-    (projectTitle.length > 42 ? ' class="long-title"' : '') +
+    '</p>') +
+    '<h1' +
+    ((linked ? linkedHeadline.length : projectTitle.length) > 42 ? ' class="long-title"' : '') +
     '>' +
-    (subject || client) +
+    (linked ? escape(linkedHeadline) : subject || client) +
     '</h1>' +
     (d.objective
       ? '<div class="hero-subject">' + lines(linked ? linkedHeroSummary : d.objective) + '</div>'
@@ -737,7 +743,7 @@ export function renderZeroProposal(
     ? '<section id="escopo" class="section reference-scope"><div class="wrap">' +
       sectionHead(
         d.services[0].title,
-        linkedDeliverables.length + ' frentes, trabalhando juntas.',
+        'Da atração à otimização.',
       ) +
       '<ol class="reference-deliverables">' +
       linkedDeliverables
@@ -991,7 +997,7 @@ export function renderZeroProposal(
     (d.client ? 'Preparada para ' + client : 'Proposta comercial') +
     '</span><a href="#inicio">Voltar ao início &#8593;</a></div></div></footer>';
   const contentByKey = {
-    context,
+    context: linked ? '' : context,
     briefing: fullBriefing,
     scope,
     gallery,
