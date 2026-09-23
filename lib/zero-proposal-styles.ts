@@ -408,10 +408,16 @@ th:last-child, td:last-child { text-align: right; white-space: nowrap; }
 .reference-clean .reference-investment-value { border-color: #ffffff54; }
 .reference-clean .investment, .reference-clean.editorial .investment, .reference-clean.contrast .investment, .reference-clean.compact .investment { display: none; }
 .reference-clean .closing .signature { border-color: #ffffff40; }
+.reference-clean .hero-copy { container-type: inline-size; }
+.reference-clean .hero h1, .reference-clean .hero h1.long-title { font-size: clamp(36px, 9cqw, 68px); line-height: 1.05; overflow-wrap: anywhere; }
+.reference-clean .reference-scope .section-heading h2 { font-size: clamp(34px, 5cqw, 48px); line-height: 1.1; }
+.reference-service-group + .reference-service-group { margin-top: 58px; }
+.reference-service-title { margin: 0 0 14px; color: #8e473a; font: 700 12px/1.3 Arial, Helvetica, sans-serif; text-transform: uppercase; }
+.reference-deliverables h4 { font: 700 22px/1.2 Arial, Helvetica, sans-serif; }
 @media (max-width: 760px) {
   .reference-clean .hero, .reference-clean.editorial .hero, .reference-clean.contrast .hero, .reference-clean.compact .hero { min-height: 0; }
   .reference-clean .hero-content, .reference-clean.editorial .hero-content, .reference-clean.contrast .hero-content, .reference-clean.compact .hero-content { min-height: 0; grid-template-columns: 1fr; gap: 38px; padding: 76px 0 34px; }
-  .reference-clean .hero h1 { font-size: 48px; }
+  .reference-clean .hero h1, .reference-clean .hero h1.long-title { font-size: 42px; }
   .reference-clean .project-facts { grid-template-columns: 1fr; }
   .reference-clean .project-facts div { padding: 15px 2px; border-right: 0; border-left: 0; }
   .reference-clean .project-facts div:first-child { border-left: 0; }
@@ -420,7 +426,7 @@ th:last-child, td:last-child { text-align: right; white-space: nowrap; }
   .reference-clean .reference-scope .section-heading { margin-bottom: 34px; }
   .reference-clean .reference-scope .section-heading h2 { font-size: 38px; }
   .reference-deliverables li { grid-template-columns: 40px minmax(0, 1fr); gap: 14px; padding: 23px 0; }
-  .reference-deliverables h3 { font-size: 22px; }
+  .reference-deliverables h4 { font-size: 20px; }
   .reference-deliverables p { font-size: 15px; }
   .reference-investment .wrap { grid-template-columns: 1fr; gap: 34px; }
   .reference-investment-copy h2 { font-size: 38px; }

@@ -552,16 +552,17 @@ export function renderZeroProposal(
     /\bseu time comercial\b/gi,
     d.client ? 'time comercial da ' + d.client : 'time comercial',
   );
-  const linkedDeliverables: Array<{ title: string; description: string }> = [];
-  if (linked && d.services[0]) {
-    const lines = descriptionItems(d.services[0].description);
-    for (let i = 0; i < lines.length; i += 2)
-      linkedDeliverables.push({
-        title: lines[i],
-        description: lines[i + 1] || '',
-      });
-  }
-  const linkedHeroSummary = linkedDeliverables.find((item) => item.description)?.description || d.objective;
+  const linkedGroups = linked
+    ? d.services.map((service) => {
+        const lines = descriptionItems(service.description);
+        const deliverables: Array<{ title: string; description: string }> = [];
+        for (let i = 0; i < lines.length; i += 2)
+          deliverables.push({ title: lines[i], description: lines[i + 1] || '' });
+        return { title: service.title, deliverables };
+      }).filter((group) => group.deliverables.length)
+    : [];
+  const linkedDeliverables = linkedGroups.flatMap((group) => group.deliverables);
+  const linkedHeroSummary = d.objective || linkedDeliverables.find((item) => item.description)?.description || '';
   const price = (s: ZeroService) =>
     s.unitCents === null ? 'A definir' : zeroMoney(s.unitCents * s.quantity);
   const hasMonthly = d.services.some((s) => s.billing === 'monthly');
@@ -578,7 +579,7 @@ export function renderZeroProposal(
   const facts = linked
     ? [
         ...(d.client ? [{ name: 'Projeto', value: d.client }] : []),
-        ...(d.services[0] ? [{ name: 'Frente', value: d.services[0].title }] : []),
+        ...(d.services.length ? [{ name: 'Frentes', value: d.services.map((service) => service.title).join(' + ') }] : []),
         ...(d.months ? [{ name: 'Duração', value: d.months + ' meses' }] : []),
       ]
     : [
@@ -606,7 +607,7 @@ export function renderZeroProposal(
   const heroServices = d.services.length
     ? '<ol class="hero-services">' +
       (linkedDeliverables.length
-        ? linkedDeliverables.map(
+        ? linkedDeliverables.slice(0, 6).map(
             (item, index) =>
             '<li><span>' +
             num(index) +
@@ -742,23 +743,17 @@ export function renderZeroProposal(
   const scope = linked && linkedDeliverables.length
     ? '<section id="escopo" class="section reference-scope"><div class="wrap">' +
       sectionHead(
-        d.services[0].title,
-        'Da atração à otimização.',
+        'Escopo da proposta',
+        d.services.map((service) => service.title).join(' + '),
       ) +
-      '<ol class="reference-deliverables">' +
-      linkedDeliverables
-        .map(
-          (item, index) =>
-            '<li><span class="reference-number">' +
-            num(index) +
-            '</span><div><h3>' +
-            escape(item.title) +
-            '</h3>' +
-            (item.description ? '<p>' + escape(item.description) + '</p>' : '') +
-            '</div></li>',
-        )
-        .join('') +
-      '</ol></div></section>'
+      linkedGroups.map((group) =>
+        '<div class="reference-service-group"><h3 class="reference-service-title">' + escape(group.title) + '</h3><ol class="reference-deliverables">' +
+        group.deliverables.map((item, index) =>
+          '<li><span class="reference-number">' + num(index + 1) + '</span><div><h4>' + escape(item.title) + '</h4>' +
+          (item.description ? '<p>' + escape(item.description) + '</p>' : '') + '</div></li>',
+        ).join('') + '</ol></div>'
+      ).join('') +
+      '</div></section>'
     : d.services.length
     ? '<section id="escopo" class="section scope"><div class="wrap">' +
       sectionHead(

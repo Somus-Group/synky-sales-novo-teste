@@ -252,6 +252,10 @@ export function composeZeroBrief(
   );
   if (supplier && !draft.supplier)
     put('supplier', titleCase(supplier[1]), 240);
+  const explicitClient = text.match(
+    /\b(?:empresa|cliente)\s+(?:chamada\s+|:\s*)?([\p{L}][\p{L}\d &'’-]{1,70}?)(?=\s+(?:e\s+(?:vamos|quero|preciso|tamb[eé]m|inclua|adicione|coloque)|,|\.|;|para\s+(?:tr[aá]fego|comercial|marketing|vendas|bpo|servi[cç]o))|$)/iu,
+  );
+  if (explicitClient) put('client', titleCase(explicitClient[1]), 240);
   const recipients = [
     ...text.matchAll(
       /\b(?:para|pra)\s+(?:(?:a|o|as|os)\s+)?([\p{L}][\p{L}\d &'’-]{2,80}?)(?=\s*(?:,|\.|;|\b(?:que|com|onde|e|fa[cç]a|crie|inclui|por|no valor)\b|$))/giu,
@@ -265,7 +269,7 @@ export function composeZeroBrief(
           match[1].trim(),
         ),
     );
-  if (recipient && recipient[1].trim())
+  if (!draft.client && recipient && recipient[1].trim())
     put('client', titleCase(recipient[1]), 240);
   // Split prose at sentence boundaries, not at decimal commas or dots inside URLs.
   const clauses = text.split(
@@ -741,42 +745,37 @@ export function composeZeroReferenceBrief(
     /\b(?:mudar|trocar|substituir|refazer)\s+(?:(?:toda|a)\s+)?(?:a\s+)?(?:proposta|oferta|escopo|servi[cç]os?)\b/i.test(
       changes,
     ) && patch.services.length > 0;
-  const serviceFocus = /tr[aá]fego|an[uú]ncios|marketing|ads/i.test(changes)
-    ? /marketing|tr[aá]fego|an[uú]ncios|campanha|criativos|otimiza[cç][aã]o/i
-    : /financeir|bpo/i.test(changes)
-      ? /financeir|bpo/i
-      : /comercial|vendas|sdr|crm/i.test(changes)
-        ? /comercial|vendas|sdr|crm/i
-        : /estrat[eé]gia|consultoria|governan[cç]a/i.test(changes)
-          ? /estrat[eé]gia|consultoria|governan[cç]a/i
-          : null;
-  const referenceFlat = base.referenceContent.replace(/\s+/g, ' ').trim();
-  const sectionMatches = [
-    ...referenceFlat.matchAll(
-      /O QUE TRABALHAMOS EM\s+(.{2,60}?)(?=\s+\d{1,2}\s|$)/giu,
-    ),
+  const focusPatterns = [
+    /marketing|tr[aá]fego|an[uú]ncios|campanha|criativos|otimiza[cç][aã]o|ads/i,
+    /financeir|bpo/i,
+    /comercial|vendas|sdr|crm/i,
+    /estrat[eé]gia|consultoria|governan[cç]a/i,
   ];
-  const focusedSection = serviceFocus
-    ? [...sectionMatches].reverse().find((match) => serviceFocus.test(match[1]))
-    : undefined;
-  const focusMarkerIndex = focusedSection?.index ?? -1;
-  let referenceScope = '';
+  const serviceFocuses = focusPatterns.filter((pattern) => pattern.test(changes));
+  const categoryForService = (service: ZeroService) => {
+    const title = `${service.title} ${service.description}`;
+    return focusPatterns.find((pattern) => pattern.test(title));
+  };
+  const referenceFlat = base.referenceContent.replace(/\s+/g, ' ').trim();
+  const rawSections = [
+    ...base.referenceContent.matchAll(/O QUE TRABALHAMOS EM\s+([^\r\n]{2,60})/giu),
+  ];
+  const findScope = (focus: RegExp) => {
+    const section = [...rawSections].reverse().find((match) => focus.test(match[1]));
+    if (!section) return { label: '', content: '', marker: -1 };
+    const start = section.index! + section[0].length;
+    const next = rawSections.find((match) => match.index! > start);
+    const sentinel = base.referenceContent.indexOf(`FIM DO ESCOPO: ${section[1]}`, start);
+    const end = sentinel >= 0 ? sentinel : next?.index ?? base.referenceContent.length;
+    const content = base.referenceContent.slice(start, end)
+      .split(/\r?\n/).map((line) => line.trim())
+      .filter((line) => line && !/^\d{1,2}$/.test(line)).slice(0, 12).join('\n');
+    return { label: section[1].trim(), content, marker: section.index! };
+  };
+  const matchedScopes = serviceFocuses.map(findScope).filter((scope) => scope.content);
+  const focusMarkerIndex = matchedScopes[0]?.marker ?? -1;
   let referenceObjective = '';
-  if (focusedSection) {
-    const scopeStart = focusedSection.index! + focusedSection[0].length;
-    const nextSection = sectionMatches.find((match) => match.index! > scopeStart);
-    const nextChapter = referenceFlat
-      .slice(scopeStart)
-      .search(/\b(?:SINERGIA ESTRUTURAL|\d{2}\s*[·.-]\s*(?:DIFERENCIAL|AUTORIDADE|INVESTIMENTO|PERGUNTAS|TRANSFORMAÇÃO))\b/i);
-    const scopeEnd = Math.min(
-      nextSection?.index ?? referenceFlat.length,
-      nextChapter < 0 ? referenceFlat.length : scopeStart + nextChapter,
-    );
-    referenceScope = referenceFlat
-      .slice(scopeStart, scopeEnd)
-      .replace(/\s+(?=(?:0?[1-9])\s+[\p{Lu}])/gu, '\n')
-      .replace(/\n\s*\d{1,2}\s*\n/g, '\n')
-      .trim();
+  if (focusMarkerIndex >= 0) {
     const objectiveLabel = referenceFlat
       .slice(0, focusMarkerIndex)
       .toLocaleUpperCase('pt-BR')
@@ -786,53 +785,15 @@ export function composeZeroReferenceBrief(
         .slice(objectiveLabel + 'OBJETIVO'.length, focusMarkerIndex)
         .replace(/\bO QUE TRABALHAMOS EM\b[\s\S]*$/i, '')
         .trim();
-    const rawSections = [
-      ...base.referenceContent.matchAll(
-        /O QUE TRABALHAMOS EM\s+([^\r\n]{2,60})/giu,
-      ),
-    ];
-    const rawFocused = [...rawSections]
-      .reverse()
-      .find((match) => serviceFocus!.test(match[1]));
-    if (rawFocused) {
-      const rawStart = rawFocused.index! + rawFocused[0].length;
-      const rawNext = rawSections.find((match) => match.index! > rawStart);
-      const structuredEnd = base.referenceContent.indexOf(
-        `FIM DO ESCOPO: ${rawFocused[1]}`,
-        rawStart,
-      );
-      const rawEnd =
-        structuredEnd >= 0
-          ? structuredEnd
-          : rawNext?.index ?? base.referenceContent.length;
-      referenceScope = base.referenceContent
-        .slice(rawStart, rawEnd)
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line && !/^\d{1,2}$/.test(line))
-        .slice(0, 12)
-        .join('\n');
-      const rawObjectiveLabel = base.referenceContent
-        .slice(0, rawFocused.index)
-        .toLocaleUpperCase('pt-BR')
-        .lastIndexOf('OBJETIVO');
-      if (rawObjectiveLabel >= 0)
-        referenceObjective = base.referenceContent
-          .slice(rawObjectiveLabel + 'OBJETIVO'.length, rawFocused.index)
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line && !/^\d{1,2}$/.test(line))
-          .slice(-1)[0] || referenceObjective;
-    }
   }
   const replaceFocusedScope =
     patch.services.length > 0 &&
-    (replaceScope || Boolean(serviceFocus && focusMarkerIndex >= 0));
+    (replaceScope || Boolean(serviceFocuses.length && matchedScopes.length));
   const adaptedTitle =
     /^(?:t[ií]tulo|projeto)\s*:/im.test(changes)
       ? patch.title
       : replaceScope && patch.client
-        ? `${patch.services[0].title} para ${patch.client}`
+        ? `${patch.services.map((service) => service.title).join(' + ')} para ${patch.client}`
         : !isDefaultTitle(patch.title)
           ? patch.title
           : source.title;
@@ -843,6 +804,9 @@ export function composeZeroReferenceBrief(
       : replaceFocusedScope
       ? `A proposta contempla ${patch.services[0].title.toLocaleLowerCase('pt-BR')} durante ${patch.months || source.months || 0} ${((patch.months || source.months || 0) === 1) ? 'mês' : 'meses'}.`
       : source.objective);
+  const referenceMonths = Number(
+    base.referenceContent.match(/\b(\d{1,2})\s+meses?\s+de\s+acompanhamento\b/i)?.[1] || 0,
+  );
   const combined = {
     ...source,
     email: base.email,
@@ -868,14 +832,14 @@ export function composeZeroReferenceBrief(
     terms: patch.terms || (replaceFocusedScope ? '' : source.terms),
     exclusions: patch.exclusions || (replaceFocusedScope ? '' : source.exclusions),
     validity: patch.validity || source.validity,
-    months: patch.months || source.months,
+    months: patch.months || source.months || referenceMonths,
     discountPercent: patch.discountPercent || source.discountPercent,
     services: replaceFocusedScope
-      ? patch.services.map((service, index) => ({
-          ...service,
-          description:
-            index === 0 ? referenceScope || service.description : service.description,
-        }))
+      ? patch.services.map((service) => {
+          const focus = categoryForService(service);
+          const scope = focus ? findScope(focus) : matchedScopes[0];
+          return { ...service, description: scope?.content || service.description };
+        })
       : mergeServices(replaceScope ? [] : source.services, patch.services),
   } satisfies ZeroDraft;
   const merged = normalizeZeroDraft({
