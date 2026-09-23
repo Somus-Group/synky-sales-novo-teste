@@ -124,6 +124,11 @@ const updated = (value: number) =>
     hour: '2-digit',
     minute: '2-digit',
   }).format(value);
+const studioUsd = (value: number) =>
+  value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 6,
+  });
 export function StudioLab() {
   const [projects, setProjects] = useState<StudioSummary[]>([]);
   const [project, setProject] = useState<StudioProject | null>(null);
@@ -246,6 +251,11 @@ export function StudioLab() {
     if (tab === 'chat' && (pending || project?.messages.length))
       messagesEnd.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
   }, [project?.messages.length, pending, tab]);
+  useEffect(() => {
+    if (!notice || notice.startsWith('Ouvindo você.')) return;
+    const timer = window.setTimeout(() => setNotice(''), 7000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
   useEffect(() => {
     if (library) dialog.current?.showModal();
     else dialog.current?.close();
@@ -645,7 +655,8 @@ export function StudioLab() {
     const Recognition =
       browser.SpeechRecognition || browser.webkitSpeechRecognition;
     if (!Recognition) {
-      setError(
+      setError('');
+      setNotice(
         'O ditado por voz não está disponível neste navegador. Use uma versão recente do Chrome, Edge ou Safari.',
       );
       return;
@@ -667,9 +678,12 @@ export function StudioLab() {
     };
     voice.onerror = (event) => {
       if (event.error === 'aborted') return;
-      setError(
+      setListening(false);
+      recognition.current = null;
+      setError('');
+      setNotice(
         event.error === 'not-allowed'
-          ? 'Permita o uso do microfone para ditar sua mensagem.'
+          ? 'O microfone está bloqueado. Libere a permissão do site para usar o ditado.'
           : 'Não foi possível transcrever o áudio. Tente novamente.',
       );
     };
@@ -685,7 +699,8 @@ export function StudioLab() {
         'Ouvindo você. Fale normalmente; a transcrição aparecerá no campo.',
       );
     } catch {
-      setError('Não foi possível iniciar o ditado. Tente novamente.');
+      setError('');
+      setNotice('Não foi possível iniciar o ditado. Tente novamente.');
     }
   }
   return (
@@ -960,7 +975,7 @@ export function StudioLab() {
                         ? 'Sem consumo de IA'
                         : message.usage.estimatedUsd === null
                           ? 'Consumo pendente de confirmação'
-                          : `IA: US$ ${message.usage.estimatedUsd.toFixed(4).replace('.', ',')} estimados`}
+                          : `Custo desta mensagem: US$ ${studioUsd(message.usage.estimatedUsd)} · estimado pelo uso de tokens`}
                     </small>
                   )}
                   {!!message.revision && (
@@ -1334,8 +1349,7 @@ export function StudioLab() {
                 <section className={styles.usageSummary}>
                   <h3>Consumo de IA</h3>
                   <strong>
-                    US${' '}
-                    {project.aiUsage.estimatedUsd.toFixed(4).replace('.', ',')}
+                    US$ {studioUsd(project.aiUsage.estimatedUsd)}
                   </strong>
                   <p>
                     {project.aiUsage.calls} chamadas · valor estimado desde a
@@ -1666,9 +1680,20 @@ export function StudioLab() {
           <div className={styles.feedback} aria-live="polite">
             {error && (
               <div role="alert" className={styles.error}>
-                {error}
-                {project && (
+                <span>{error}</span>
+                <button
+                  type="button"
+                  className={styles.dismissFeedback}
+                  aria-label="Dispensar aviso"
+                  title="Dispensar aviso"
+                  onClick={() => setError('')}
+                >
+                  <X size={15} />
+                </button>
+                {project && error.includes('Reabra') && (
                   <button
+                    type="button"
+                    className={styles.reopenProject}
                     disabled={busy}
                     onClick={() => void openProject(project.id)}
                   >
@@ -1680,7 +1705,15 @@ export function StudioLab() {
             {notice && !error && (
               <div className={styles.notice}>
                 <Check size={14} />
-                {notice}
+                <span>{notice}</span>
+                <button
+                  type="button"
+                  aria-label="Dispensar aviso"
+                  title="Dispensar aviso"
+                  onClick={() => setNotice('')}
+                >
+                  <X size={14} />
+                </button>
               </div>
             )}
           </div>
@@ -1727,12 +1760,20 @@ export function StudioLab() {
                     <option value="premium">Design livre · maior custo</option>
                   </select>
                 </label>
-                <span title="O modo instantâneo cria a proposta localmente. Os modos assistidos usam a API conforme o consumo informado.">
+                <span className={styles.costLabel} title="O modo instantâneo não usa IA. Nos modos assistidos, este é o limite por envio; o custo calculado pelos tokens aparece junto da resposta.">
                   {quality === 'local'
                     ? 'Sem consumo de IA'
-                    : 'Orçamento: US$ ' +
+                    : 'Máx. por envio: US$ ' +
                       estimatedRequestBudget.toFixed(2).replace('.', ',')}
                 </span>
+                {!!project?.aiUsage?.calls && (
+                  <span
+                    className={styles.projectSpend}
+                    title={`${project.aiUsage.calls} mensagens com IA neste projeto`}
+                  >
+                    Acumulado: US$ {studioUsd(project.aiUsage.estimatedUsd)}
+                  </span>
+                )}
               </div>
               {(attachment || draft.referenceUrl || selection) && (
                 <div className={styles.composerAttachments}>
@@ -1782,7 +1823,10 @@ export function StudioLab() {
                 rows={3}
                 maxLength={maxStudioMessageLength}
                 disabled={busy || loading}
-                onChange={(event) => setPrompt(event.target.value)}
+                onChange={(event) => {
+                  setPrompt(event.target.value);
+                  setNotice('');
+                }}
                 placeholder={
                   intent === 'plan'
                     ? 'O que você quer planejar?'

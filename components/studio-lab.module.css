@@ -1983,6 +1983,11 @@
 .studio .welcome > p {
   color: var(--muted);
 }
+.studio .welcome > .primary {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+}
 .studio .assistantMark {
   background: var(--studio-inset);
   color: var(--blue);
@@ -2469,12 +2474,86 @@
   font: inherit;
   font-size: 14px;
 }
+.costLabel,
+.projectSpend {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.costLabel {
+  color: #526274;
+  font-weight: 600;
+}
+.projectSpend {
+  flex-basis: 100%;
+  margin-left: auto;
+  color: #657386;
+  text-align: right;
+}
 .usageReceipt {
-  display: block;
+  display: inline-flex;
+  max-width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #dce7f2;
+  border-radius: 7px;
+  background: #f3f8fd;
   margin-top: 8px;
-  color: #53665c;
+  color: #315371;
   font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
   overflow-wrap: anywhere;
+}
+.studio .feedback {
+  padding-inline: clamp(14px, 3vw, 28px);
+}
+.studio .error {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  align-items: start;
+  gap: 4px 8px;
+  padding: 9px 10px;
+}
+.studio .error .dismissFeedback {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: -4px -5px 0 0;
+  border-radius: 5px;
+  color: #9c4846;
+}
+.studio .error .dismissFeedback:hover {
+  background: #fbe6e4;
+}
+.studio .error .reopenProject {
+  display: inline-flex;
+  grid-column: 1;
+  justify-self: start;
+  margin: 2px 0 0;
+  text-decoration: underline;
+}
+.studio .notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 26px;
+  gap: 8px;
+  padding: 7px 0;
+}
+.studio .notice span {
+  overflow-wrap: anywhere;
+}
+.studio .notice button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: -5px 0;
+  border-radius: 5px;
+  color: #61766b;
+}
+.studio .notice button:hover {
+  background: #e8f2ec;
 }
 .usageSummary {
   padding-bottom: 16px;
