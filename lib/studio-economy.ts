@@ -4,17 +4,24 @@ import {
   type StudioMessage,
 } from '@/lib/studio';
 
-// USD per million tokens, standard API pricing checked 2026-09-14.
+// USD per million tokens, standard API pricing checked 2026-09-23.
 // Unknown models fail closed instead of silently assuming a cheap rate.
 const rates: Record<string, { input: number; cached: number; output: number }> =
   {
+    'gpt-5-nano': { input: 0.05, cached: 0.005, output: 0.4 },
     'gpt-5-mini': { input: 0.25, cached: 0.025, output: 2 },
     'gpt-5.5': { input: 5, cached: 0.5, output: 30 },
   };
 export const studioSpendLimits = { economy: 0.05, premium: 0.6 };
+export const studioMicroSpendLimits: Record<StudioTask, number> = {
+  create: 0.01,
+  patch: 0.004,
+  chat: 0.002,
+};
 export const studioWebSpendLimit = 0.02;
 
 export type StudioTask = 'create' | 'patch' | 'chat';
+export type StudioQuality = 'local' | 'micro' | 'economy' | 'premium';
 export function studioTask(
   message: string,
   hasHtml: boolean,
@@ -41,7 +48,7 @@ export function studioTask(
 
 export function studioModel(
   task: StudioTask,
-  quality: 'economy' | 'premium',
+  quality: Exclude<StudioQuality, 'local'>,
   configuration: {
     STUDIO_ECONOMY_AI_MODEL?: string;
     STUDIO_DESIGN_AI_MODEL?: string;
@@ -50,6 +57,8 @@ export function studioModel(
   const model =
     quality === 'premium' && task !== 'chat'
       ? configuration.STUDIO_DESIGN_AI_MODEL || 'gpt-5.5'
+      : quality === 'micro'
+        ? 'gpt-5-nano'
       : configuration.STUDIO_ECONOMY_AI_MODEL || 'gpt-5-mini';
   if (!rates[model])
     throw new StudioError(
@@ -63,7 +72,7 @@ export function studioModel(
 export function studioOutputBudget(
   model: string,
   task: StudioTask,
-  quality: 'economy' | 'premium',
+  quality: Exclude<StudioQuality, 'local'>,
   text: string,
   images: number,
   pdf: boolean,
@@ -78,7 +87,9 @@ export function studioOutputBudget(
   const available =
     (structured && quality === 'economy'
       ? studioWebSpendLimit
-      : studioSpendLimits[quality]) -
+      : quality === 'micro'
+        ? studioMicroSpendLimits[task]
+        : studioSpendLimits[quality]) -
     (inputAllowance * rate.input) / 1e6;
   const max =
     task === 'chat'

@@ -79,7 +79,7 @@ import { ProposalTemplateLibrary } from './proposal-template-library';
 import { TeamWorkspace } from './team-workspace';
 import { collectionTemplates } from '@/lib/proposal-collection';
 
-type View = 'overview' | 'agent' | 'agent_setup' | 'studio' | 'zero' | 'pipeline' | 'tasks' | 'clients' | 'proposals' | 'team' | 'editor';
+type View = 'overview' | 'agent' | 'agent_setup' | 'studio' | 'conversation' | 'zero' | 'pipeline' | 'tasks' | 'clients' | 'proposals' | 'team' | 'editor';
 type Stage = 'Novo contato' | 'Diagnóstico' | 'Proposta enviada' | 'Negociação';
 type PipelineCompany = { id: string; name: string; createdAt: number };
 type PipelineLabels = { title: string; description: string; newOpportunity: string; period: string; metrics: { pipeline: string; forecast: string; ticket: string; negotiation: string }; stages: Record<Stage, string> };
@@ -156,7 +156,7 @@ export function SomusApp({ userName, userEmail, initialView = 'overview' }: { us
   const [mobileNav, setMobileNav] = useState(false);
   const [sidebarPreference, setSidebarCollapsed] = useState(false);
   const [studioNavOpen, setStudioNavOpen] = useState(false);
-  const sidebarCollapsed = (view === 'studio' || view === 'zero') && !mobileNav ? !studioNavOpen : sidebarPreference;
+  const sidebarCollapsed = (view === 'studio' || view === 'conversation' || view === 'zero') && !mobileNav ? !studioNavOpen : sidebarPreference;
   const [opportunities, setOpportunities] = useState(opportunitiesSeed);
   const [clients, setClients] = useState<Client[]>([]);
   const [proposals, setProposals] = useState(proposalsSeed);
@@ -442,7 +442,7 @@ export function SomusApp({ userName, userEmail, initialView = 'overview' }: { us
           <button onClick={() => setView('overview')} className="brand-lockup flex items-center" aria-label="Synky Sales">
               <img src="/synky-sales-logo-transparent.png" alt="Synky Sales" className="brand-logo h-9 w-[148px] object-contain object-left" />
           </button>
-          <Button variant="ghost" size="icon-sm" className="sidebar-collapse-toggle hidden lg:grid" onClick={() => view === 'studio' || view === 'zero' ? setStudioNavOpen((value) => !value) : setSidebarCollapsed((value) => !value)} aria-label={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}>{sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</Button>
+          <Button variant="ghost" size="icon-sm" className="sidebar-collapse-toggle hidden lg:grid" onClick={() => view === 'studio' || view === 'conversation' || view === 'zero' ? setStudioNavOpen((value) => !value) : setSidebarCollapsed((value) => !value)} aria-label={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}>{sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</Button>
           <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label="Fechar navegação" onClick={() => setMobileNav(false)}><X /></Button>
         </div>
 
@@ -454,6 +454,7 @@ export function SomusApp({ userName, userEmail, initialView = 'overview' }: { us
           <Nav collapsed={sidebarCollapsed} active={view === 'agent'} icon={Sparkles} label="Agente de propostas" onClick={() => openAgent()} />
           <Nav collapsed={sidebarCollapsed} active={view === 'agent_setup'} icon={SlidersHorizontal} label="Configurar agente" onClick={() => setView('agent_setup')} />
           <Nav collapsed={sidebarCollapsed} active={view === 'studio'} icon={FlaskConical} label="Estúdio Lab" onClick={() => { setView('studio'); setMobileNav(false); }} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'conversation'} icon={Bot} label="Proposta Conversa · teste" onClick={() => { setView('conversation'); setMobileNav(false); }} />
           <Nav collapsed={sidebarCollapsed} active={view === 'zero'} icon={Zap} label="Proposta Zero" onClick={() => { setView('zero'); setMobileNav(false); }} />
           <p className="sidebar-group-label sidebar-collapse-text">Comercial</p>
           <Nav collapsed={sidebarCollapsed} active={view === 'pipeline'} icon={BarChart3} label="Pipeline" badge={opportunities.length} onClick={() => setView('pipeline')} />
@@ -485,8 +486,9 @@ export function SomusApp({ userName, userEmail, initialView = 'overview' }: { us
           </div>
         </header>
 
-        <main data-view={view} className={view === 'studio' || view === 'zero' ? 'sales-content w-full' : 'sales-content mx-auto max-w-[1440px] px-4 py-6 sm:px-5 md:px-8 md:py-10'}>
+        <main data-view={view} className={view === 'studio' || view === 'conversation' || view === 'zero' ? 'sales-content w-full' : 'sales-content mx-auto max-w-[1440px] px-4 py-6 sm:px-5 md:px-8 md:py-10'}>
           {view === 'studio' && <StudioLab />}
+          {view === 'conversation' && <StudioLab conversational />}
           {view === 'zero' && <ZeroLab profile={agentProfile} onDirtyChange={(dirty) => { zeroDirty.current = dirty; }} />}
           {view === 'overview' && <Overview opportunities={opportunities} proposals={proposals} pipelineValue={pipelineValue} onPipeline={() => setView('pipeline')} onProposal={openAgent} onProposals={() => setView('proposals')} onOpenProposal={(proposal) => { setActiveProposal(proposal); setView('editor'); }} />}
           {view === 'agent' && <AgentStudio profile={agentProfile} initialTemplate={agentInitialTemplate} onSetup={() => setView('agent_setup')} onGenerated={(proposal) => { setProposals((items) => [proposal, ...items]); setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}

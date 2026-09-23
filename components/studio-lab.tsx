@@ -65,6 +65,7 @@ import {
 } from '@/lib/studio-stream';
 import {
   studioSpendLimits,
+  studioMicroSpendLimits,
   studioWebSpendLimit,
   studioTask,
 } from '@/lib/studio-economy';
@@ -129,7 +130,7 @@ const studioUsd = (value: number) =>
     minimumFractionDigits: 4,
     maximumFractionDigits: 6,
   });
-export function StudioLab() {
+export function StudioLab({ conversational = false }: { conversational?: boolean }) {
   const [projects, setProjects] = useState<StudioSummary[]>([]);
   const [project, setProject] = useState<StudioProject | null>(null);
   const [versions, setVersions] = useState<StudioVersion[]>([]);
@@ -142,14 +143,14 @@ export function StudioLab() {
   const [pending, setPending] = useState('');
   const [stage, setStage] = useState<StudioStage>('reading');
   const [intent, setIntent] = useState<'edit' | 'plan'>('edit');
-  const [quality, setQuality] = useState<'local' | 'economy' | 'premium'>(
-    'local',
-  );
+  const [quality, setQuality] = useState<'local' | 'micro' | 'economy' | 'premium'>(conversational ? 'micro' : 'local');
   const [mode, setMode] = useState<StudioMode>('free');
   const [draft, setDraft] = useState<ContextDraft>(emptyContext);
   const estimatedRequestBudget =
     quality === 'local'
       ? 0
+      : quality === 'micro'
+        ? studioMicroSpendLimits[studioTask(prompt, Boolean(project?.html), intent, false)]
       : quality === 'economy' &&
           !project?.html &&
           !studioMessageReference(prompt, draft.referenceUrl) &&
@@ -188,6 +189,9 @@ export function StudioLab() {
   const [listening, setListening] = useState(false);
   const gate = useRef(false);
   const request = useRef<AbortController | null>(null);
+  const activeProjectStorageKey = conversational
+    ? 'synky.conversation.activeProject'
+    : 'synky.studio.activeProject';
   const composer = useRef<HTMLTextAreaElement>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
   const imageInput = useRef<HTMLInputElement>(null);
@@ -230,14 +234,14 @@ export function StudioLab() {
   }
   useEffect(() => {
     void loadProjects().then(() => {
-      const id = sessionStorage.getItem('synky.studio.activeProject');
+      const id = sessionStorage.getItem(activeProjectStorageKey);
       if (id) void openProject(id);
     });
     return () => {
       request.current?.abort();
       recognition.current?.abort();
     };
-  }, []);
+  }, [activeProjectStorageKey]);
   useEffect(() => {
     const browser = window as typeof window & {
       SpeechRecognition?: VoiceRecognitionConstructor;
@@ -282,7 +286,7 @@ export function StudioLab() {
   }, []);
   function accept(result: ProjectResponse) {
     setCanvasReport(null);
-    sessionStorage.setItem('synky.studio.activeProject', result.project.id);
+    sessionStorage.setItem(activeProjectStorageKey, result.project.id);
     setProject(result.project);
     setVersions(result.versions);
     setHistorical(null);
@@ -330,7 +334,7 @@ export function StudioLab() {
       setError('Salve ou descarte as alterações do contexto antes de sair.');
       return;
     }
-    sessionStorage.removeItem('synky.studio.activeProject');
+    sessionStorage.removeItem(activeProjectStorageKey);
     setProject(null);
     setCanvasReport(null);
     setVersions([]);
@@ -340,6 +344,7 @@ export function StudioLab() {
     setNotice('');
     setDraft(emptyContext);
     setMode('free');
+    setQuality(conversational ? 'micro' : 'local');
     setAttachment(null);
     setBriefFile(null);
     setTab('chat');
@@ -523,7 +528,7 @@ export function StudioLab() {
       setBusy(false);
       gate.current = false;
       request.current = null;
-      setQuality('local');
+      setQuality(conversational ? 'micro' : 'local');
     }
   }
   async function viewVersion(revision: number) {
@@ -711,7 +716,7 @@ export function StudioLab() {
             <PanelsTopLeft size={20} />
           </span>
           <strong>
-            Estúdio <span>Lab</span>
+            {conversational ? <>Proposta <span>Conversa</span></> : <>Estúdio <span>Lab</span></>}
           </strong>
         </div>
         <button
@@ -829,12 +834,13 @@ export function StudioLab() {
                   <h2>
                     {project
                       ? 'Vamos criar a primeira versão.'
-                      : 'Nova proposta'}
+                      : conversational ? 'Vamos montar sua proposta juntos.' : 'Nova proposta'}
                   </h2>
+                  {conversational && !project && <p>Conte sua ideia ou cole um link de referência. Depois, peça mudanças aqui na conversa.</p>}
                   {(project?.briefing || briefFile) && (
                     <p>{briefFile?.name || 'Briefing pronto para usar.'}</p>
                   )}
-                  <div className={styles.starterModes}>
+                  {!conversational && <div className={styles.starterModes}>
                     <button
                       aria-pressed={mode === 'free'}
                       disabled={!!project}
@@ -866,7 +872,7 @@ export function StudioLab() {
                         <ChevronDown size={14} />
                       </button>
                     )}
-                  </div>
+                  </div>}
                   {!project && (
                     <div className={styles.startContext}>
                       <label>
@@ -889,7 +895,7 @@ export function StudioLab() {
                           />
                         </div>
                       </label>
-                      <label>
+                      {!conversational && <label>
                         Briefing
                         <textarea
                           aria-label="Briefing"
@@ -902,10 +908,10 @@ export function StudioLab() {
                             setDraft({ ...draft, briefing: event.target.value })
                           }
                         />
-                      </label>
+                      </label>}
                     </div>
                   )}
-                  <button
+                  {!conversational && <button
                     className={styles.primary}
                     disabled={
                       blocked ||
@@ -925,7 +931,7 @@ export function StudioLab() {
                     }
                   >
                     <Sparkles size={16} /> Criar proposta
-                  </button>
+                  </button>}
                 </div>
               )}
               {project?.messages.map((message, index) => (
@@ -1743,6 +1749,16 @@ export function StudioLab() {
             />
             <div className={styles.composer}>
               <div className={styles.costControls}>
+                {conversational ? (
+                  <>
+                    <span className={styles.costLabel} title="Cada mensagem tem limite rígido de gasto. Pedidos objetivos podem ser aplicados sem IA.">
+                      Experimental · máx. US$ {estimatedRequestBudget.toFixed(3).replace('.', ',')} nesta mensagem
+                    </span>
+                    {!!project?.aiUsage?.calls && <span className={styles.projectSpend} title={`${project.aiUsage.calls} mensagens com IA neste projeto`}>
+                      Total: US$ {studioUsd(project.aiUsage.estimatedUsd)}
+                    </span>}
+                  </>
+                ) : <>
                 <label>
                   <span>Forma de criar</span>
                   <select
@@ -1774,6 +1790,7 @@ export function StudioLab() {
                     Acumulado: US$ {studioUsd(project.aiUsage.estimatedUsd)}
                   </span>
                 )}
+                </>}
               </div>
               {(attachment || draft.referenceUrl || selection) && (
                 <div className={styles.composerAttachments}>
@@ -1832,7 +1849,7 @@ export function StudioLab() {
                     ? 'O que você quer planejar?'
                     : project?.html
                       ? 'O que você quer mudar?'
-                      : 'Descreva a proposta que você quer criar…'
+                      : conversational ? 'Me conte a ideia ou cole o link da proposta que quer usar como referência…' : 'Descreva a proposta que você quer criar…'
                 }
                 onKeyDown={(event) => {
                   if (

@@ -651,6 +651,42 @@ test('economical custom HTML call receives all commercial conditions and records
   }
 });
 
+test('conversational micro mode uses nano and reserves a task-specific hard spend ceiling', async () => {
+  const f = fixture();
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (_url, options) => {
+    calls.push(JSON.parse(options.body));
+    return Response.json({
+      status: 'completed',
+      usage: { input_tokens: 4000, output_tokens: 5000 },
+      output_text: JSON.stringify({
+        title: 'Proposta sob medida',
+        message: 'Criei a primeira versão.',
+        html,
+        reference_status: 'not_requested',
+      }),
+    });
+  };
+  try {
+    const { project } = await (await f.create({ mode: 'free' })).json();
+    const response = await f.messages.POST(
+      request({ message: 'Quero uma proposta de gestão de redes sociais.', revision: 0, quality: 'micro' }),
+      context(project.id),
+    );
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].model, 'gpt-5-nano');
+    assert.equal(f.sqlite.prepare('SELECT reserved_usd FROM studio_ai_requests').get().reserved_usd, 0.01);
+    const { project: saved } = await response.json();
+    assert.equal(saved.messages.at(-1).usage.model, 'gpt-5-nano');
+    assert.equal(saved.messages.at(-1).usage.estimatedUsd, 0.0022);
+  } finally {
+    globalThis.fetch = originalFetch;
+    f.sqlite.close();
+  }
+});
+
 test('an empty creation never triggers a paid retry and preserves the saved proposal', async () => {
   const f = fixture();
   const originalFetch = globalThis.fetch;
@@ -1968,6 +2004,10 @@ test('reference and PDF facts are cached; later edits do not resend PDFs, refere
 });
 
 test('budget checks fail before billing and premium processing requires explicit selection', () => {
+  assert.equal(studioEconomy.studioModel('create', 'micro', {}), 'gpt-5-nano');
+  assert.equal(studioEconomy.studioMicroSpendLimits.create, 0.01);
+  assert.equal(studioEconomy.studioMicroSpendLimits.patch, 0.004);
+  assert.equal(studioEconomy.studioMicroSpendLimits.chat, 0.002);
   assert.equal(
     studioEconomy.studioModel('create', 'economy', {
       STUDIO_DESIGN_AI_MODEL: 'gpt-5.5',

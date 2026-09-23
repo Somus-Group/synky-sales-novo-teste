@@ -134,7 +134,7 @@ export function studioInput(value: unknown) {
     throw new StudioError('Escolha criar ou planejar.');
   if (
     p.quality !== undefined &&
-    !['local', 'economy', 'premium'].includes(String(p.quality))
+    !['local', 'micro', 'economy', 'premium'].includes(String(p.quality))
   )
     throw new StudioError('Escolha uma forma válida de criar a proposta.');
   if (
@@ -156,6 +156,8 @@ export function studioInput(value: unknown) {
     quality:
       p.quality === 'local'
         ? ('local' as const)
+        : p.quality === 'micro'
+          ? ('micro' as const)
         : p.quality === 'premium'
           ? ('premium' as const)
           : ('economy' as const),

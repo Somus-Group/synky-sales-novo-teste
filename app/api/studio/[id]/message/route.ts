@@ -48,6 +48,7 @@ import {
   studioUsage,
   studioDigest,
   studioSpendLimits,
+  studioMicroSpendLimits,
   studioWebSpendLimit,
   economicalConversation,
 } from '@/lib/studio-economy';
@@ -487,11 +488,13 @@ async function runMessage(
       // Existing logos and attachments remain embedded locally, not re-analyzed
       // as image inputs on every edit.
       const quality =
-        task === 'chat'
-          ? 'economy'
-          : payload.quality === 'premium'
-            ? 'premium'
-            : 'economy';
+        payload.quality === 'micro'
+          ? 'micro'
+          : task === 'chat'
+            ? 'economy'
+            : payload.quality === 'premium'
+              ? 'premium'
+              : 'economy';
       const model = studioModel(task, quality, configuration);
       const baseSchema =
         task === 'patch'
@@ -550,7 +553,9 @@ async function runMessage(
         workspaceId,
         payload.requestId,
         model,
-        (usingWeb || usingTemplate) && quality === 'economy'
+        quality === 'micro'
+          ? studioMicroSpendLimits[task]
+          : (usingWeb || usingTemplate) && quality === 'economy'
           ? studioWebSpendLimit
           : studioSpendLimits[quality],
         daily,
