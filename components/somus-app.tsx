@@ -539,7 +539,7 @@ function Overview({ opportunities, proposals, pipelineValue, onPipeline, onPropo
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#60708B]">Tudo o que precisa acompanhar do seu comercial, em um só lugar.</p>
         </div>
           <div className="overview-heading-actions flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="overview-day-card flex items-center gap-3 rounded-2xl border border-[#0B6FE8]/10 bg-[#F7FAFF] px-3.5 py-3"><span className="grid size-9 place-items-center rounded-xl bg-white text-[#0B6FE8] shadow-sm"><CalendarDays className="size-4" /></span><span><strong className="block text-xs font-semibold text-[#11244A]">Seu dia começa aqui</strong><span className="mt-0.5 block text-[11px] text-[#60708B]">Seg, 15 de setembro de 2026</span></span></div>
+          <div className="overview-day-card flex items-center gap-3 rounded-2xl border border-[#0B6FE8]/10 bg-[#F7FAFF] px-3.5 py-3"><span className="grid size-9 place-items-center rounded-xl bg-white text-[#0B6FE8] shadow-sm"><CalendarDays className="size-4" /></span><span><strong className="block text-xs font-semibold text-[#11244A]">Seu dia começa aqui</strong><span className="mt-0.5 block text-[11px] text-[#60708B]">{new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' }).format(new Date()).replace('.', '').replace(/^./, (letter) => letter.toUpperCase())}</span></span></div>
           <Button className="overview-new-proposal h-11 rounded-xl bg-[#0B6FE8] px-4 text-white shadow-[0_10px_22px_rgba(11,111,232,0.2)] hover:bg-[#0757C8]" onClick={onProposal}><Plus /> Nova proposta</Button>
         </div>
       </div>
