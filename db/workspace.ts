@@ -45,6 +45,9 @@ async function ensureWorkspaceSchema() {
         db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_brand_assets_public_token ON brand_assets (public_token)'),
         db.prepare('CREATE TABLE IF NOT EXISTS proposal_references (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, workspace_id TEXT NOT NULL, name TEXT NOT NULL, object_key TEXT NOT NULL, content_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, status TEXT NOT NULL, created_at INTEGER NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces(id))'),
         db.prepare('CREATE INDEX IF NOT EXISTS idx_proposal_references_workspace ON proposal_references (workspace_id)'),
+        db.prepare('CREATE TABLE IF NOT EXISTS proposal_copy_pages (id TEXT PRIMARY KEY NOT NULL, workspace_id TEXT NOT NULL, slug TEXT NOT NULL, title TEXT NOT NULL, source_url TEXT NOT NULL, html TEXT NOT NULL, created_at INTEGER NOT NULL, FOREIGN KEY (workspace_id) REFERENCES workspaces(id))'),
+        db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_proposal_copy_pages_slug ON proposal_copy_pages (slug)'),
+        db.prepare('CREATE INDEX IF NOT EXISTS idx_proposal_copy_pages_workspace ON proposal_copy_pages (workspace_id)'),
       ]);
 
       await ensureColumn('opportunities', 'source', "source TEXT NOT NULL DEFAULT 'Não informado'");

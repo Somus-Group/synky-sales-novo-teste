@@ -22,6 +22,7 @@ import {
   Eye,
   Flag,
   FileText,
+  FilePlus2,
   FlaskConical,
   Zap,
   Grid2X2,
@@ -78,8 +79,9 @@ import { ZeroLab } from './zero-lab';
 import { ProposalTemplateLibrary } from './proposal-template-library';
 import { TeamWorkspace } from './team-workspace';
 import { collectionTemplates } from '@/lib/proposal-collection';
+import { ProposalCopyEditor } from './proposal-copy-editor';
 
-type View = 'overview' | 'agent' | 'agent_setup' | 'studio' | 'conversation' | 'zero' | 'pipeline' | 'tasks' | 'clients' | 'proposals' | 'team' | 'editor';
+type View = 'overview' | 'agent' | 'agent_setup' | 'studio' | 'conversation' | 'zero' | 'proposal_copy' | 'pipeline' | 'tasks' | 'clients' | 'proposals' | 'team' | 'editor';
 type Stage = 'Novo contato' | 'Diagnóstico' | 'Proposta enviada' | 'Negociação';
 type PipelineCompany = { id: string; name: string; createdAt: number };
 type PipelineLabels = { title: string; description: string; newOpportunity: string; period: string; metrics: { pipeline: string; forecast: string; ticket: string; negotiation: string }; stages: Record<Stage, string> };
@@ -456,6 +458,7 @@ export function SomusApp({ userName, userEmail, initialView = 'overview' }: { us
           <Nav collapsed={sidebarCollapsed} active={view === 'studio'} icon={FlaskConical} label="Estúdio Lab" onClick={() => { setView('studio'); setMobileNav(false); }} />
           <Nav collapsed={sidebarCollapsed} active={view === 'conversation'} icon={Bot} label="Proposta Conversa · teste" onClick={() => { setView('conversation'); setMobileNav(false); }} />
           <Nav collapsed={sidebarCollapsed} active={view === 'zero'} icon={Zap} label="Proposta Zero" onClick={() => { setView('zero'); setMobileNav(false); }} />
+          <Nav collapsed={sidebarCollapsed} active={view === 'proposal_copy'} icon={FilePlus2} label="Editar por link" onClick={() => { setView('proposal_copy'); setMobileNav(false); }} />
           <p className="sidebar-group-label sidebar-collapse-text">Comercial</p>
           <Nav collapsed={sidebarCollapsed} active={view === 'pipeline'} icon={BarChart3} label="Pipeline" badge={opportunities.length} onClick={() => setView('pipeline')} />
           <Nav collapsed={sidebarCollapsed} active={view === 'tasks'} icon={ListTodo} label="Ações" badge={tasks.filter((task) => task.status !== 'Concluída').length} onClick={() => setView('tasks')} />
@@ -490,6 +493,7 @@ export function SomusApp({ userName, userEmail, initialView = 'overview' }: { us
           {view === 'studio' && <StudioLab />}
           {view === 'conversation' && <StudioLab conversational />}
           {view === 'zero' && <ZeroLab profile={agentProfile} onDirtyChange={(dirty) => { zeroDirty.current = dirty; }} />}
+          {view === 'proposal_copy' && <ProposalCopyEditor />}
           {view === 'overview' && <Overview opportunities={opportunities} proposals={proposals} pipelineValue={pipelineValue} onPipeline={() => setView('pipeline')} onProposal={openAgent} onProposals={() => setView('proposals')} onOpenProposal={(proposal) => { setActiveProposal(proposal); setView('editor'); }} />}
           {view === 'agent' && <AgentStudio profile={agentProfile} initialTemplate={agentInitialTemplate} onSetup={() => setView('agent_setup')} onGenerated={(proposal) => { setProposals((items) => [proposal, ...items]); setActiveProposal(proposal); setView('editor'); }} onNotify={notify} />}
           {view === 'agent_setup' && <AgentSetup initialProfile={agentProfile} onSaved={(profile) => { setAgentProfile(profile); notify('Agente configurado para o seu negócio'); setView('agent'); }} onNotify={notify} />}

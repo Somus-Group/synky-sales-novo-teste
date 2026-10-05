@@ -260,3 +260,13 @@ export const zeroProjects = sqliteTable('zero_projects', {
   revision: integer('revision').notNull().default(1),
   updatedAt: integer('updated_at').notNull(),
 }, table => [index('idx_zero_projects_workspace_updated').on(table.workspaceId, table.updatedAt)]);
+
+export const proposalCopyPages = sqliteTable('proposal_copy_pages', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id),
+  slug: text('slug').notNull(),
+  title: text('title').notNull(),
+  sourceUrl: text('source_url').notNull(),
+  html: text('html').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, table => [uniqueIndex('idx_proposal_copy_pages_slug').on(table.slug), index('idx_proposal_copy_pages_workspace').on(table.workspaceId)]);

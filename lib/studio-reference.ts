@@ -11,6 +11,7 @@ export type StudioReference = {
   structure: string;
   styles: string;
   template: string;
+  editableHtml: string;
   media: StudioMedia[];
   mediaWarnings: string[];
   designEvidence: {
@@ -64,6 +65,25 @@ async function safeReferenceTemplate(html: string) {
   if (template.length > 64000)
     throw unavailable('A página de referência é grande demais para ser usada como base.');
   return template;
+}
+
+export async function editableReferenceHtml(html: string) {
+  const cleaned = await new HTMLRewriter()
+    .on('script,noscript,template,iframe,object,embed,form,input,button,textarea,select,base,meta', {
+      element(element) { element.remove(); },
+    })
+    .on('*', {
+      element(element) {
+        for (const [name, value] of element.attributes as unknown as Iterable<[string, string]>) {
+          if (name.toLowerCase().startsWith('on') || name === 'srcdoc') element.removeAttribute(name);
+          if ((name === 'href' || name === 'src') && /^\s*javascript:/i.test(value)) element.removeAttribute(name);
+        }
+      },
+    })
+    .transform(new Response(html))
+    .text();
+  if (cleaned.length > 64000) throw unavailable('A página é grande demais para editar com preservação do visual.');
+  return cleaned;
 }
 
 function reactReferenceTemplate(structure: string) {
@@ -558,6 +578,7 @@ export async function readStudioReference(
         method === 'react-source'
           ? reactReferenceTemplate(structure)
           : await safeReferenceTemplate(page.text),
+      editableHtml: method === 'html' ? await editableReferenceHtml(page.text) : '',
       designEvidence: {
         colors: designStyles.colors,
         fonts: designStyles.fonts,
